@@ -1,0 +1,1404 @@
+<!--
+  Developed by Mohammad Rameez Imdad (Rameez Scripts)
+  WhatsApp: https://wa.me/923224083545 (For Custom Projects)
+  YouTube: https://www.youtube.com/@rameezimdad (Subscribe for more!)
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#001f3f">
+<title>WhatsApp Send API — Rameez Scripts</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  :root {
+    --navy: #001f3f;
+    --navy-2: #00355c;
+    --navy-dark: #001529;
+    --blue: #0074D9;
+    --blue-soft: #e8f2fc;
+    --green: #1f9d55;
+    --green-soft: #e7f6ee;
+    --red: #c0392b;
+    --red-soft: #fdecea;
+    --amber: #b7791f;
+    --amber-soft: #fdf3e0;
+    --ink: #1d2733;
+    --muted: #617082;
+    --line: #dde5ee;
+    --bg: #f2f5f9;
+    --sb-w: 250px;
+    --sb-w-mini: 70px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    touch-action: manipulation;
+  }
+  button, input, textarea, select { font: inherit; }
+  input, textarea { font-size: 16px !important; }
+
+  /* ===== sidebar ===== */
+  .sidebar {
+    position: fixed; inset: 0 auto 0 0; z-index: 1000;
+    width: var(--sb-w); height: 100vh;
+    display: flex; flex-direction: column;
+    background: linear-gradient(180deg, var(--navy), var(--navy-dark));
+    color: #fff; overflow-y: auto; overflow-x: hidden;
+    box-shadow: 2px 0 12px rgba(0,0,0,.18);
+    transition: width .22s ease, transform .22s ease;
+  }
+  .sb-brand {
+    min-height: 70px; padding: 12px 16px;
+    display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px solid rgba(255,255,255,.1);
+  }
+  .sb-brand img { width: 42px; height: 42px; flex: 0 0 42px; border-radius: 50%; border: 2px solid rgba(255,255,255,.55); object-fit: cover; }
+  .sb-brand .t { min-width: 0; white-space: nowrap; overflow: hidden; }
+  .sb-brand .t strong { display: block; font-size: 15px; }
+  .sb-brand .t small { font-size: 11px; color: rgba(255,255,255,.6); }
+  .sb-status {
+    padding: 14px 16px; text-align: center; white-space: nowrap; overflow: hidden;
+    background: rgba(0,0,0,.22); border-bottom: 1px solid rgba(255,255,255,.1);
+    font-size: 12.5px;
+  }
+  .sb-status .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #9aa7b5; margin-right: 7px; }
+  .sb-status.connected .dot { background: #2ecc71; box-shadow: 0 0 8px #2ecc71; }
+  .sb-status.waiting .dot { background: #f1c40f; box-shadow: 0 0 8px #f1c40f; }
+  .sb-status.down .dot { background: #e74c3c; box-shadow: 0 0 8px #e74c3c; }
+  .sb-menu { list-style: none; padding: 12px 8px; flex: 1; }
+  .sb-menu .sec { font-size: 10.5px; letter-spacing: 1.2px; text-transform: uppercase; color: rgba(255,255,255,.4); padding: 10px 12px 6px; white-space: nowrap; }
+  .sb-menu button {
+    width: 100%; display: flex; align-items: center; gap: 12px;
+    background: none; border: none; color: rgba(255,255,255,.82);
+    padding: 11px 13px; border-radius: 8px; cursor: pointer;
+    font-size: 14px; text-align: left; white-space: nowrap;
+    transition: background .14s, color .14s;
+  }
+  .sb-menu button:hover { background: rgba(255,255,255,.09); color: #fff; }
+  .sb-menu button.active { background: var(--blue); color: #fff; font-weight: 600; }
+  .sb-menu button i { width: 20px; text-align: center; font-size: 15px; flex: 0 0 20px; }
+  .sb-foot {
+    padding: 14px 12px; border-top: 1px solid rgba(255,255,255,.1);
+    display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+  }
+  .sb-foot a {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 12px; color: #fff; text-decoration: none;
+    padding: 7px 11px; border-radius: 6px; white-space: nowrap;
+  }
+  .sb-foot a.wa { background: #25d366; }
+  .sb-foot a.yt { background: #e74c3c; }
+  .sb-foot a:hover { filter: brightness(1.1); }
+
+  /* collapsed (desktop) */
+  body.sb-mini .sidebar { width: var(--sb-w-mini); }
+  body.sb-mini .sb-brand .t, body.sb-mini .sb-status, body.sb-mini .sb-menu .sec,
+  body.sb-mini .sb-menu button span, body.sb-mini .sb-foot { display: none; }
+  body.sb-mini .sb-menu button { justify-content: center; }
+  body.sb-mini .sb-menu button i { flex: none; }
+  body.sb-mini .shell { margin-left: var(--sb-w-mini); }
+
+  .sb-overlay { display: none; position: fixed; inset: 0; z-index: 999; background: rgba(0,0,0,.45); border: none; }
+
+  /* ===== shell / navbar ===== */
+  .shell { margin-left: var(--sb-w); min-height: 100vh; display: flex; flex-direction: column; transition: margin-left .22s ease; }
+  .navbar {
+    background: #fff; border-bottom: 1px solid var(--line);
+    padding: 10px 20px; display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 1px 6px rgba(0,31,63,.07);
+    position: sticky; top: 0; z-index: 500;
+  }
+  .nav-burger {
+    background: none; border: none; cursor: pointer;
+    font-size: 18px; color: var(--navy); padding: 8px 10px; border-radius: 7px;
+  }
+  .nav-burger:hover { background: var(--blue-soft); }
+  .nav-page { min-width: 0; }
+  .nav-page h1 { font-size: 16.5px; color: var(--navy); display: flex; align-items: center; gap: 9px; white-space: nowrap; }
+  .nav-page .crumb { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+  .navbar .spacer { flex: 1; }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--navy); color: #fff;
+    padding: 7px 14px; border-radius: 999px;
+    font-size: 12.5px; font-weight: 600; white-space: nowrap;
+  }
+  .status-pill .dot { width: 9px; height: 9px; border-radius: 50%; background: #9aa7b5; }
+  .status-pill.connected .dot { background: #2ecc71; box-shadow: 0 0 8px #2ecc71; }
+  .status-pill.waiting .dot { background: #f1c40f; box-shadow: 0 0 8px #f1c40f; }
+  .status-pill.down .dot { background: #e74c3c; box-shadow: 0 0 8px #e74c3c; }
+  .nav-btn {
+    background: #fff; color: var(--navy);
+    border: 1px solid var(--line); border-radius: 7px;
+    padding: 8px 13px; font-size: 13px; cursor: pointer; transition: background .15s;
+    white-space: nowrap;
+  }
+  .nav-btn:hover { background: var(--blue-soft); }
+
+  main { flex: 1; width: 100%; padding: 24px 22px 40px; }
+
+  /* ===== cards ===== */
+  .card {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 12px; box-shadow: 0 3px 14px rgba(0,31,63,.06);
+    overflow: hidden; margin-bottom: 22px;
+  }
+  .card-head {
+    background: var(--navy); color: #fff;
+    padding: 13px 18px; font-size: 15px; font-weight: 600;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .card-head .right { margin-left: auto; font-size: 12px; font-weight: 400; opacity: .8; }
+  .card-body { padding: 22px 20px; }
+
+  /* ===== KPI small-boxes ===== */
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 22px; }
+  .small-box { border-radius: 12px; color: #fff; position: relative; overflow: hidden; box-shadow: 0 3px 14px rgba(0,31,63,.12); }
+  .small-box .inner { padding: 16px 18px 14px; position: relative; z-index: 1; }
+  .small-box h3 { font-size: 26px; font-weight: 700; line-height: 1.1; word-break: break-word; }
+  .small-box p { font-size: 12.5px; opacity: .92; margin-top: 4px; }
+  .small-box .icon { position: absolute; right: 12px; top: 10px; font-size: 52px; opacity: .22; z-index: 0; }
+  .small-box .foot { display: block; background: rgba(0,0,0,.14); padding: 6px 18px; font-size: 11.5px; color: rgba(255,255,255,.9); }
+  .sb-green { background: linear-gradient(135deg, #1f9d55, #157347); }
+  .sb-red   { background: linear-gradient(135deg, #c0392b, #962d22); }
+  .sb-amber { background: linear-gradient(135deg, #d68910, #b7791f); }
+  .sb-blue  { background: linear-gradient(135deg, #0074D9, #005bb0); }
+  .sb-navy  { background: linear-gradient(135deg, #00355c, #001f3f); }
+
+  /* ===== key gate ===== */
+  .gate { max-width: 480px; margin: 6vh auto 0; }
+  .gate .lock-icon {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: var(--blue-soft); color: var(--blue);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; margin: 4px auto 16px;
+  }
+  .gate h2 { text-align: center; font-size: 19px; margin-bottom: 6px; }
+  .gate p.hint { text-align: center; font-size: 13px; color: var(--muted); margin-bottom: 18px; }
+  body.locked .sb-menu button, body.locked .nav-burger { opacity: .45; pointer-events: none; }
+
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--navy); }
+  .field input, .field textarea {
+    width: 100%; padding: 11px 13px;
+    border: 1px solid var(--line); border-radius: 7px;
+    font-family: inherit; color: var(--ink);
+    outline: none; transition: border .15s, box-shadow .15s;
+  }
+  .field input:focus, .field textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(0,116,217,.13); }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+    background: var(--blue); color: #fff; border: none;
+    padding: 11px 20px; border-radius: 7px;
+    font-size: 14.5px; font-weight: 600; cursor: pointer;
+    transition: background .15s, transform .1s;
+  }
+  .btn:hover { background: #0063ba; }
+  .btn:active { transform: scale(.98); }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+  .btn.block { width: 100%; }
+  .btn.danger { background: var(--red); }
+  .btn.danger:hover { background: #a93226; }
+  .alert {
+    display: none; align-items: flex-start; gap: 10px;
+    padding: 11px 14px; border-radius: 7px;
+    font-size: 13.5px; margin-bottom: 14px;
+  }
+  .alert.show { display: flex; }
+  .alert.error { background: var(--red-soft); color: var(--red); border: 1px solid #f5c6c0; }
+  .alert.okay { background: var(--green-soft); color: var(--green); border: 1px solid #bfe8d0; }
+
+  /* ===== connection states ===== */
+  .conn-wrap { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 10px 0 4px; }
+  .conn-wrap .big-icon { font-size: 44px; margin-bottom: 14px; }
+  .conn-wrap h3 { font-size: 18px; margin-bottom: 7px; }
+  .conn-wrap p { font-size: 13.5px; color: var(--muted); max-width: 460px; line-height: 1.55; }
+  .spin { color: var(--blue); animation: rot 1.1s linear infinite; display: inline-block; }
+  @keyframes rot { to { transform: rotate(360deg); } }
+
+  .qr-frame {
+    background: #fff; border: 2px solid var(--line); border-radius: 12px;
+    padding: 12px; margin: 14px 0 10px; position: relative;
+  }
+  .qr-frame img { width: 248px; height: 248px; display: block; }
+  .qr-frame.expired img { filter: blur(4px) grayscale(1); opacity: .4; }
+  .qr-expired-overlay {
+    display: none; position: absolute; inset: 0;
+    align-items: center; justify-content: center; flex-direction: column; gap: 8px;
+    font-size: 13px; font-weight: 600; color: var(--navy);
+  }
+  .qr-frame.expired .qr-expired-overlay { display: flex; }
+  .qr-meta { font-size: 12.5px; color: var(--muted); margin-bottom: 12px; }
+  .qr-steps {
+    text-align: left; background: var(--blue-soft); border-radius: 9px;
+    padding: 14px 18px; font-size: 13.5px; line-height: 2; color: var(--navy);
+  }
+  .qr-steps i { width: 20px; color: var(--blue); }
+
+  .connected-box { text-align: center; padding: 6px 0; }
+  .connected-box .ok-ring {
+    width: 86px; height: 86px; border-radius: 50%;
+    background: var(--green-soft); color: var(--green);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px; margin: 4px auto 14px;
+  }
+  .connected-box h3 { font-size: 19px; color: var(--green); margin-bottom: 5px; }
+  .connected-box .acct { font-size: 14px; color: var(--ink); margin-bottom: 4px; }
+  .connected-box .since { font-size: 12.5px; color: var(--muted); margin-bottom: 14px; }
+  .badge-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 16px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 999px;
+  }
+  .badge.send-only { background: var(--amber-soft); color: var(--amber); }
+  .badge.live { background: var(--green-soft); color: var(--green); }
+  .badge.queue { background: var(--blue-soft); color: var(--blue); }
+
+  /* ===== docs ===== */
+  .api-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-bottom: 22px; }
+  .api-grid .card { margin: 0; }
+  .base-url {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--navy); color: #7fd4ff;
+    font-family: Consolas, Menlo, monospace; font-size: 13.5px;
+    padding: 11px 14px; border-radius: 8px;
+    word-break: break-all;
+  }
+  .copy-mini {
+    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2);
+    color: #fff; border-radius: 5px; padding: 4px 9px;
+    font-size: 11.5px; cursor: pointer; flex-shrink: 0; margin-left: auto;
+  }
+  .copy-mini:hover { background: rgba(255,255,255,.25); }
+  pre.curl {
+    background: #0b2238; color: #d9e6f2; border-radius: 9px;
+    padding: 14px 15px; font-size: 12.3px; line-height: 1.65;
+    font-family: Consolas, Menlo, monospace;
+    overflow-x: auto; white-space: pre;
+  }
+  .curl-wrap { position: relative; }
+  .curl-wrap .copy-mini { position: absolute; top: 9px; right: 9px; margin: 0; }
+  .no-domain {
+    background: var(--amber-soft); color: var(--amber);
+    border: 1px dashed #e4c98e; border-radius: 9px;
+    padding: 18px 16px; font-size: 13.5px; line-height: 1.65; text-align: center;
+  }
+  .no-domain code { background: #fff; padding: 2px 7px; border-radius: 4px; font-size: 12.5px; }
+  .note-strip {
+    display: flex; gap: 10px; align-items: flex-start;
+    background: var(--blue-soft); border-radius: 9px;
+    padding: 13px 15px; font-size: 13px; color: var(--navy);
+    line-height: 1.6;
+  }
+  .note-strip i { margin-top: 3px; color: var(--blue); }
+  .note-strip.warn { background: var(--amber-soft); color: var(--amber); }
+  .note-strip.warn i { color: var(--amber); }
+
+  .ep-block { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 14px; overflow: hidden; }
+  .ep-head {
+    width: 100%; display: flex; align-items: center; gap: 11px;
+    background: #f8fafc; border: none; cursor: pointer;
+    padding: 12px 15px; font-size: 13.5px; text-align: left;
+  }
+  .ep-head:hover { background: var(--blue-soft); }
+  .method {
+    color: #fff; font-size: 10.5px; font-weight: 700;
+    border-radius: 4px; padding: 3px 8px; letter-spacing: .4px; flex-shrink: 0;
+    background: var(--blue); min-width: 44px; text-align: center;
+  }
+  .method.get { background: var(--green); }
+  .method.admin { background: var(--red); }
+  .ep-path { font-family: Consolas, Menlo, monospace; color: var(--navy); font-weight: 600; }
+  .ep-sum { color: var(--muted); font-size: 12px; margin-left: auto; text-align: right; }
+  .ep-head .chev { color: var(--muted); transition: transform .18s; }
+  .ep-block.open .ep-head .chev { transform: rotate(180deg); }
+  .ep-body { display: none; padding: 16px 15px; border-top: 1px solid var(--line); }
+  .ep-block.open .ep-body { display: block; }
+
+  table.doc-table { width: 100%; border-collapse: collapse; font-size: 12.8px; margin: 10px 0 14px; }
+  .doc-table th { text-align: left; background: var(--blue-soft); color: var(--navy); padding: 8px 10px; font-size: 12px; }
+  .doc-table td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .doc-table code { background: #f1f5fa; border-radius: 4px; padding: 1.5px 6px; font-size: 11.8px; color: var(--navy); }
+  .req { color: var(--red); font-weight: 700; }
+  .opt { color: var(--muted); }
+
+  .lang-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .lang-tabs button {
+    background: #fff; border: 1px solid var(--line); border-radius: 999px;
+    padding: 7px 16px; font-size: 12.5px; cursor: pointer; color: var(--ink);
+    display: inline-flex; align-items: center; gap: 7px;
+  }
+  .lang-tabs button.active { background: var(--navy); color: #fff; border-color: var(--navy); font-weight: 600; }
+  .lang-pane { display: none; }
+  .lang-pane.active { display: block; }
+
+  .h-sub { font-size: 13.5px; font-weight: 700; color: var(--navy); margin: 18px 0 8px; display: flex; align-items: center; gap: 8px; }
+  .h-sub:first-child { margin-top: 0; }
+
+  /* ===== test send ===== */
+  .test-grid { display: grid; grid-template-columns: 240px 1fr auto; gap: 12px; align-items: end; }
+  .send-result { margin-top: 12px; }
+
+  /* ===== queue page ===== */
+  .q-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .q-chips button {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: #fff; border: 1px solid var(--line); border-radius: 999px;
+    padding: 8px 16px; font-size: 12.5px; cursor: pointer; color: var(--ink);
+  }
+  .q-chips button.active { background: var(--navy); color: #fff; border-color: var(--navy); font-weight: 600; }
+  .q-chips .n {
+    background: var(--blue-soft); color: var(--navy); border-radius: 999px;
+    font-size: 11px; font-weight: 700; padding: 2px 8px; min-width: 24px; text-align: center;
+  }
+  .q-chips button.active .n { background: rgba(255,255,255,.22); color: #fff; }
+  .q-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .q-table th { text-align: left; padding: 10px; background: var(--blue-soft); color: var(--navy); font-size: 12px; white-space: nowrap; }
+  .q-table td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .q-table .pos { font-weight: 700; color: var(--amber); white-space: nowrap; }
+  .q-table .rcpt { font-family: Consolas, Menlo, monospace; font-size: 12.5px; color: var(--navy); white-space: nowrap; }
+  .q-table .prev { color: var(--muted); max-width: 380px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .q-table .tm { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+  .q-table .err { color: var(--red); font-size: 11.5px; display: block; margin-top: 3px; }
+  .mbadge { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+  .mbadge.queued { background: var(--amber-soft); color: var(--amber); }
+  .mbadge.sent { background: var(--blue-soft); color: var(--blue); }
+  .mbadge.delivered, .mbadge.read { background: var(--green-soft); color: var(--green); }
+  .mbadge.failed { background: var(--red-soft); color: var(--red); }
+  .tico { width: 26px; height: 26px; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; background: var(--blue-soft); color: var(--blue); font-size: 12px; }
+  .q-empty { text-align: center; color: var(--muted); padding: 34px 10px; font-size: 13.5px; }
+  .q-empty i { font-size: 30px; display: block; margin-bottom: 10px; color: var(--line); }
+  .sb-badge {
+    margin-left: auto; background: var(--amber); color: #fff;
+    border-radius: 999px; font-size: 10.5px; font-weight: 700;
+    padding: 2px 8px; min-width: 22px; text-align: center;
+  }
+  body.sb-mini .sb-badge { display: none; }
+
+  /* ===== api keys panel ===== */
+  .key-current {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: var(--navy); color: #7fd4ff;
+    font-family: Consolas, Menlo, monospace; font-size: 13.5px;
+    padding: 11px 14px; border-radius: 8px; word-break: break-all;
+  }
+  .key-current .kv { flex: 1; min-width: 180px; }
+  .key-current .copy-mini { margin-left: 0; }
+  .role-toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+  .role-toggle button { background: #fff; border: none; padding: 11px 18px; font-size: 14px; cursor: pointer; color: var(--ink); }
+  .role-toggle button.active { background: var(--blue); color: #fff; font-weight: 600; }
+  .gen-row { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: end; }
+  .key-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 6px; }
+  .key-table th { text-align: left; padding: 9px 10px; background: var(--blue-soft); color: var(--navy); font-size: 12px; }
+  .key-table td { padding: 9px 10px; border-bottom: 1px solid var(--line); }
+  .key-table code { font-size: 12px; color: var(--navy); }
+  .kbadge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+  .kbadge.ok { background: var(--green-soft); color: var(--green); }
+  .kbadge.rev { background: var(--red-soft); color: var(--red); }
+  .kbtn { border: none; border-radius: 5px; padding: 6px 11px; font-size: 12px; cursor: pointer; color: #fff; }
+  .kbtn.danger { background: var(--red); }
+  .kbtn.danger:hover { background: #a93226; }
+
+  footer {
+    background: var(--navy); color: rgba(255,255,255,.78);
+    text-align: center; padding: 16px 14px; font-size: 12.5px; line-height: 1.9;
+  }
+  footer a { color: #7fd4ff; text-decoration: none; font-weight: 600; }
+  footer a:hover { text-decoration: underline; }
+  footer .f-links { display: inline-flex; gap: 16px; margin-left: 10px; }
+
+  .hidden { display: none !important; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  @media (max-width: 980px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 860px) {
+    .sidebar { transform: translateX(-100%); width: var(--sb-w) !important; }
+    body.sb-open .sidebar { transform: translateX(0); }
+    body.sb-open .sb-overlay { display: block; }
+    body.sb-mini .sb-brand .t, body.sb-mini .sb-status, body.sb-mini .sb-menu .sec,
+    body.sb-mini .sb-menu button span, body.sb-mini .sb-foot { display: revert; }
+    body.sb-mini .sb-menu button { justify-content: flex-start; }
+    .shell, body.sb-mini .shell { margin-left: 0; }
+    .api-grid { grid-template-columns: 1fr; }
+    .test-grid { grid-template-columns: 1fr; }
+    .gen-row { grid-template-columns: 1fr; }
+    .status-pill span:last-child { display: none; }
+    .nav-page .crumb { display: none; }
+  }
+  @media (max-width: 520px) { .kpi-row { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<!-- ===== sidebar ===== -->
+<aside class="sidebar" id="sidebar">
+  <div class="sb-brand">
+    <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiGXxCe0WNNedmFqSWeF761f7Kshhc-NP5ChRQKz9fr97cO8VaarvD0KlCwqHojJVBWv-RAxfOqMI5rD4H78KnARyOc6QgwL1nRRFWf5xNQ1d9F9HfAoLPPGlTyP0GwNl4n-INMEsWLQ4Y7zJtz5bOdAnc2ePH9-uCRgshlo6BsS6gJEz6fhrxL-5U5O3sX/s160/channels4_profile.jpg" alt="Rameez Scripts">
+    <div class="t"><strong>WhatsApp API</strong><small>by Rameez Scripts</small></div>
+  </div>
+  <div class="sb-status down" id="sbStatus"><span class="dot"></span><span id="sbStatusText">Locked</span></div>
+  <ul class="sb-menu">
+    <li class="sec">Navigation</li>
+    <li><button data-page="dashboard" class="active"><i class="fa-solid fa-gauge-high"></i><span>Dashboard</span></button></li>
+    <li><button data-page="queue"><i class="fa-solid fa-hourglass-half"></i><span>Message Queue</span><span class="sb-badge hidden" id="sbQueueBadge">0</span></button></li>
+    <li><button data-page="docs"><i class="fa-solid fa-book"></i><span>API Docs</span></button></li>
+    <li><button data-page="keys"><i class="fa-solid fa-key"></i><span>API Keys</span></button></li>
+  </ul>
+  <div class="sb-foot">
+    <a class="wa" href="https://wa.me/923224083545" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> Custom Projects</a>
+    <a class="yt" href="https://www.youtube.com/@rameezimdad" target="_blank" rel="noopener"><i class="fa-brands fa-youtube"></i> YouTube</a>
+  </div>
+</aside>
+<button class="sb-overlay" id="sbOverlay" aria-label="Close menu"></button>
+
+<div class="shell">
+
+  <!-- ===== navbar ===== -->
+  <nav class="navbar">
+    <button class="nav-burger" id="burger" title="Toggle sidebar"><i class="fa-solid fa-bars"></i></button>
+    <div class="nav-page">
+      <h1><i id="pageIcon" class="fa-solid fa-gauge-high"></i> <span id="pageTitle">Dashboard</span></h1>
+      <div class="crumb">Home / <span id="pageCrumb">Dashboard</span></div>
+    </div>
+    <div class="spacer"></div>
+    <span class="status-pill" id="statusPill"><span class="dot"></span><span id="statusPillText">Checking…</span></span>
+    <button class="nav-btn hidden" id="changeKeyBtn" title="Change API key"><i class="fa-solid fa-key"></i> Key</button>
+  </nav>
+
+  <main>
+
+    <!-- ===== key gate ===== -->
+    <section id="gateView" class="gate hidden">
+      <div class="card">
+        <div class="card-body">
+          <div class="lock-icon"><i class="fa-solid fa-lock"></i></div>
+          <h2>Unlock Dashboard</h2>
+          <p class="hint">Enter your API key (admin or api role). It is stored only in this browser.</p>
+          <div class="alert error" id="gateAlert"><i class="fa-solid fa-circle-exclamation"></i><span id="gateAlertText"></span></div>
+          <div class="field">
+            <label><i class="fa-solid fa-key"></i> API Key</label>
+            <input type="password" id="keyInput" placeholder="wapi_… or bootstrap admin key" autocomplete="off">
+          </div>
+          <button class="btn block" id="unlockBtn"><i class="fa-solid fa-unlock"></i> Unlock</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="connView" class="hidden">
+
+      <!-- ============ PAGE: dashboard ============ -->
+      <div class="page active" id="page-dashboard">
+
+        <div class="kpi-row">
+          <div class="small-box sb-red" id="kpiConnBox">
+            <div class="inner"><h3 id="kpiConn">…</h3><p>WhatsApp Connection</p></div>
+            <i class="fa-brands fa-whatsapp icon"></i>
+            <span class="foot" id="kpiConnFoot">checking status…</span>
+          </div>
+          <div class="small-box sb-amber">
+            <div class="inner"><h3 id="kpiQueue">0</h3><p>Messages in Queue</p></div>
+            <i class="fa-solid fa-hourglass-half icon"></i>
+            <span class="foot" id="kpiQueueFoot">sent one-by-one, anti-ban</span>
+          </div>
+          <div class="small-box sb-blue">
+            <div class="inner"><h3 id="kpiGap">5–9s</h3><p>Anti-Ban Gap</p></div>
+            <i class="fa-solid fa-shield-halved icon"></i>
+            <span class="foot">random delay between sends</span>
+          </div>
+          <div class="small-box sb-navy">
+            <div class="inner"><h3 id="kpiRole">—</h3><p>Your API Key Role</p></div>
+            <i class="fa-solid fa-id-badge icon"></i>
+            <span class="foot" id="kpiKeyName">—</span>
+          </div>
+        </div>
+
+        <!-- connection card -->
+        <div class="card">
+          <div class="card-head">
+            <i class="fa-brands fa-whatsapp"></i> WhatsApp Connection
+            <span class="right" id="keyWho"></span>
+          </div>
+          <div class="card-body">
+
+            <div class="conn-wrap" id="stateLoading">
+              <div class="big-icon"><i class="fa-solid fa-circle-notch spin"></i></div>
+              <h3 id="loadingTitle">Starting WhatsApp session…</h3>
+              <p id="loadingText">Hold on, preparing your QR code.</p>
+            </div>
+
+            <div class="conn-wrap hidden" id="stateQr">
+              <h3><i class="fa-solid fa-qrcode" style="color:var(--blue)"></i> Scan to Connect</h3>
+              <div class="qr-frame" id="qrFrame">
+                <img id="qrImg" alt="WhatsApp QR code">
+                <div class="qr-expired-overlay"><i class="fa-solid fa-rotate-right fa-2x"></i> Refreshing QR…</div>
+              </div>
+              <div class="qr-meta" id="qrMeta">QR refreshes automatically</div>
+              <div class="qr-steps">
+                <div><i class="fa-brands fa-whatsapp"></i> Open <b>WhatsApp</b> on your phone</div>
+                <div><i class="fa-solid fa-gear"></i> Go to <b>Settings &rarr; Linked devices</b></div>
+                <div><i class="fa-solid fa-link"></i> Tap <b>Link a device</b></div>
+                <div><i class="fa-solid fa-camera"></i> Point the camera at this QR code</div>
+              </div>
+            </div>
+
+            <div class="connected-box hidden" id="stateConnected">
+              <div class="ok-ring"><i class="fa-solid fa-check"></i></div>
+              <h3>WhatsApp Connected</h3>
+              <div class="acct"><i class="fa-solid fa-mobile-screen"></i> <span id="connUser">—</span></div>
+              <div class="since" id="connSince"></div>
+              <div class="since hidden" id="queueInfo" style="color:var(--amber);font-weight:600"></div>
+              <div class="badge-row">
+                <span class="badge live"><i class="fa-solid fa-tower-broadcast"></i> API LIVE</span>
+                <span class="badge queue"><i class="fa-solid fa-shield-halved"></i> ANTI-BAN QUEUE &middot; 5–9s random gap</span>
+                <span class="badge send-only"><i class="fa-solid fa-paper-plane"></i> SEND-ONLY &middot; incoming ignored</span>
+              </div>
+              <button class="btn danger" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Logout WhatsApp Session</button>
+            </div>
+
+            <div class="conn-wrap hidden" id="stateError">
+              <div class="big-icon" style="color:var(--red)"><i class="fa-solid fa-triangle-exclamation"></i></div>
+              <h3>Connection Problem</h3>
+              <p id="errorText">Trying to reconnect automatically…</p>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- test send -->
+        <div class="card" id="apiSection">
+          <div class="card-head"><i class="fa-solid fa-paper-plane"></i> Send a Test Message</div>
+          <div class="card-body">
+            <div class="test-grid">
+              <div class="field" style="margin:0">
+                <label><i class="fa-solid fa-phone"></i> Recipient (with country code)</label>
+                <input type="text" id="testTo" placeholder="923001234567" inputmode="numeric">
+              </div>
+              <div class="field" style="margin:0">
+                <label><i class="fa-solid fa-message"></i> Message</label>
+                <input type="text" id="testMsg" placeholder="Hello from my API!" maxlength="4096">
+              </div>
+              <button class="btn" id="testSendBtn"><i class="fa-solid fa-paper-plane"></i> Send</button>
+            </div>
+            <div class="send-result">
+              <div class="alert" id="sendAlert"><i id="sendAlertIcon" class="fa-solid fa-circle-check"></i><span id="sendAlertText"></span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ============ PAGE: message queue ============ -->
+      <div class="page" id="page-queue">
+        <div class="card">
+          <div class="card-head">
+            <i class="fa-solid fa-hourglass-half"></i> Message Queue &amp; History
+            <span class="right" id="qRefreshed">auto-refreshes every 4s</span>
+          </div>
+          <div class="card-body">
+            <div class="q-chips" id="qChips">
+              <button class="active" data-status=""><i class="fa-solid fa-list"></i> All <span class="n" id="qcAll">0</span></button>
+              <button data-status="queued"><i class="fa-solid fa-hourglass-half"></i> Queued <span class="n" id="qcQueued">0</span></button>
+              <button data-status="sent"><i class="fa-solid fa-paper-plane"></i> Sent <span class="n" id="qcSent">0</span></button>
+              <button data-status="failed"><i class="fa-solid fa-circle-xmark"></i> Failed <span class="n" id="qcFailed">0</span></button>
+            </div>
+            <div class="note-strip warn" style="margin-bottom:14px"><i class="fa-solid fa-shield-halved"></i><div>
+              Queued messages drain <b>one-by-one with a random 5–9s gap</b> + typing simulation (anti-ban). Top of the queued list sends next.
+              Fire-and-forget: the server only sends — it does <b>not</b> track delivered/seen receipts.
+            </div></div>
+            <div style="overflow-x:auto">
+              <table class="q-table">
+                <thead><tr><th>#</th><th>Type</th><th>Recipient</th><th>Message</th><th>Status</th><th>Time</th></tr></thead>
+                <tbody id="qBody"><tr><td colspan="6" class="q-empty"><i class="fa-solid fa-inbox"></i>Loading…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ PAGE: api docs ============ -->
+      <div class="page" id="page-docs">
+
+        <div class="api-grid">
+          <div class="card">
+            <div class="card-head"><i class="fa-solid fa-globe"></i> Domain API <span class="right">use with SSL</span></div>
+            <div class="card-body" id="domainBody"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><i class="fa-solid fa-server"></i> VPS IP API <span class="right">direct access</span></div>
+            <div class="card-body" id="ipBody"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><i class="fa-solid fa-shield-halved"></i> Authentication &amp; Response Format</div>
+          <div class="card-body">
+            <div class="h-sub"><i class="fa-solid fa-key"></i> Authentication — every request</div>
+            <table class="doc-table">
+              <tr><th>Header</th><th>Example</th></tr>
+              <tr><td><code>X-API-Key</code></td><td><code>X-API-Key: wapi_xxxxxxxx_yyyyyyyy</code></td></tr>
+              <tr><td><code>Authorization</code> (alternative)</td><td><code>Authorization: Bearer wapi_xxxxxxxx_yyyyyyyy</code></td></tr>
+            </table>
+            <div class="h-sub"><i class="fa-solid fa-reply"></i> Every response has the same JSON shape</div>
+            <div class="curl-wrap"><pre class="curl">{
+  "success": true,           // false on any error
+  "data": { ... },           // the result payload
+  "error": "",               // human-readable error message
+  "code": ""                 // machine error code, e.g. RATE_LIMITED
+}</pre></div>
+            <div class="h-sub"><i class="fa-solid fa-phone"></i> Recipient format</div>
+            <div class="note-strip"><i class="fa-solid fa-circle-info"></i><div>
+              Digits with country code, <b>no +</b> — e.g. <b>923001234567</b>. Group JIDs ending in <b>@g.us</b> also work.
+            </div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><i class="fa-solid fa-hourglass-half"></i> Anti-Ban Queue — how sending works</div>
+          <div class="card-body">
+            <div class="note-strip warn" style="margin-bottom:14px"><i class="fa-solid fa-shield-halved"></i><div>
+              Messages are <b>never blasted out together</b>. Protection layers, all automatic:
+              <b>one message at a time</b> with a fresh <b>random 5–9s gap</b> · brief <b>"typing…" simulation</b> before each send ·
+              a <b>30–60s cool-down after every 20 messages</b> · a <b>daily send limit</b> (default 500/day, configurable) ·
+              numbers are <b>verified on WhatsApp</b> before sending. Fire as many API requests as you like; they queue automatically.
+            </div></div>
+            <table class="doc-table">
+              <tr><th>Response <code>status</code></th><th>Meaning</th></tr>
+              <tr><td><code>sent</code></td><td>Message went out while your HTTP request was waiting (within ~15s). Fire-and-forget — delivery/seen receipts are <b>not tracked</b>.</td></tr>
+              <tr><td><code>queued</code></td><td>Accepted &amp; in the queue — it WILL send when its turn comes. No action needed. Track via <code>GET /api/status</code> → <code>pendingMessages</code>.</td></tr>
+              <tr><td><code>failed</code></td><td>Send failed (e.g. WhatsApp disconnected mid-queue, or number not on WhatsApp).</td></tr>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><i class="fa-solid fa-code"></i> Code Examples — send a text message</div>
+          <div class="card-body">
+            <div class="lang-tabs" id="langTabs">
+              <button class="active" data-lang="curl"><i class="fa-solid fa-terminal"></i> curl</button>
+              <button data-lang="js"><i class="fa-brands fa-js"></i> JavaScript</button>
+              <button data-lang="php"><i class="fa-brands fa-php"></i> PHP</button>
+              <button data-lang="gas"><i class="fa-solid fa-table"></i> Apps Script</button>
+              <button data-lang="py"><i class="fa-brands fa-python"></i> Python</button>
+            </div>
+            <div class="lang-pane active" data-pane="curl"><div class="curl-wrap"><pre class="curl" id="exCurl"></pre><button class="copy-mini" data-copy-el="exCurl"><i class="fa-regular fa-copy"></i> Copy</button></div></div>
+            <div class="lang-pane" data-pane="js"><div class="curl-wrap"><pre class="curl" id="exJs"></pre><button class="copy-mini" data-copy-el="exJs"><i class="fa-regular fa-copy"></i> Copy</button></div></div>
+            <div class="lang-pane" data-pane="php"><div class="curl-wrap"><pre class="curl" id="exPhp"></pre><button class="copy-mini" data-copy-el="exPhp"><i class="fa-regular fa-copy"></i> Copy</button></div></div>
+            <div class="lang-pane" data-pane="gas"><div class="curl-wrap"><pre class="curl" id="exGas"></pre><button class="copy-mini" data-copy-el="exGas"><i class="fa-regular fa-copy"></i> Copy</button></div></div>
+            <div class="lang-pane" data-pane="py"><div class="curl-wrap"><pre class="curl" id="exPy"></pre><button class="copy-mini" data-copy-el="exPy"><i class="fa-regular fa-copy"></i> Copy</button></div></div>
+            <div class="note-strip" style="margin-top:12px"><i class="fa-brands fa-google"></i><div>
+              Google Sheets / Apps Script? A full drop-in client (<code>WhatsAppApi.gs</code>) with a Sheets bulk-send menu
+              ships in the repo under <code>clients/apps-script/</code>.
+            </div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><i class="fa-solid fa-list"></i> All Endpoints</div>
+          <div class="card-body" id="epDetails"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><i class="fa-solid fa-triangle-exclamation"></i> Errors &amp; Rate Limits</div>
+          <div class="card-body">
+            <table class="doc-table">
+              <tr><th>HTTP</th><th>Code</th><th>When</th></tr>
+              <tr><td>400 / 422</td><td><code>VALIDATION_ERROR</code></td><td>Bad body — check <code>details</code> in the response</td></tr>
+              <tr><td>401</td><td><code>UNAUTHORIZED</code></td><td>Missing / invalid / revoked API key</td></tr>
+              <tr><td>403</td><td><code>ADMIN_REQUIRED</code></td><td>Endpoint needs an admin-role key</td></tr>
+              <tr><td>404</td><td><code>RECIPIENT_NOT_FOUND</code></td><td>Number is not registered on WhatsApp (checked before every send)</td></tr>
+              <tr><td>413</td><td><code>UPLOAD_ERROR</code></td><td>Media file too large (default limit 25 MB)</td></tr>
+              <tr><td>429</td><td><code>RATE_LIMITED</code></td><td>Too many requests — default 120 per key per 15 min (HTTP level; the send queue is separate)</td></tr>
+              <tr><td>429</td><td><code>DAILY_LIMIT_REACHED</code></td><td>Anti-ban daily cap hit (default 500/day, <code>DAILY_SEND_LIMIT</code> in .env) — resets midnight UTC</td></tr>
+              <tr><td>503</td><td><code>WHATSAPP_NOT_CONNECTED</code></td><td>Session not linked — open the dashboard and scan the QR</td></tr>
+            </table>
+            <div class="note-strip"><i class="fa-solid fa-circle-info"></i><div>
+              On <code>429</code>, respect the <code>retry-after</code> response header. The anti-ban queue means the HTTP rate
+              limit is rarely the bottleneck — queued messages drain at one per 5–9s regardless of how fast you call the API.
+            </div></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ============ PAGE: api keys ============ -->
+      <div class="page" id="page-keys">
+        <div class="card" id="keysSection">
+          <div class="card-head"><i class="fa-solid fa-key"></i> API Keys <span class="right">use these in your apps</span></div>
+          <div class="card-body">
+
+            <div class="field" style="margin-bottom:18px">
+              <label><i class="fa-solid fa-id-badge"></i> Your current key <span id="curKeyName" style="color:var(--muted);font-weight:400"></span></label>
+              <div class="key-current">
+                <span class="kv" id="curKeyVal">&bull;&bull;&bull;&bull;&bull;&bull;</span>
+                <button class="copy-mini" id="revealKeyBtn" title="Show / hide"><i class="fa-solid fa-eye"></i></button>
+                <button class="copy-mini" id="copyCurKey"><i class="fa-regular fa-copy"></i> Copy</button>
+              </div>
+            </div>
+
+            <div id="adminKeys" class="hidden">
+              <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px;color:var(--navy)"><i class="fa-solid fa-plus"></i> Generate a new key (one per app is best practice)</label>
+              <div class="gen-row">
+                <div class="field" style="margin:0">
+                  <input type="text" id="genKeyName" placeholder="e.g. my-shop-app" maxlength="100">
+                </div>
+                <div class="role-toggle" id="genKeyRole" data-role="api">
+                  <button type="button" data-r="api" class="active">api</button>
+                  <button type="button" data-r="admin">admin</button>
+                </div>
+                <button class="btn" id="genKeyBtn"><i class="fa-solid fa-bolt"></i> Generate</button>
+              </div>
+              <div id="genResult"></div>
+
+              <label style="display:block;font-size:13px;font-weight:600;margin:20px 0 4px;color:var(--navy)"><i class="fa-solid fa-list"></i> All keys</label>
+              <div style="overflow-x:auto">
+                <table class="key-table">
+                  <thead><tr><th>Name</th><th>Prefix</th><th>Role</th><th>Last used</th><th>Status</th><th></th></tr></thead>
+                  <tbody id="keyTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <footer>
+    Developed by <b>Mohammad Rameez Imdad</b> (Rameez Scripts)
+    <span class="f-links">
+      <a href="https://wa.me/923224083545" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>
+      <a href="https://www.youtube.com/@rameezimdad" target="_blank" rel="noopener"><i class="fa-brands fa-youtube"></i> YouTube</a>
+    </span>
+  </footer>
+
+</div>
+
+<script>
+  // tiny helpers
+  const $ = id => document.getElementById(id);
+  const show = el => el.classList.remove('hidden');
+  const hide = el => el.classList.add('hidden');
+  const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
+  let key = localStorage.getItem('wapi_key') || '';
+  let me = null;            // /api/me payload
+  let serverInfo = null;    // /api/server-info payload
+  let qrExpiresAt = 0;
+  let qrBusy = false;
+  let pollTimer = null;
+  let apiBuilt = false;
+
+  const api = async (path, opts = {}) => {
+    const headers = { 'x-api-key': key, ...(opts.headers || {}) };
+    if (opts.body && typeof opts.body === 'string') headers['content-type'] = 'application/json';
+    const res = await fetch(path, { ...opts, headers });
+    let json = {};
+    try { json = await res.json(); } catch { /* png or empty */ }
+    if (res.status === 401) { lock('Your API key is invalid or was revoked.'); throw new Error('AUTH'); }
+    return { res, json };
+  };
+
+  // ---- sidebar + pages ----
+  const PAGES = {
+    dashboard: { icon: 'fa-gauge-high',     title: 'Dashboard' },
+    queue:     { icon: 'fa-hourglass-half', title: 'Message Queue' },
+    docs:      { icon: 'fa-book',           title: 'API Docs' },
+    keys:      { icon: 'fa-key',            title: 'API Keys' }
+  };
+
+  const showPage = name => {
+    document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + name));
+    document.querySelectorAll('.sb-menu button[data-page]').forEach(b => b.classList.toggle('active', b.dataset.page === name));
+    $('pageIcon').className = 'fa-solid ' + PAGES[name].icon;
+    $('pageTitle').textContent = PAGES[name].title;
+    $('pageCrumb').textContent = PAGES[name].title;
+    document.body.classList.remove('sb-open');
+    if (name === 'docs' && !apiBuilt) buildDocs();
+    if (name === 'queue') startQueuePoll(); else stopQueuePoll();
+    window.scrollTo({ top: 0 });
+  };
+
+  document.querySelectorAll('.sb-menu button[data-page]').forEach(b => b.onclick = () => showPage(b.dataset.page));
+  $('sbOverlay').onclick = () => document.body.classList.remove('sb-open');
+  $('burger').onclick = () => {
+    if (window.innerWidth <= 860) document.body.classList.toggle('sb-open');
+    else {
+      document.body.classList.toggle('sb-mini');
+      localStorage.setItem('wapi_sb_mini', document.body.classList.contains('sb-mini') ? '1' : '0');
+    }
+  };
+  if (localStorage.getItem('wapi_sb_mini') === '1') document.body.classList.add('sb-mini');
+
+  // ---- key gate ----
+  const lock = msg => {
+    clearTimeout(pollTimer);
+    stopQueuePoll();
+    localStorage.removeItem('wapi_key');
+    key = ''; me = null; apiBuilt = false;
+    hide($('connView')); hide($('changeKeyBtn'));
+    show($('gateView'));
+    document.body.classList.add('locked');
+    setPill('down', 'Locked');
+    if (msg) { $('gateAlertText').textContent = msg; $('gateAlert').classList.add('show'); }
+  };
+
+  const unlock = async candidate => {
+    const btn = $('unlockBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch spin"></i> Checking…';
+    try {
+      const probe = await fetch('/api/me', { headers: { 'x-api-key': candidate } });
+      const json = await probe.json().catch(() => ({}));
+      if (!probe.ok) {
+        $('gateAlertText').textContent = json.error || 'Invalid API key.';
+        $('gateAlert').classList.add('show');
+        return;
+      }
+      key = candidate;
+      me = json.data;
+      localStorage.setItem('wapi_key', key);
+      $('gateAlert').classList.remove('show');
+      hide($('gateView')); show($('connView')); show($('changeKeyBtn'));
+      document.body.classList.remove('locked');
+      $('keyWho').innerHTML = '<i class="fa-solid fa-id-badge"></i> ' + esc(me.name || 'key') + ' &middot; ' + esc(me.role);
+      $('kpiRole').textContent = me.role;
+      $('kpiKeyName').textContent = me.name || 'key';
+      tick();
+      renderKeys();
+    } catch {
+      $('gateAlertText').textContent = 'Could not reach the server.';
+      $('gateAlert').classList.add('show');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-unlock"></i> Unlock';
+    }
+  };
+
+  $('unlockBtn').onclick = () => { const v = $('keyInput').value.trim(); if (v) unlock(v); };
+  $('keyInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('unlockBtn').click(); });
+  $('changeKeyBtn').onclick = () => lock();
+
+  // ---- status pill (navbar + sidebar) ----
+  const setPill = (cls, text) => {
+    $('statusPill').className = 'status-pill ' + cls;
+    $('statusPillText').textContent = text;
+    $('sbStatus').className = 'sb-status ' + cls;
+    $('sbStatusText').textContent = text;
+  };
+
+  // ---- connection states ----
+  const showState = id => {
+    ['stateLoading', 'stateQr', 'stateConnected', 'stateError'].forEach(s => hide($(s)));
+    show($(id));
+  };
+
+  const gapText = s => s.queueGapMs ? Math.round(s.queueGapMs.min / 1000) + '–' + Math.round(s.queueGapMs.max / 1000) + 's' : '5–9s';
+
+  const render = async status => {
+    // KPI + sidebar badge updates on every poll
+    const pending = status.pendingMessages || 0;
+    $('kpiQueue').textContent = pending;
+    $('sbQueueBadge').textContent = pending;
+    $('sbQueueBadge').classList.toggle('hidden', !pending);
+    if (status.dailyLimit) $('kpiQueueFoot').textContent = 'today: ' + (status.sentToday || 0) + ' / ' + status.dailyLimit + ' daily limit';
+    $('kpiGap').textContent = gapText(status);
+    $('kpiConn').textContent = status.connected ? 'Online' : (status.status === 'qr_ready' ? 'Scan QR' : status.status);
+    $('kpiConnBox').className = 'small-box ' + (status.connected ? 'sb-green' : 'sb-red');
+    $('kpiConnFoot').textContent = status.connected ? (status.user || 'linked device') : 'not connected';
+
+    if (status.connected) {
+      showState('stateConnected');
+      setPill('connected', 'Connected');
+      $('connUser').textContent = status.user || 'linked device';
+      $('connSince').textContent = status.connectedAt ? 'connected since ' + new Date(status.connectedAt).toLocaleString() : '';
+      $('queueInfo').classList.toggle('hidden', !pending);
+      $('queueInfo').innerHTML = pending ? '<i class="fa-solid fa-hourglass-half"></i> ' + pending + ' message(s) in queue — sending one every ' + gapText(status) + ' (anti-ban)' : '';
+      show($('apiSection'));
+      return;
+    }
+
+    hide($('apiSection'));
+    if (status.status === 'qr_ready' || status.qrAvailable) {
+      await ensureQr();
+      return;
+    }
+    if (['connecting', 'reconnecting', 'logged_out', 'stopped'].includes(status.status)) {
+      showState('stateLoading');
+      setPill('waiting', status.status === 'reconnecting' ? 'Reconnecting' : 'Starting');
+      $('loadingTitle').textContent = status.status === 'reconnecting' ? 'Reconnecting to WhatsApp…' : 'Starting WhatsApp session…';
+      $('loadingText').textContent = 'A QR code will appear here in a few seconds.';
+      await ensureQr(); // server long-polls until a QR exists
+      return;
+    }
+    showState('stateError');
+    setPill('down', 'Error');
+    $('errorText').textContent = (status.lastError || 'Unknown error') + ' — retrying automatically.';
+  };
+
+  const ensureQr = async () => {
+    if (qrBusy) return;
+    if (qrExpiresAt - Date.now() > 8000 && !$('qrFrame').classList.contains('expired')) return; // current QR still fresh
+    qrBusy = true;
+    try {
+      const { res, json } = await api('/api/qr');
+      if (res.status === 409) return;       // connected meanwhile
+      if (!res.ok || !json.data?.dataUrl) return; // not ready yet, next tick retries
+      $('qrImg').src = json.data.dataUrl;
+      qrExpiresAt = Date.parse(json.data.expiresAt) || (Date.now() + 60000);
+      $('qrFrame').classList.remove('expired');
+      showState('stateQr');
+      setPill('waiting', 'Scan QR');
+    } catch { /* tick retries */ }
+    finally { qrBusy = false; }
+  };
+
+  // countdown on the QR caption
+  setInterval(() => {
+    if ($('stateQr').classList.contains('hidden')) return;
+    const left = Math.max(0, Math.round((qrExpiresAt - Date.now()) / 1000));
+    $('qrMeta').innerHTML = left > 0
+      ? '<i class="fa-solid fa-clock"></i> QR expires in <b>' + left + 's</b> — auto-refreshes'
+      : 'Getting a fresh QR…';
+    if (left <= 0) $('qrFrame').classList.add('expired');
+  }, 1000);
+
+  const tick = async () => {
+    clearTimeout(pollTimer);
+    try {
+      const { json } = await api('/api/status');
+      if (json.success) await render(json.data);
+    } catch (e) { if (e.message === 'AUTH') return; }
+    pollTimer = setTimeout(tick, 4000);
+  };
+
+  // ---- message queue page ----
+  const TYPE_ICONS = { text: 'fa-message', image: 'fa-image', document: 'fa-file', audio: 'fa-microphone', location: 'fa-location-dot' };
+  let qTimer = null;
+  let qStatus = '';
+
+  const mTime = iso => {
+    const d = new Date(iso);
+    const today = new Date().toDateString() === d.toDateString();
+    return today ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : d.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
+  };
+
+  const loadQueue = async () => {
+    try {
+      const { res, json } = await api('/api/messages?limit=100' + (qStatus ? '&status=' + qStatus : ''));
+      if (!res.ok || !json.success) return;
+      const { counts, messages } = json.data;
+      const c = s => counts[s] || 0;
+      $('qcQueued').textContent = c('queued');
+      $('qcSent').textContent = c('sent') + c('delivered') + c('read'); // legacy delivered/read rows count as sent
+      $('qcFailed').textContent = c('failed');
+      $('qcAll').textContent = Object.values(counts).reduce((sum, n) => sum + n, 0);
+
+      let qPos = 0; // position counter for queued rows (FIFO)
+      $('qBody').innerHTML = messages.length ? messages.map(m => {
+        const pos = m.status === 'queued' ? '<span class="pos">#' + (++qPos) + '</span>' : '';
+        const ico = TYPE_ICONS[m.type] || 'fa-message';
+        return '<tr>' +
+          '<td>' + (pos || '<span style="color:var(--line)">—</span>') + '</td>' +
+          '<td><span class="tico" title="' + m.type + '"><i class="fa-solid ' + ico + '"></i></span></td>' +
+          '<td class="rcpt">' + esc(m.recipient.replace('@s.whatsapp.net', '')) + '</td>' +
+          '<td class="prev" title="' + esc(m.preview) + '">' + (esc(m.preview) || '<i style="color:var(--line)">media</i>') +
+            (m.error ? '<span class="err"><i class="fa-solid fa-circle-exclamation"></i> ' + esc(m.error) + '</span>' : '') + '</td>' +
+          '<td><span class="mbadge ' + m.status + '">' + m.status + '</span></td>' +
+          '<td class="tm">' + mTime(m.createdAt) + '</td>' +
+          '</tr>';
+      }).join('') : '<tr><td colspan="6" class="q-empty"><i class="fa-solid fa-inbox"></i>No messages ' + (qStatus ? 'with status "' + qStatus + '"' : 'yet') + '</td></tr>';
+      $('qRefreshed').textContent = 'updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    } catch (e) { /* AUTH handled in api(); transient errors retry next poll */ }
+  };
+
+  const startQueuePoll = () => { stopQueuePoll(); loadQueue(); qTimer = setInterval(loadQueue, 4000); };
+  const stopQueuePoll = () => { clearInterval(qTimer); qTimer = null; };
+
+  $('qChips').addEventListener('click', e => {
+    const b = e.target.closest('button[data-status]');
+    if (!b) return;
+    qStatus = b.dataset.status;
+    [...$('qChips').children].forEach(c => c.classList.toggle('active', c === b));
+    loadQueue();
+  });
+
+  // ---- logout ----
+  $('logoutBtn').onclick = async () => {
+    if (!confirm('Logout this WhatsApp session? You will need to scan the QR again.')) return;
+    const btn = $('logoutBtn');
+    btn.disabled = true;
+    try {
+      const { res, json } = await api('/api/logout', { method: 'POST' });
+      if (res.status === 403) alert('An admin API key is required to logout.');
+      else if (!res.ok) alert(json.error || 'Logout failed.');
+      else tick();
+    } finally { btn.disabled = false; }
+  };
+
+  // ---- API DOCS ----
+  const isIpish = h => /^[0-9.]+$/.test(h) || h === 'localhost' || h.includes(':');
+
+  const baseCard = base => (
+    '<div class="base-url"><i class="fa-solid fa-link"></i><span>' + base + '/api</span>' +
+    '<button class="copy-mini" data-copy="' + base + '/api"><i class="fa-regular fa-copy"></i> Copy</button></div>'
+  );
+
+  // endpoint reference data — params: [name, type, required, note]
+  const EP_DOCS = [
+    { m: 'POST', p: '/api/send-message', sum: 'send a text message', params: [
+        ['to', 'string', 1, 'recipient, digits with country code'],
+        ['message', 'string', 1, '1–4096 characters']
+      ],
+      ex: { to: '923001234567', message: 'Hello from API' } },
+    { m: 'POST', p: '/api/send-image', sum: 'jpeg / png / webp', params: [
+        ['to', 'string', 1, 'recipient'],
+        ['url', 'string', 0, 'public image URL (or upload multipart field "file")'],
+        ['caption', 'string', 0, 'up to 1024 chars'],
+        ['fileName', 'string', 0, 'display name']
+      ],
+      ex: { to: '923001234567', url: 'https://example.com/photo.jpg', caption: 'Check this!' } },
+    { m: 'POST', p: '/api/send-document', sum: 'pdf, office, zip…', params: [
+        ['to', 'string', 1, 'recipient'],
+        ['url', 'string', 0, 'public file URL (or multipart "file")'],
+        ['caption', 'string', 0, ''],
+        ['fileName', 'string', 0, 'e.g. invoice.pdf']
+      ],
+      ex: { to: '923001234567', url: 'https://example.com/invoice.pdf', fileName: 'invoice.pdf' } },
+    { m: 'POST', p: '/api/send-audio', sum: 'audio / voice note', params: [
+        ['to', 'string', 1, 'recipient'],
+        ['url', 'string', 0, 'public audio URL (or multipart "file")'],
+        ['ptt', 'boolean', 0, 'true = send as voice note']
+      ],
+      ex: { to: '923001234567', url: 'https://example.com/audio.mp3', ptt: true } },
+    { m: 'POST', p: '/api/send-location', sum: 'latitude + longitude pin', params: [
+        ['to', 'string', 1, 'recipient'],
+        ['latitude', 'number', 1, '-90 to 90'],
+        ['longitude', 'number', 1, '-180 to 180'],
+        ['name', 'string', 0, 'place name'],
+        ['address', 'string', 0, 'address line']
+      ],
+      ex: { to: '923001234567', latitude: 24.8607, longitude: 67.0011, name: 'Office' } },
+    { m: 'GET', p: '/api/status', sum: 'connection + queue status', params: [],
+      resp: '{ "status": "connected", "connected": true, "pendingMessages": 2,\n  "queueGapMs": { "min": 5000, "max": 9000 },\n  "sentToday": 41, "dailyLimit": 500, "user": "923***545@s.whatsapp.net", ... }' },
+    { m: 'GET', p: '/api/messages', sum: 'queue + history (?status=queued&limit=100)', params: [
+        ['status', 'string', 0, 'queued | sent | failed'],
+        ['limit', 'number', 0, '1–200, default 50']
+      ],
+      resp: '{ "counts": { "queued": 2, "sent": 40, "failed": 1 },\n  "messages": [ { "id": "…", "recipient": "923…", "type": "text", "preview": "Hello…",\n    "status": "queued", "createdAt": "…" } ] }\n// admin key = all messages; api-role key = only its own' },
+    { m: 'GET', p: '/api/me', sum: 'info about your API key', params: [],
+      resp: '{ "id": "…", "name": "my-shop-app", "role": "api", "prefix": "wapi_xxxx", "expiresAt": null }' },
+    { m: 'GET', p: '/api/qr', sum: 'QR code (?format=png for raw image)', params: [],
+      resp: '{ "dataUrl": "data:image/png;base64,…", "expiresAt": "2026-01-01T00:00:00Z" }' },
+    { m: 'GET', p: '/api/server-info', sum: 'domain / IP / port of this server', params: [],
+      resp: '{ "domain": "yourdomain.com", "ip": "203.0.113.7", "port": 3000 }' },
+    { m: 'ADMIN', p: '/api/logout', sum: 'unlink WhatsApp (POST, admin key)', params: [],
+      resp: 'logs out the session; a new QR is generated automatically' },
+    { m: 'ADMIN', p: '/api/admin/generate-key', sum: 'create API key (POST)', params: [
+        ['name', 'string', 1, '2–100 chars, e.g. my-shop-app'],
+        ['role', 'string', 0, '"api" (default) or "admin"'],
+        ['expiresAt', 'ISO date', 0, 'optional expiry']
+      ],
+      ex: { name: 'my-shop-app', role: 'api' } },
+    { m: 'ADMIN', p: '/api/admin/revoke-key', sum: 'kill a key instantly (POST)', params: [
+        ['id', 'string', 1, 'the key prefix from list-keys']
+      ],
+      ex: { id: 'wapi_xxxxxxxx' } },
+    { m: 'ADMIN', p: '/api/admin/list-keys', sum: 'all keys + usage (GET)', params: [],
+      resp: '{ "keys": [ { "name": "…", "prefix": "wapi_xxxx", "role": "api", "last_used_at": "…", "revoked_at": null } ] }' }
+  ];
+
+  const paramsTable = params => !params.length ? '' :
+    '<table class="doc-table"><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr>' +
+    params.map(([n, t, r, note]) =>
+      '<tr><td><code>' + n + '</code></td><td>' + t + '</td><td>' + (r ? '<span class="req">yes</span>' : '<span class="opt">no</span>') + '</td><td>' + note + '</td></tr>'
+    ).join('') + '</table>';
+
+  const epCurl = (base, ep) => {
+    if (ep.m === 'GET') return 'curl ' + base + ep.p + ' \\\n  -H "X-API-Key: YOUR_API_KEY"';
+    const body = ep.ex ? JSON.stringify(ep.ex) : '{}';
+    return 'curl -X POST ' + base + ep.p + ' \\\n  -H "X-API-Key: YOUR_API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d \'' + body + '\'';
+  };
+
+  const buildEndpointDocs = base => {
+    $('epDetails').innerHTML = EP_DOCS.map((ep, i) => {
+      const mClass = ep.m === 'GET' ? 'get' : (ep.m === 'ADMIN' ? 'admin' : '');
+      const mLabel = ep.m === 'ADMIN' ? 'ADMIN' : ep.m;
+      const exId = 'epx' + i;
+      return (
+        '<div class="ep-block">' +
+        '<button class="ep-head" data-ep="' + i + '">' +
+        '<span class="method ' + mClass + '">' + mLabel + '</span>' +
+        '<span class="ep-path">' + ep.p + '</span>' +
+        '<span class="ep-sum">' + ep.sum + '</span>' +
+        '<i class="fa-solid fa-chevron-down chev"></i>' +
+        '</button>' +
+        '<div class="ep-body">' +
+        paramsTable(ep.params) +
+        (ep.resp ? '<div class="h-sub"><i class="fa-solid fa-reply"></i> Response data</div><div class="curl-wrap"><pre class="curl">' + esc(ep.resp) + '</pre></div>' : '') +
+        '<div class="h-sub"><i class="fa-solid fa-terminal"></i> Example</div>' +
+        '<div class="curl-wrap"><pre class="curl" id="' + exId + '">' + esc(epCurl(base, ep)) + '</pre>' +
+        '<button class="copy-mini" data-copy-el="' + exId + '"><i class="fa-regular fa-copy"></i> Copy</button></div>' +
+        '</div></div>'
+      );
+    }).join('');
+  };
+
+  const codeSamples = base => {
+    $('exCurl').textContent = 'curl -X POST ' + base + '/api/send-message \\\n' +
+      '  -H "X-API-Key: YOUR_API_KEY" \\\n' +
+      '  -H "Content-Type: application/json" \\\n' +
+      '  -d \'{"to":"923001234567","message":"Hello from API"}\'';
+
+    $('exJs').textContent = 'const res = await fetch(\'' + base + '/api/send-message\', {\n' +
+      '  method: \'POST\',\n' +
+      '  headers: {\n' +
+      '    \'X-API-Key\': \'YOUR_API_KEY\',\n' +
+      '    \'Content-Type\': \'application/json\'\n' +
+      '  },\n' +
+      '  body: JSON.stringify({ to: \'923001234567\', message: \'Hello from API\' })\n' +
+      '});\n' +
+      'const data = await res.json();\n' +
+      'console.log(data.success, data.data.status); // true "sent" | "queued"';
+
+    $('exPhp').textContent = '$ch = curl_init(\'' + base + '/api/send-message\');\n' +
+      'curl_setopt_array($ch, [\n' +
+      '  CURLOPT_POST => true,\n' +
+      '  CURLOPT_RETURNTRANSFER => true,\n' +
+      '  CURLOPT_HTTPHEADER => [\n' +
+      '    \'X-API-Key: YOUR_API_KEY\',\n' +
+      '    \'Content-Type: application/json\'\n' +
+      '  ],\n' +
+      '  CURLOPT_POSTFIELDS => json_encode([\'to\' => \'923001234567\', \'message\' => \'Hello from API\'])\n' +
+      ']);\n' +
+      '$out = json_decode(curl_exec($ch), true);\n' +
+      'curl_close($ch);\n' +
+      'if (!($out[\'success\'] ?? false)) error_log($out[\'error\'] ?? \'send failed\');';
+
+    $('exGas').textContent = '// Apps Script / Google Sheets — UrlFetchApp is server-side, no CORS\n' +
+      'function sendWhatsApp(to, message) {\n' +
+      '  const res = UrlFetchApp.fetch(\'' + base + '/api/send-message\', {\n' +
+      '    method: \'post\',\n' +
+      '    contentType: \'application/json\',\n' +
+      '    headers: { \'X-API-Key\': \'YOUR_API_KEY\' },\n' +
+      '    payload: JSON.stringify({ to: to, message: message }),\n' +
+      '    muteHttpExceptions: true\n' +
+      '  });\n' +
+      '  const data = JSON.parse(res.getContentText());\n' +
+      '  if (!data.success) throw new Error(data.error);\n' +
+      '  return data.data; // { id, status: "sent"|"queued", ... }\n' +
+      '}\n' +
+      '// Full drop-in client + Sheets bulk-send menu: clients/apps-script/WhatsAppApi.gs';
+
+    $('exPy').textContent = 'import requests\n\n' +
+      'res = requests.post(\'' + base + '/api/send-message\',\n' +
+      '    headers={\'X-API-Key\': \'YOUR_API_KEY\'},\n' +
+      '    json={\'to\': \'923001234567\', \'message\': \'Hello from API\'})\n' +
+      'data = res.json()\n' +
+      'print(data[\'success\'], data[\'data\'][\'status\'])  # True sent|queued';
+  };
+
+  const buildDocs = async () => {
+    if (!serverInfo) {
+      try { const { json } = await api('/api/server-info'); serverInfo = json.data || {}; }
+      catch { serverInfo = {}; }
+    }
+    const loc = window.location;
+    const hostIsIp = isIpish(loc.hostname);
+
+    // domain card: env wins, else current origin when it is a real domain
+    const domainBase = serverInfo.domain ? 'https://' + serverInfo.domain : (!hostIsIp ? loc.origin : null);
+    $('domainBody').innerHTML = domainBase
+      ? baseCard(domainBase)
+      : '<div class="no-domain"><i class="fa-solid fa-globe fa-lg"></i><br>No domain configured for this VPS.<br>' +
+        'Point a domain to this server and set <code>PUBLIC_DOMAIN=yourdomain.com</code> in <code>.env</code>, then restart.</div>';
+
+    // ip card: current origin when browsing by IP (keeps port), else detected public ip
+    const ipBase = hostIsIp ? loc.origin : (serverInfo.ip ? 'http://' + serverInfo.ip : null);
+    $('ipBody').innerHTML = ipBase
+      ? baseCard(ipBase)
+      : '<div class="no-domain"><i class="fa-solid fa-server fa-lg"></i><br>Could not detect the VPS IP. Set <code>PUBLIC_IP=x.x.x.x</code> in <code>.env</code> and restart.</div>';
+
+    const base = domainBase || ipBase || loc.origin;
+    codeSamples(base);
+    buildEndpointDocs(base);
+    apiBuilt = true;
+  };
+
+  // language tabs
+  $('langTabs').addEventListener('click', e => {
+    const b = e.target.closest('button[data-lang]');
+    if (!b) return;
+    [...$('langTabs').children].forEach(c => c.classList.toggle('active', c === b));
+    document.querySelectorAll('.lang-pane').forEach(p => p.classList.toggle('active', p.dataset.pane === b.dataset.lang));
+  });
+
+  // endpoint accordions (delegated)
+  document.addEventListener('click', e => {
+    const head = e.target.closest('.ep-head');
+    if (head) head.parentElement.classList.toggle('open');
+  });
+
+  // copy that also works on plain http (clipboard API needs https)
+  const copyText = async text => {
+    try { await navigator.clipboard.writeText(text); return true; } catch { /* http or denied */ }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;font-size:16px';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select(); ta.setSelectionRange(0, text.length);
+      const okay = document.execCommand('copy');
+      ta.remove();
+      return okay;
+    } catch { return false; }
+  };
+  const flashCopied = (btn, okay) => {
+    const old = btn.innerHTML;
+    btn.innerHTML = okay ? '<i class="fa-solid fa-check"></i> Copied' : '<i class="fa-solid fa-xmark"></i> Failed';
+    setTimeout(() => { btn.innerHTML = old; }, 1400);
+  };
+
+  // copy buttons (delegated)
+  document.addEventListener('click', async e => {
+    const btn = e.target.closest('.copy-mini');
+    if (!btn || btn.id === 'revealKeyBtn' || btn.id === 'copyCurKey') return;
+    const text = btn.dataset.copyEl ? $(btn.dataset.copyEl).textContent : btn.dataset.copy;
+    if (!text) return;
+    flashCopied(btn, await copyText(text));
+  });
+
+  // ---- test send ----
+  $('testSendBtn').onclick = async () => {
+    const to = $('testTo').value.trim();
+    const message = $('testMsg').value.trim();
+    const alertBox = $('sendAlert');
+    alertBox.classList.remove('show', 'okay', 'error');
+    if (!to || !message) {
+      alertBox.classList.add('show', 'error');
+      $('sendAlertIcon').className = 'fa-solid fa-circle-exclamation';
+      $('sendAlertText').textContent = 'Enter a recipient number and a message.';
+      return;
+    }
+    const btn = $('testSendBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch spin"></i> Sending…';
+    try {
+      const { res, json } = await api('/api/send-message', { method: 'POST', body: JSON.stringify({ to, message }) });
+      const okay = res.ok && json.success;
+      alertBox.classList.add('show', okay ? 'okay' : 'error');
+      $('sendAlertIcon').className = okay ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-exclamation';
+      $('sendAlertText').textContent = okay
+        ? (json.data.status === 'queued'
+          ? 'Queued! It will send shortly — anti-ban gap of 5–9s between messages.'
+          : 'Sent! WhatsApp message ID: ' + (json.data.waMessageId || json.data.id))
+        : (json.error || 'Send failed') + (json.details ? ' — ' + json.details.map(d => d.message).join(', ') : '');
+      if (okay) $('testMsg').value = '';
+    } catch (e) {
+      if (e.message !== 'AUTH') {
+        alertBox.classList.add('show', 'error');
+        $('sendAlertIcon').className = 'fa-solid fa-circle-exclamation';
+        $('sendAlertText').textContent = 'Network error — is the server running?';
+      }
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send';
+    }
+  };
+
+  // ---- api keys panel ----
+  const maskKey = k => !k ? '••••••' : (k.length > 18 ? k.slice(0, 12) + '••••••••' + k.slice(-4) : '••••••');
+  let keyShown = false;
+
+  const renderKeys = () => {
+    $('curKeyName').textContent = me ? '· ' + (me.name || 'key') + ' · ' + me.role : '';
+    $('curKeyVal').textContent = keyShown ? key : maskKey(key);
+    const admin = me?.role === 'admin';
+    $('adminKeys').classList.toggle('hidden', !admin);
+    if (admin) loadKeyList();
+  };
+
+  $('revealKeyBtn').onclick = () => {
+    keyShown = !keyShown;
+    $('curKeyVal').textContent = keyShown ? key : maskKey(key);
+    $('revealKeyBtn').innerHTML = keyShown ? '<i class="fa-solid fa-eye-slash"></i>' : '<i class="fa-solid fa-eye"></i>';
+  };
+  $('copyCurKey').onclick = async () => flashCopied($('copyCurKey'), await copyText(key));
+
+  $('genKeyRole').addEventListener('click', e => {
+    const b = e.target.closest('button[data-r]');
+    if (!b) return;
+    $('genKeyRole').dataset.role = b.dataset.r;
+    [...$('genKeyRole').children].forEach(c => c.classList.toggle('active', c === b));
+  });
+
+  const loadKeyList = async () => {
+    try {
+      const { res, json } = await api('/api/admin/list-keys');
+      if (!res.ok) return;
+      const rows = json.data?.keys || [];
+      $('keyTableBody').innerHTML = rows.length ? rows.map(k => {
+        const dead = k.revoked_at || (k.expires_at && Date.parse(k.expires_at) < Date.now());
+        const status = k.revoked_at ? '<span class="kbadge rev">revoked</span>'
+          : (k.expires_at && Date.parse(k.expires_at) < Date.now()) ? '<span class="kbadge rev">expired</span>'
+          : '<span class="kbadge ok">active</span>';
+        const used = k.last_used_at ? new Date(k.last_used_at).toLocaleDateString() : '—';
+        const act = dead ? '' : '<button class="kbtn danger" data-revoke="' + k.prefix + '"><i class="fa-solid fa-ban"></i> Revoke</button>';
+        return '<tr><td>' + esc(k.name) + '</td><td><code>' + k.prefix + '</code></td><td>' + k.role + '</td><td>' + used + '</td><td>' + status + '</td><td>' + act + '</td></tr>';
+      }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">No keys generated yet</td></tr>';
+    } catch { /* not admin / network */ }
+  };
+
+  $('genKeyBtn').onclick = async () => {
+    const name = $('genKeyName').value.trim();
+    const role = $('genKeyRole').dataset.role;
+    if (name.length < 2) { alert('Enter a name (at least 2 characters).'); return; }
+    const btn = $('genKeyBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch spin"></i>';
+    try {
+      const { res, json } = await api('/api/admin/generate-key', { method: 'POST', body: JSON.stringify({ name, role }) });
+      if (!res.ok) {
+        $('genResult').innerHTML = '<div class="alert error show"><i class="fa-solid fa-circle-exclamation"></i><span>' + esc(json.error || 'Failed to generate') + '</span></div>';
+        return;
+      }
+      const raw = json.data.apiKey;
+      const id = 'gk' + Math.random().toString(36).slice(2, 7);
+      $('genResult').innerHTML =
+        '<div class="alert okay show" style="display:block"><b><i class="fa-solid fa-circle-check"></i> Key for "' + esc(json.data.name) + '" created — copy it now, it is shown only once:</b>' +
+        '<div class="curl-wrap" style="margin-top:8px"><pre class="curl" id="' + id + '">' + raw + '</pre>' +
+        '<button class="copy-mini" data-copy-el="' + id + '"><i class="fa-regular fa-copy"></i> Copy</button></div></div>';
+      $('genKeyName').value = '';
+      loadKeyList();
+    } catch { /* AUTH handled in api() */ }
+    finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Generate'; }
+  };
+
+  // revoke (delegated)
+  document.addEventListener('click', async e => {
+    const b = e.target.closest('[data-revoke]');
+    if (!b) return;
+    if (!confirm('Revoke this key? Apps using it will stop working immediately.')) return;
+    try { await api('/api/admin/revoke-key', { method: 'POST', body: JSON.stringify({ id: b.dataset.revoke }) }); loadKeyList(); }
+    catch { /* AUTH handled in api() */ }
+  });
+
+  // ---- boot ----
+  show($('gateView'));
+  document.body.classList.add('locked');
+  setPill('down', 'Locked');
+  if (key) unlock(key); // hides the gate on success
+</script>
+</body>
+</html>
