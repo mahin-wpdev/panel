@@ -455,5 +455,9 @@
     "Change_title_in_user_Plan_order": "Change title in user Plan order",
     "Hotspot_Package": "Hotspot Package",
     "PPPOE_Package": "PPPOE Package",
-    "VPN_Package": "VPN Package"
+    "VPN_Package": "VPN Package",
+    "Failed_Login": "Failed Login",
+    "Invalid_Username_or_Password": "Invalid Username or Password",
+    "danger": "danger",
+    "ODPs": "ODPs"
 }
