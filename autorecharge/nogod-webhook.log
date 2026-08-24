@@ -1,0 +1,22 @@
+2026-08-25 04:01:36 PARSED SUCCESS
+REF: test
+USERNAME_USED: test
+AMOUNT: 500
+SENDER: 01776159990
+TRXID: NAG001
+BALANCE: 822.45
+DATE: 25/08/2026
+TIME: 18:38
+
+2026-08-25 04:01:37 RESULT
+Array
+(
+    [status] => success
+    [gateway] => Nagad
+    [message] => Recharge completed
+    [username] => test
+    [amount] => 500
+    [trxid] => NAG001
+)
+
+

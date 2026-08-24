@@ -1,0 +1,14 @@
+2026-08-25 03:57:59 START gateway=bKash username=test amount=500 sender=01776159990 trxid=ABC12557YZ
+2026-08-25 03:57:59 ROUTER CONFIG MISSING
+2026-08-25 03:59:00 START gateway=bKash username=test amount=500 sender=01776159990 trxid=ABC12557YZ
+2026-08-25 03:59:00 ROUTER AUTO-DETECTED: Mikrotik (no auto_payment_router_name config set)
+2026-08-25 03:59:00 CUSTOMER FOUND id=1
+2026-08-25 03:59:00 PLAN FOUND id=1 name=test price=500 router=Mikrotik
+2026-08-25 03:59:00 CALLING Package::rechargeUser()
+2026-08-25 03:59:01 RECHARGE RESULT: INV-1
+2026-08-25 04:01:36 START gateway=Nagad username=test amount=500 sender=01776159990 trxid=NAG001
+2026-08-25 04:01:36 ROUTER AUTO-DETECTED: Mikrotik (no auto_payment_router_name config set)
+2026-08-25 04:01:36 CUSTOMER FOUND id=1
+2026-08-25 04:01:36 PLAN FOUND id=1 name=test price=500 router=Mikrotik
+2026-08-25 04:01:36 CALLING Package::rechargeUser()
+2026-08-25 04:01:37 RECHARGE RESULT: INV-2
