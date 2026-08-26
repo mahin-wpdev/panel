@@ -20,3 +20,47 @@ Array
 )
 
 
+2026-08-26 16:25:40 PARSED SUCCESS
+REF: test
+USERNAME_USED: test
+AMOUNT: 500
+SENDER: 01776159990
+TRXID: NAG00DFGS1
+BALANCE: 822.45
+DATE: 25/08/2026
+TIME: 18:38
+
+2026-08-26 16:25:44 RESULT
+Array
+(
+    [status] => success
+    [gateway] => Nagad
+    [message] => Recharge completed
+    [username] => test
+    [amount] => 500
+    [trxid] => NAG00DFGS1
+)
+
+
+2026-08-26 16:26:35 PARSED SUCCESS
+REF: test
+USERNAME_USED: test
+AMOUNT: 500
+SENDER: 01776159990
+TRXID: NAG00DFG1
+BALANCE: 822.45
+DATE: 25/08/2026
+TIME: 18:38
+
+2026-08-26 16:26:37 RESULT
+Array
+(
+    [status] => success
+    [gateway] => Nagad
+    [message] => Recharge completed
+    [username] => test
+    [amount] => 500
+    [trxid] => NAG00DFG1
+)
+
+
