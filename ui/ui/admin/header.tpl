@@ -111,23 +111,41 @@
         </header>
         <aside class="main-sidebar">
             <section class="sidebar">
+                {if $_admin['user_type'] eq 'Agent'}
+                <style>{literal}.sidebar-menu > li.agent-hide{display:none!important}{/literal}</style>
+                {/if}
+                <script>{literal}document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.sidebar-menu a[href*="_route=plugin/reseller"],.sidebar-menu a[href*="_route=plugin/quickadd"]').forEach(function(link){var item=link.closest('li');if(item)item.remove();});var ids={'Create / Update Reseller':'reseller-config','Allowed Packages by Reseller':'package-management','Manual Profit Settlement':'profit-settlement'};document.querySelectorAll('.box').forEach(function(box){var h=box.querySelector('.box-title');if(h&&ids[h.textContent.trim()])box.id=ids[h.textContent.trim()];});if(location.hash){var target=document.getElementById(location.hash.slice(1));if(target)setTimeout(function(){target.scrollIntoView({behavior:'smooth',block:'start'});},80);}});{/literal}</script>
+                {if $_admin['user_type'] eq 'Agent'}<script>{literal}document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.sidebar-menu a[href*="_route=plugin/mikrotik_monitor_ui"]').forEach(function(link){var item=link.closest('li');if(item)item.remove();});});{/literal}</script>{/if}
                 <ul class="sidebar-menu" data-widget="tree">
                     <li {if $_system_menu eq 'dashboard' }class="active" {/if}>
-                        <a href="{Text::url('dashboard')}">
+                        <a href="{if $_admin['user_type'] eq 'Agent'}{Text::url('reseller')}{else}{Text::url('dashboard')}{/if}">
                             <i class="ion ion-monitor"></i>
                             <span>{Lang::T('Dashboard')}</span>
                         </a>
                     </li>
                     {$_MENU_AFTER_DASHBOARD}
+                    {if $_admin['user_type'] eq 'Agent'}
+                    <li class="{if $_routes[0] eq 'reseller' && $_routes[1] eq 'customers'}active{/if}"><a href="{Text::url('reseller/customers')}"><i class="fa fa-users"></i><span>My Customers</span></a></li>
+                    <li class="{if $_routes[0] eq 'reseller' && $_routes[1] eq 'customer-add'}active{/if}"><a href="{Text::url('reseller/customer-add')}"><i class="fa fa-user-plus"></i><span>Add Customer</span></a></li>
+                    <li class="{if $_routes[0] eq 'reseller' && $_routes[1] eq 'report'}active{/if}"><a href="{Text::url('reseller/report')}"><i class="fa fa-line-chart"></i><span>Earnings &amp; Reports</span></a></li>
+                    {/if}
+                    {if in_array($_admin['user_type'],['SuperAdmin','Admin'])}
+                        <li class="reseller-only {if $_routes[0] eq 'reseller' }active{/if} treeview">
+                            <a href="#"><i class="fa fa-handshake-o"></i><span>Reseller Management</span><span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
+                            <ul class="treeview-menu"><li><a href="{Text::url('reseller/dashboard')}"><i class="fa fa-dashboard"></i> Dashboard</a></li><li><a href="{Text::url('reseller/resellers')}"><i class="fa fa-users"></i> Resellers</a></li><li><a href="{Text::url('reseller/ownership')}"><i class="fa fa-object-group"></i> Customers &amp; Ownership</a></li><li><a href="{Text::url('reseller/packages')}"><i class="fa fa-cubes"></i> Packages</a></li><li><a href="{Text::url('reseller/earnings')}"><i class="fa fa-line-chart"></i> Earnings</a></li><li><a href="{Text::url('reseller/settlements')}"><i class="fa fa-money"></i> Settlements</a></li><li><a href="{Text::url('reseller/activity')}"><i class="fa fa-history"></i> Activity Logs</a></li></ul>
+                        </li>
+                    {/if}
+                    {if $_admin['user_type'] neq 'Agent'}
                     <li {if $_system_menu eq 'customers' }class="active" {/if}>
                         <a href="{Text::url('customers')}">
                             <i class="fa fa-user"></i>
                             <span>{Lang::T('Customer')}</span>
                         </a>
                     </li>
+                    {/if}
                     {$_MENU_AFTER_CUSTOMERS}
                     {if !in_array($_admin['user_type'],['Report'])}
-                        <li class="{if $_routes[0] eq 'plan' || $_routes[0] eq 'coupons'}active{/if} treeview">
+                        <li class="agent-hide {if $_routes[0] eq 'plan' || $_routes[0] eq 'coupons'}active{/if} treeview">
                             <a href="#">
                                 <i class="fa fa-ticket"></i> <span>{Lang::T('Services')}</span>
                                 <span class="pull-right-container">
@@ -186,7 +204,7 @@
                         </li>
                     {/if}
                     {$_MENU_AFTER_PLANS}
-                    <li class="{if in_array($_routes[0], ['maps'])}active{/if} treeview">
+                    <li class="agent-hide {if in_array($_routes[0], ['maps'])}active{/if} treeview">
                         <a href="#">
                             <i class="fa fa-map-marker"></i> <span>{Lang::T('Maps')}</span>
                             <span class="pull-right-container">
@@ -221,7 +239,7 @@
                         </ul>
                     </li>
                     {$_MENU_AFTER_REPORTS}
-                    <li class="{if $_system_menu eq 'message'}active{/if} treeview">
+                    <li class="agent-hide {if $_system_menu eq 'message'}active{/if} treeview">
                         <a href="#">
                             <i class="ion ion-android-chat"></i> <span>{Lang::T('Send Message')}</span>
                             <span class="pull-right-container">
@@ -254,6 +272,10 @@
                                         href="{Text::url('pool/port')}">Port Pool</a></li>
                                 <li {if $_routes[0] eq 'odp' and $_routes[1] eq '' }class="active" {/if}><a
                                         href="{Text::url('odp')}">ODP List</a></li>
+                                <li {if $_routes[0] eq 'olts' }class="active" {/if}><a
+                                        href="{Text::url('olts')}"><i class="fa fa-sitemap"></i> OLT Management</a></li>
+                                <li {if $_routes[0] eq 'onus' }class="active" {/if}><a
+                                        href="{Text::url('onus')}"><i class="fa fa-plug"></i> ONU Management</a></li>
                                 {$_MENU_NETWORK}
                             </ul>
                         </li>
@@ -305,7 +327,7 @@
                     {/if}
                     {$_MENU_AFTER_PAGES}
                     <li
-                        class="{if $_system_menu eq 'settings' || $_system_menu eq 'paymentgateway' }active{/if} treeview">
+                        class="agent-hide {if $_system_menu eq 'settings' || $_system_menu eq 'paymentgateway' }active{/if} treeview">
                         <a href="#">
                             <i class="ion ion-gear-a"></i> <span>{Lang::T('Settings')}</span>
                             <span class="pull-right-container">
