@@ -1,26 +1,2 @@
-2026-08-25 03:57:59 START gateway=bKash username=test amount=500 sender=01776159990 trxid=ABC12557YZ
-2026-08-25 03:57:59 ROUTER CONFIG MISSING
-2026-08-25 03:59:00 START gateway=bKash username=test amount=500 sender=01776159990 trxid=ABC12557YZ
-2026-08-25 03:59:00 ROUTER AUTO-DETECTED: Mikrotik (no auto_payment_router_name config set)
-2026-08-25 03:59:00 CUSTOMER FOUND id=1
-2026-08-25 03:59:00 PLAN FOUND id=1 name=test price=500 router=Mikrotik
-2026-08-25 03:59:00 CALLING Package::rechargeUser()
-2026-08-25 03:59:01 RECHARGE RESULT: INV-1
-2026-08-25 04:01:36 START gateway=Nagad username=test amount=500 sender=01776159990 trxid=NAG001
-2026-08-25 04:01:36 ROUTER AUTO-DETECTED: Mikrotik (no auto_payment_router_name config set)
-2026-08-25 04:01:36 CUSTOMER FOUND id=1
-2026-08-25 04:01:36 PLAN FOUND id=1 name=test price=500 router=Mikrotik
-2026-08-25 04:01:36 CALLING Package::rechargeUser()
-2026-08-25 04:01:37 RECHARGE RESULT: INV-2
-2026-08-26 16:25:40 START gateway=Nagad username=test amount=500 sender=01776159990 trxid=NAG00DFGS1
-2026-08-26 16:25:40 ROUTER AUTO-DETECTED: Mikrotik (no auto_payment_router_name config set)
-2026-08-26 16:25:40 CUSTOMER FOUND id=1
-2026-08-26 16:25:40 PLAN FOUND id=1 name=test price=500 router=Mikrotik
-2026-08-26 16:25:40 CALLING Package::rechargeUser()
-2026-08-26 16:25:44 RECHARGE RESULT: INV-3
-2026-08-26 16:26:35 START gateway=Nagad username=test amount=500 sender=01776159990 trxid=NAG00DFG1
-2026-08-26 16:26:35 ROUTER AUTO-DETECTED: Mikrotik (no auto_payment_router_name config set)
-2026-08-26 16:26:35 CUSTOMER FOUND id=1
-2026-08-26 16:26:35 PLAN FOUND id=1 name=test price=500 router=Mikrotik
-2026-08-26 16:26:35 CALLING Package::rechargeUser()
-2026-08-26 16:26:37 RECHARGE RESULT: INV-4
+2026-09-19 01:10:35 SCHEMA_WARNING transaction_id is numeric; stored legacy numeric suffix=117 original=INV-117 | Run migration.sql to change transaction_id to VARCHAR(100).
+2026-09-19 01:10:35 SUCCESS gateway=bKash Merchant customer=22 amount=500 trxid=DIJ3MXAHAJ transaction=INV-117

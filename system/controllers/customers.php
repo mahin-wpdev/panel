@@ -321,6 +321,22 @@ switch ($action) {
         }
         _alert(Lang::T('Customer not found'), 'danger', "customers");
         break;
+    case 'assign-onu':
+        if (!in_array($admin['user_type'], ['SuperAdmin', 'Admin'])) {
+            _alert(Lang::T('You do not have permission to access this page'), 'danger', 'dashboard');
+        }
+        $customerId = (int)$routes['2'];
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !Csrf::check(_post('csrf_token'))) {
+            r2(getUrl('customers/view/') . $customerId, 'e', Lang::T('Invalid or Expired CSRF Token') . '.');
+        }
+        $customer = ORM::for_table('tbl_customers')->find_one($customerId);
+        $onu = ORM::for_table('tbl_onus')->find_one((int)_post('onu_id'));
+        if (!$customer || !$onu) r2(getUrl('customers/view/') . $customerId, 'e', 'Customer or ONU not found');
+        if (!empty($onu['customer_id']) && (int)$onu['customer_id'] !== $customerId) r2(getUrl('customers/view/') . $customerId, 'e', 'ONU is already assigned to another customer');
+        $onu->customer_id=$customerId; $onu->updated_at=date('Y-m-d H:i:s'); $onu->save();
+        _log('ONU assigned #'.$onu->id.' customer #'.$customerId);
+        r2(getUrl('customers/view/') . $customerId, 's', 'ONU assigned to customer');
+        break;
     case 'viewu':
         $customer = ORM::for_table('tbl_customers')->where('username', $routes['2'])->find_one();
     case 'view':
@@ -364,6 +380,8 @@ switch ($action) {
                     break;
             }
             $ui->assign('packages', User::_billing($customer['id']));
+            $ui->assign('customerOnu', ORM::for_table('tbl_onus')->where('customer_id', $customer['id'])->find_one());
+            $ui->assign('unassignedOnus', ORM::for_table('tbl_onus')->table_alias('o')->select_many('o.*','olt.name')->left_outer_join('tbl_olts',['o.olt_id','=','olt.id'],'olt')->where_null('o.customer_id')->order_by_desc('o.updated_at')->find_many());
             $ui->assign('v', $v);
             $ui->assign('d', $customer);
             $ui->assign('customFields', $customFields);

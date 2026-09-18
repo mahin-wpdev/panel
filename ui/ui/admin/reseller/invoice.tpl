@@ -1,0 +1,3 @@
+{include file="sections/header.tpl"}
+<div class="row"><div class="col-md-8 col-md-offset-2"><div class="box box-primary"><div class="box-header"><h3 class="box-title">Invoice {$invoice_transaction['invoice']|escape}</h3></div><div class="box-body"><pre style="background:#fff;border:0;white-space:pre-wrap;font-family:monospace">{$invoice|escape}</pre></div><div class="box-footer"><a class="btn btn-default" href="{Text::url('reseller/customer-view/')}{$invoice_transaction['user_id']}"><i class="fa fa-arrow-left"></i> Customer Details</a> <button class="btn btn-primary" onclick="window.print()"><i class="fa fa-print"></i> Print Invoice</button></div></div></div></div>
+{include file="sections/footer.tpl"}
