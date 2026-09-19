@@ -83,6 +83,15 @@ try {
         if (!$dashboard) respond(403,['error'=>'ACCOUNT_DISABLED']);
         respond(200,['success'=>true,'data'=>$dashboard]);
     }
+    if ($action==='live-traffic' && $method==='GET') {
+        require_once __DIR__.'/system/mobile/live-traffic.php';
+        respond(200,['success'=>true,'data'=>jm_live_snapshot($db,$session)]);
+    }
+    if ($action==='mobile-data' && $method==='GET') {
+        require_once __DIR__.'/system/mobile/panel-app.php';
+        $section=(string)($_GET['section']??'home');
+        respond(200,['success'=>true,'data'=>jm_mobile_app_data($db,$session,$section)]);
+    }
     if ($action==='logout' && $method==='POST') {
         jm_mobile_query($db,'UPDATE tbl_mobile_auth_sessions SET revoked_at=NOW() WHERE id=?',[(int)$session['id']]);
         respond(200,['success'=>true]);
@@ -94,8 +103,8 @@ try {
             if (!$actor || $actor['status']==='Banned') respond(403,['error'=>'ACCOUNT_DISABLED']);
             $role='customer';$reseller=null;
         } else {
-            $actor=jm_mobile_query($db,'SELECT id,username,fullname,user_type FROM tbl_users WHERE id=?',[$id])->fetch(PDO::FETCH_ASSOC);
-            $reseller=$actor?jm_mobile_query($db,'SELECT id,status FROM tbl_resellers WHERE user_id=? LIMIT 1',[$id])->fetch(PDO::FETCH_ASSOC):null;
+            $actor=jm_mobile_query($db,'SELECT id,username,fullname,user_type,status FROM tbl_users WHERE id=?',[$id])->fetch(PDO::FETCH_ASSOC);
+            $reseller=$actor && $actor['user_type']==='Agent' ? jm_mobile_reseller($db,$id) : null;
             $role=$actor?jm_mobile_role($actor,'staff',$reseller ?: null):null;
             if (!$role) respond(403,['error'=>'ACCOUNT_DISABLED']);
         }
