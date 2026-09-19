@@ -76,13 +76,6 @@ try {
     $token=bearer();if (!$token) respond(401,['error'=>'LOGIN_REQUIRED']);
     $session=jm_mobile_query($db,'SELECT * FROM tbl_mobile_auth_sessions WHERE access_hash=? AND revoked_at IS NULL AND access_expires_at>NOW() LIMIT 1',[hash('sha256',$token)])->fetch(PDO::FETCH_ASSOC);
     if (!$session) respond(401,['error'=>'INVALID_SESSION']);
-    if ($action==='customer-dashboard' && $method==='GET') {
-        if ($session['actor_type'] !== 'customer') respond(403,['error'=>'FORBIDDEN']);
-        require_once __DIR__.'/system/mobile/customer-dashboard.php';
-        $dashboard=jm_mobile_customer_dashboard($db,(int)$session['actor_id']);
-        if (!$dashboard) respond(403,['error'=>'ACCOUNT_DISABLED']);
-        respond(200,['success'=>true,'data'=>$dashboard]);
-    }
     if ($action==='logout' && $method==='POST') {
         jm_mobile_query($db,'UPDATE tbl_mobile_auth_sessions SET revoked_at=NOW() WHERE id=?',[(int)$session['id']]);
         respond(200,['success'=>true]);
