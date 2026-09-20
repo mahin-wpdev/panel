@@ -40,7 +40,7 @@ function jm_app_actor(PDO $db, array $session): array {
         $actor = jm_mobile_query($db,
             'SELECT id, username, fullname, status, balance, pppoe_username FROM tbl_customers WHERE id=? LIMIT 1',
             [$id])->fetch(PDO::FETCH_ASSOC);
-        if (!$actor || $actor['status'] === 'Banned') respond(403,['error'=>'ACCOUNT_DISABLED']);
+        if (!$actor || $actor['status'] !== 'Active') respond(403,['error'=>'ACCOUNT_DISABLED']);
         return ['role'=>'customer','id'=>$id,'name'=>$actor['fullname'],'username'=>$actor['username'],
             'actor'=>$actor,'reseller_id'=>null];
     }

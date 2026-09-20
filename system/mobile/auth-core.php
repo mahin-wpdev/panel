@@ -6,7 +6,7 @@ function jm_mobile_query(PDO $db, string $sql, array $params=[]): PDOStatement {
     $query=$db->prepare($sql); $query->execute($params); return $query;
 }
 function jm_mobile_role(array $actor, string $type, ?array $reseller): ?string {
-    if ($type==='customer') return $actor['status']==='Banned' ? null : 'customer';
+    if ($type==='customer') return ($actor['status'] ?? '') === 'Active' ? 'customer' : null;
     if (($actor['status'] ?? '') !== 'Active') return null;
     $staffRole=(string)$actor['user_type'];
     if ($staffRole==='SuperAdmin') return 'superadmin';
@@ -25,6 +25,37 @@ function jm_mobile_reseller(PDO $db, int $staffId): ?array {
     return jm_mobile_query($db,'SELECT id,status FROM tbl_resellers WHERE user_id=? LIMIT 1',
         [$staffId])->fetch(PDO::FETCH_ASSOC) ?: null;
 }
+function jm_mobile_session_allowed(PDO $db, array $session): bool {
+    $id = (int)($session['actor_id'] ?? 0);
+    if ($id < 1) return false;
+
+    if (($session['actor_type'] ?? '') === 'customer') {
+        $actor = jm_mobile_query($db,
+            'SELECT status FROM tbl_customers WHERE id=? LIMIT 1',
+            [$id])->fetch(PDO::FETCH_ASSOC);
+        return $actor && $actor['status'] === 'Active';
+    }
+
+    if (($session['actor_type'] ?? '') === 'staff') {
+        $actor = jm_mobile_query($db,
+            'SELECT user_type,status FROM tbl_users WHERE id=? LIMIT 1',
+            [$id])->fetch(PDO::FETCH_ASSOC);
+
+        if (!$actor || $actor['status'] !== 'Active') return false;
+
+        if (in_array($actor['user_type'], ['Admin', 'SuperAdmin'], true)) {
+            return true;
+        }
+
+        if ($actor['user_type'] === 'Agent') {
+            $reseller = jm_mobile_reseller($db, $id);
+            return $reseller && $reseller['status'] === 'active';
+        }
+    }
+
+    return false;
+}
+
 function jm_mobile_resolve(PDO $db,string $username,string $password): ?array {
     $customer=jm_mobile_query($db,'SELECT id,username,fullname,password,status FROM tbl_customers WHERE username=? LIMIT 1',[$username])->fetch(PDO::FETCH_ASSOC);
     $staff=jm_mobile_query($db,'SELECT id,username,fullname,password,user_type,status FROM tbl_users WHERE username=? LIMIT 1',[$username])->fetch(PDO::FETCH_ASSOC);

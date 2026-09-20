@@ -33,7 +33,7 @@ function jm_live_snapshot(PDO $db, array $session): array {
     $customer=jm_mobile_query($db,
         'SELECT id,username,pppoe_username,status FROM tbl_customers WHERE id=? LIMIT 1',
         [(int)$person['id']])->fetch(PDO::FETCH_ASSOC);
-    if (!$customer || $customer['status']==='Banned') respond(403,['error'=>'ACCOUNT_DISABLED']);
+    if (!$customer || $customer['status']!=='Active') respond(403,['error'=>'ACCOUNT_DISABLED']);
     $pppoe=trim((string)($customer['pppoe_username'] ?: $customer['username']));
     if ($pppoe==='' || strlen($pppoe)>100) return jm_live_unavailable('PPPoE username is not configured.');
     $recharge=jm_mobile_query($db,

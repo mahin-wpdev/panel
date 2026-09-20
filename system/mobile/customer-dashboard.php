@@ -22,7 +22,7 @@ WHERE c.id = ? LIMIT 1
 SQL);
     $stmt->execute([$customerId]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$row || $row['status'] === 'Banned') {
+    if (!$row || $row['status'] !== 'Active') {
         return null;
     }
 

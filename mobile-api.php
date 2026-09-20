@@ -68,6 +68,10 @@ try {
         $db->beginTransaction();
         $session=jm_mobile_query($db,'SELECT * FROM tbl_mobile_auth_sessions WHERE refresh_hash=? AND revoked_at IS NULL AND refresh_expires_at>NOW() FOR UPDATE',[hash('sha256',$token)])->fetch(PDO::FETCH_ASSOC);
         if (!$session) {$db->commit();respond(401,['error'=>'INVALID_SESSION']);}
+        if (!jm_mobile_session_allowed($db, $session)) {
+            $db->commit();
+            respond(403,['error'=>'ACCOUNT_DISABLED']);
+        }
         $access=jm_mobile_token();$refresh=jm_mobile_token();
         jm_mobile_query($db,'UPDATE tbl_mobile_auth_sessions SET access_hash=?,refresh_hash=?,access_expires_at=DATE_ADD(NOW(),INTERVAL 15 MINUTE),last_seen_at=NOW() WHERE id=?',
           [hash('sha256',$access),hash('sha256',$refresh),(int)$session['id']]);
@@ -76,6 +80,9 @@ try {
     $token=bearer();if (!$token) respond(401,['error'=>'LOGIN_REQUIRED']);
     $session=jm_mobile_query($db,'SELECT * FROM tbl_mobile_auth_sessions WHERE access_hash=? AND revoked_at IS NULL AND access_expires_at>NOW() LIMIT 1',[hash('sha256',$token)])->fetch(PDO::FETCH_ASSOC);
     if (!$session) respond(401,['error'=>'INVALID_SESSION']);
+    if (!jm_mobile_session_allowed($db, $session)) {
+        respond(403,['error'=>'ACCOUNT_DISABLED']);
+    }
     if ($action==='customer-dashboard' && $method==='GET') {
         if ($session['actor_type'] !== 'customer') respond(403,['error'=>'FORBIDDEN']);
         require_once __DIR__.'/system/mobile/customer-dashboard.php';
@@ -100,7 +107,7 @@ try {
         $id=(int)$session['actor_id'];
         if ($session['actor_type']==='customer') {
             $actor=jm_mobile_query($db,'SELECT id,username,fullname,status FROM tbl_customers WHERE id=?',[$id])->fetch(PDO::FETCH_ASSOC);
-            if (!$actor || $actor['status']==='Banned') respond(403,['error'=>'ACCOUNT_DISABLED']);
+            if (!$actor || $actor['status']!=='Active') respond(403,['error'=>'ACCOUNT_DISABLED']);
             $role='customer';$reseller=null;
         } else {
             $actor=jm_mobile_query($db,'SELECT id,username,fullname,user_type,status FROM tbl_users WHERE id=?',[$id])->fetch(PDO::FETCH_ASSOC);
