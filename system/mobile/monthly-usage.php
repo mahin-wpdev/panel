@@ -18,6 +18,18 @@ function jm_mobile_monthly_integer($value): ?int {
     return (int)$raw;
 }
 
+function jm_mobile_radius_db(PDO $panel): PDO {
+    global $config, $radius_user;
+    if (!empty($radius_user) && !empty($config['radius_enable'])) {
+        // phpNuxBill configures its separate Radius PDO connection in init.php.
+        // Do not silently read an unrelated radacct table from the Panel DB.
+        $radius = ORM::get_db('radius');
+        $radius->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        return $radius;
+    }
+    return $panel;
+}
+
 function jm_mobile_monthly_usage(PDO $db, string $pppoe): array {
     $start = date('Y-m-01 00:00:00');
     $next = date('Y-m-01 00:00:00', strtotime('first day of next month'));
@@ -27,6 +39,7 @@ function jm_mobile_monthly_usage(PDO $db, string $pppoe): array {
         return jm_mobile_monthly_unavailable($month, 'PPPoE username is not configured.');
     }
     try {
+        $db = jm_mobile_radius_db($db);
         // The legacy rad_acct table overwrites cumulative counters and cannot
         // establish a calendar-month total. Only use RADIUS session records.
         $schema = $db->query("SELECT COUNT(DISTINCT COLUMN_NAME) FROM information_schema.COLUMNS
@@ -71,6 +84,7 @@ function jm_mobile_monthly_usage(PDO $db, string $pppoe): array {
             'download_bytes' => $down, 'upload_bytes' => $up,
             'total_bytes' => $down + $up,
             'note' => 'Recorded RADIUS session counters for this calendar month. '
+                . 'Verify direction against a known download/upload on this NAS. '
                 . 'Values may lag until the next accounting update.'];
     } catch (Throwable $error) {
         error_log('JM monthly accounting read failed (' . get_class($error) . ')');
