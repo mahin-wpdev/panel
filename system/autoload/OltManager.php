@@ -1,7 +1,14 @@
 <?php
 /** OLT access boundary; only the verified V-SOL Telnet adapter is enabled. */
 class OltManager {
-    private static function key(){ $file='/tmp/phpnuxbill-olt-key'; $key=@file_get_contents($file); if($key===false||strlen($key)!==32)throw new Exception('OLT encryption key is unavailable'); return $key; }
+    // Read the existing persistent key used by the active OLT sync adapter.
+    // Never create a replacement key: it would make stored credentials unreadable.
+    private static function key(){
+        $file='/www/wwwroot/27.147.201.165/system/secure/olt-encryption.key';
+        $key=@file_get_contents($file);
+        if($key===false||strlen($key)!==32)throw new Exception('OLT encryption key is unavailable');
+        return $key;
+    }
     public static function encrypt($value){$iv=random_bytes(12);$tag='';$cipher=openssl_encrypt($value,'aes-256-gcm',self::key(),OPENSSL_RAW_DATA,$iv,$tag);return base64_encode($iv.$tag.$cipher);}
     public static function decrypt($value){$raw=base64_decode((string)$value,true);if($raw===false||strlen($raw)<29)throw new Exception('Stored OLT credential is invalid');$plain=openssl_decrypt(substr($raw,28),'aes-256-gcm',self::key(),OPENSSL_RAW_DATA,substr($raw,0,12),substr($raw,12,16));if($plain===false)throw new Exception('Stored OLT credential cannot be decrypted');return $plain;}
     public static function validHost($host){return (bool)filter_var($host,FILTER_VALIDATE_IP)||(bool)preg_match('/^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i',$host);}
