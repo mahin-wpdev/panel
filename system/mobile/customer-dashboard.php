@@ -32,6 +32,9 @@ SQL);
     $isActive = $hasPackage && $days !== null && $days >= 0 && $row['recharge_status'] === 'on';
     $speed = $row['rate_down'] === null ? null :
         ((int)$row['rate_down']) . ' ' . $row['rate_down_unit'];
+    require_once __DIR__ . '/monthly-usage.php';
+    $pppoe = (string)($row['pppoe_username'] ?: $row['username']);
+    $monthlyUsage = jm_mobile_monthly_usage($db, $pppoe);
 
     return [
         'customer' => [
@@ -50,6 +53,7 @@ SQL);
             'state' => !$hasPackage ? 'none' : ($isActive ? 'active' : 'expired'),
         ],
         'demo' => str_starts_with($row['username'], 'jm_demo_'),
+        'monthly_usage' => $monthlyUsage,
         'network' => [
             'pppoe_online' => null,
             'usage_download_bytes' => null,

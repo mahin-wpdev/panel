@@ -78,6 +78,7 @@ function jm_app_home(PDO $db, array $identity): array {
         // This data is already restricted to the authenticated customer ID.
         return ['available'=>true,'role'=>'customer','profile'=>$data['customer'],
             'package'=>$data['package'],'network'=>$data['network'],
+            'monthly_usage'=>$data['monthly_usage'],
             'demo'=>(bool)$data['demo']];
     }
     $scope=jm_app_customer_scope($db,$identity);
