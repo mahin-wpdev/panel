@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 ROOT=/www/wwwroot/27.147.201.165
-STAGE=/home/mahin/olt-pager-stage
+STAGE=$(CDPATH= cd "$(dirname "$0")" && pwd)
 BACKUP=/home/mahin/olt-pager-predeploy-20260922.tar.gz
 PHP=/www/server/php/83/bin/php
 OUTER="$ROOT/system/autoload/OltManager.php"

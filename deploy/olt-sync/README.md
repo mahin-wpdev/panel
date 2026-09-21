@@ -10,17 +10,24 @@ treats incomplete responses as errors instead of deleting or misclassifying ONUs
 - `OltManager.php` → `/www/wwwroot/27.147.201.165/system/autoload/OltManager.php` (the auto-sync adapter)
 - `panel-OltManager.php` → `/www/wwwroot/27.147.201.165/panel/system/autoload/OltManager.php`
 - `OltOnuRemoval.php` → `/www/wwwroot/27.147.201.165/panel/system/autoload/OltOnuRemoval.php`
-- `apply.sh` → run as root after staging the files in `/home/mahin/olt-pager-stage`.
+- `apply.sh` → run as root from the staged directory `/home/mahin/olt-sync`.
 
 ## Installation on the authorized machine
 
-Copy these four files as a directory into the VM user's
-`/home/mahin/olt-pager-stage` using the user's own normal SSH/SFTP access.
+From the connected Windows PC, use the user's normal SSH/SFTP access:
+
+```powershell
+scp -r "C:\\Users\\dell\\Documents\\arivo-panel-backend\\deploy\\olt-sync" mahin@10.10.10.7:/home/mahin/
+```
+
 Then run from the Ubuntu VM:
 
 ```bash
-sudo sh /home/mahin/olt-pager-stage/apply.sh
+sudo sh /home/mahin/olt-sync/apply.sh
 ```
+
+The script uses its own directory for the three staged PHP files; do not run
+it from a different or partially copied directory.
 
 The script checks existing source markers and the persistent key, lint-checks
 all staged PHP files, makes `/home/mahin/olt-pager-predeploy-20260922.tar.gz`,
