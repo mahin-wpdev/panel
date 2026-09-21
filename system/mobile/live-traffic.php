@@ -45,6 +45,15 @@ function jm_live_snapshot(PDO $db, array $session): array {
     $router=jm_mobile_query($db,
         'SELECT ip_address,username,password,enabled FROM tbl_routers WHERE name=? LIMIT 1',
         [$routerName])->fetch(PDO::FETCH_ASSOC);
+    // "radius" is a virtual billing/authentication mapping, not a MikroTik
+    // management device. Only use a fallback if exactly one router is enabled.
+    // Multiple routers must never be guessed for another customer's traffic.
+    if (!$router && strcasecmp($routerName, 'radius')===0) {
+        $candidates=jm_mobile_query($db,
+            'SELECT ip_address,username,password,enabled FROM tbl_routers WHERE enabled=1 LIMIT 2'
+        )->fetchAll(PDO::FETCH_ASSOC);
+        if (count($candidates)===1) $router=$candidates[0];
+    }
     if (!$router || (int)$router['enabled']!==1) return jm_live_unavailable('Assigned router is not available.');
     $where=explode(':',(string)$router['ip_address'],2);
     $host=$where[0]; $port=isset($where[1])?(int)$where[1]:8728;

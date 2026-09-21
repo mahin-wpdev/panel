@@ -5,9 +5,13 @@
         <div class="box box-{if $d['status']=='Active'}primary{else}danger{/if}">
             <div class="box-body box-profile">
                 <img class="profile-user-img img-responsive img-circle"
+                    {if $d['photo'] && strpos($d['photo'], 'default') === false}
                     onclick="window.location.href = '{$app_url}/{$UPLOAD_PATH}{$d['photo']}'"
                     src="{$app_url}/{$UPLOAD_PATH}{$d['photo']}.thumb.jpg"
-                    onerror="this.src='{$app_url}/{$UPLOAD_PATH}/user.default.jpg'" alt="avatar">
+                    {else}
+                    src="{$app_url}/system/uploads/admin.default.png"
+                    {/if}
+                    onerror="this.onerror=null;this.src='{$app_url}/system/uploads/admin.default.png';" alt="avatar">
                 <h3 class="profile-username text-center">{$d['fullname']}</h3>
                 <ul class="list-group list-group-unbordered">
                     <li class="list-group-item">
