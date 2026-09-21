@@ -125,6 +125,25 @@
         </div>
     </div>
     <div class="col-sm-8 col-md-8">
+        {if isset($arivoUsage)}
+        <div class="box box-info">
+            <div class="box-header with-border">
+                <h3 class="box-title">Monthly RADIUS Usage ({$arivoUsage.month|escape})</h3>
+            </div>
+            <div class="box-body">
+                {if $arivoUsage.available}
+                <div class="row text-center">
+                    <div class="col-xs-4"><b>Download</b><h4>{$arivoUsage.download_gb|escape} GB</h4></div>
+                    <div class="col-xs-4"><b>Upload</b><h4>{$arivoUsage.upload_gb|escape} GB</h4></div>
+                    <div class="col-xs-4"><b>Total</b><h4>{$arivoUsage.total_gb|escape} GB</h4></div>
+                </div>
+                {else}
+                <div class="alert alert-warning">Accounting unavailable for this customer.</div>
+                {/if}
+                <small class="text-muted">{$arivoUsage.note|escape}</small>
+            </div>
+        </div>
+        {/if}
         <div class="box box-info">
             <ul class="nav nav-tabs">
                 <li role="presentation" {if $v=='order' }class="active" {/if}><a

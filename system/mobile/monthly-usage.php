@@ -62,6 +62,7 @@ function jm_mobile_monthly_usage(PDO $db, string $pppoe): array {
                 'A PPPoE session spans month start; exact monthly bytes need periodic accounting snapshots.');
         }
         $sum = $db->prepare('SELECT COUNT(*) AS sessions,
+            MIN(acctstarttime) AS coverage_start,
             SUM(COALESCE(acctoutputoctets,0)) AS download_bytes,
             SUM(COALESCE(acctinputoctets,0)) AS upload_bytes,
             SUM(acctoutputoctets IS NOT NULL AND acctinputoctets IS NOT NULL) AS sampled
@@ -80,15 +81,32 @@ function jm_mobile_monthly_usage(PDO $db, string $pppoe): array {
             return jm_mobile_monthly_unavailable($month,
                 'Accounting byte totals are outside the supported range.');
         }
+        $since = (string)($row['coverage_start'] ?? '');
+        $partial = $since !== '' && $since > $start;
         return ['available' => true, 'month' => $month,
             'download_bytes' => $down, 'upload_bytes' => $up,
             'total_bytes' => $down + $up,
-            'note' => 'Recorded RADIUS session counters for this calendar month. '
-                . 'Verify direction against a known download/upload on this NAS. '
+            'recorded_since' => $since ?: null,
+            'partial_month' => $partial,
+            'note' => ($partial
+                ? 'Partial month: recorded sessions start ' . $since
+                    . '; earlier traffic is not included. '
+                : 'Recorded RADIUS session counters for this calendar month. ')
                 . 'Values may lag until the next accounting update.'];
     } catch (Throwable $error) {
         error_log('JM monthly accounting read failed (' . get_class($error) . ')');
         return jm_mobile_monthly_unavailable($month,
             'Monthly accounting is temporarily unavailable.');
     }
+}
+
+/** Same authenticated RADIUS totals, formatted only for phpNuxBill Smarty views. */
+function jm_mobile_monthly_view(PDO $db, string $pppoe): array {
+    $usage = jm_mobile_monthly_usage($db, $pppoe);
+    foreach (['download', 'upload', 'total'] as $direction) {
+        $bytes = $usage[$direction . '_bytes'] ?? null;
+        $usage[$direction . '_gb'] = $bytes === null ? null
+            : number_format((float)$bytes / 1000000000, 2, '.', '');
+    }
+    return $usage;
 }

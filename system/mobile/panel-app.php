@@ -114,7 +114,22 @@ function jm_app_customers(PDO $db, array $identity): array {
     if (!$scope) return jm_app_disabled('This Panel has no customer-to-reseller mapping.');
     [$where,$params]=$scope;
     $rows=jm_app_rows($db,"SELECT c.id,c.username,c.fullname,c.status,c.pppoe_username FROM tbl_customers c WHERE $where ORDER BY c.id DESC LIMIT 60",$params);
-    return ['available'=>true,'items'=>$rows,'note'=>'Customer records are scoped on the server. No PPPoE passwords are returned.'];
+    require_once __DIR__ . '/monthly-usage.php';
+    foreach ($rows as &$customerRow) {
+        $pppoe = (string)($customerRow['pppoe_username'] ?: $customerRow['username']);
+        $usage = jm_mobile_monthly_view($db, $pppoe);
+        $customerRow['monthly_usage_month'] = $usage['month'];
+        $customerRow['monthly_download'] = $usage['available']
+            ? $usage['download_gb'] . ' GB' : 'Unavailable';
+        $customerRow['monthly_upload'] = $usage['available']
+            ? $usage['upload_gb'] . ' GB' : 'Unavailable';
+        $customerRow['monthly_total'] = $usage['available']
+            ? $usage['total_gb'] . ' GB' : 'Unavailable';
+        $customerRow['monthly_usage_note'] = $usage['note'];
+    }
+    unset($customerRow);
+    return ['available'=>true,'items'=>$rows,
+        'note'=>'RADIUS session totals, scoped on the server. A partial-month note means earlier traffic is not included. No PPPoE passwords are returned.'];
 }
 function jm_app_sales(PDO $db, array $identity): array {
     if (!jm_app_table($db,'tbl_transactions')) return jm_app_disabled('Transactions table is unavailable.');
