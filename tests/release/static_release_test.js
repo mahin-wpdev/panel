@@ -42,4 +42,12 @@ const receiptMigration = read('autorecharge/migration.sql');
 assert.match(receiptMigration, /CREATE TABLE IF NOT EXISTS\s+`tbl_autorecharge_receipts`/i);
 assert.match(receiptMigration, /UNIQUE KEY[\s\S]*gateway[\s\S]*trxid/i,
   'receipt ledger must enforce gateway + transaction id idempotency');
-console.log('PASS: installer, webhook auth, receipt idempotency, logs, Nginx and ONU safety invariants');
+const peakCollector = read('system/mobile/collect-radius-peaks.php');
+assert.match(peakCollector, /PHP_SAPI\s*!==\s*'cli'/);
+assert.match(peakCollector, /GET_LOCK\('jm_radius_speed_peaks'/);
+assert.match(peakCollector, /\$_SERVER\['SERVER_PORT'\]\s*\?\?=/);
+assert.match(read('mobile-api.php'), /\['server_peak'\]/);
+assert.match(read('system/mobile/customer-dashboard.php'), /'traffic_peak'\s*=>/);
+assert.match(read('system/mobile/panel-app.php'), /'traffic_peak'\s*=>/);
+assert.match(read('system/mobile/traffic-peaks-migration.sql'), /CREATE TABLE IF NOT EXISTS tbl_mobile_radius_speed_peaks/);
+console.log('PASS: installer, webhook auth, receipt idempotency, logs, Nginx, ONU, and server-owned peak invariants');

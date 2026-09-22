@@ -3,8 +3,9 @@
 ## Scope / isolation
 This branch is a **release candidate**, not an authorization to alter the running
 server. The Flutter companion lives in a separate repository, also on branch
-`next-release`. No database, RouterOS, OLT, or deployed PHP changes are part
-of these commits.
+`next-release`. This Git branch is not a complete image of the running production tree.
+Production rollout and rollback must use the site-specific audit notes below;
+never run the installer SQL against an existing server.
 
 ## Verified in the audit
 - OLT pager fix was confirmed on the running server by two new `synced 26`
@@ -16,7 +17,7 @@ of these commits.
   mobile and installer files. CI separately validates the release set on PHP 8.3.
 - Added automatic release safety checks and branch-targeted CI definitions.
 
-## Fixes prepared ONLY on next-release
+## Branch fixes (production deployment status varies)
 - Do not track runtime payment and SMS logs. Existing local log files remain
   untracked and are ignored. Existing public *Git history* still contains
   earlier revisions and must be addressed separately.
@@ -25,7 +26,8 @@ of these commits.
   exists at the Panel root or its immediate parent, preventing destructive
   `install/step4.php` reinstallation on a configured instance.
 - Include a sample Nginx deny configuration for `/panel/install/`, sensitive
-  file extensions and the legacy endpoint. **It is not applied to production.**
+  file extensions and the legacy endpoint. Matching restrictions were separately
+  installed and validated on production on 2026-09-22.
 - Keep read-only ONU paging checks, separate OLT/Panel adapters, and
   single-offline-ONU removal protections.
 - bKash Personal, bKash Merchant and Nagad SMS webhooks now fail closed unless
@@ -39,11 +41,9 @@ of these commits.
   logs, backup artifacts and signing material remain excluded from release source.
 
 ## Blockers BEFORE public rollout / production acceptance
-1. **Production web server needs hardening.** Audit observed unauthenticated
-   HTTP 200 for `/panel/install/index.php`,
-   `/panel/install/radius.sql` and one payment webhook `.log`.
-   Install the Nginx restrictions and re-test from an unauthenticated browser;
-   do not upload or run destructive installer SQL on existing data.
+1. **Web-server restriction completed on 2026-09-22.** Installer, SQL,
+   webhook logs, and public ZIP archives now return 404; the admin route
+   remains 200 and unauthenticated mobile API 401. Retest on future vhost edits.
 2. **Historic public payment/SMS log exposure.** Removing files on a new
    branch does not erase existing public commits or existing live log contents.
    Perform authorized incident review, redaction/history strategy and rotate
@@ -71,7 +71,26 @@ of these commits.
   announcing the release. Do not use `install/radius.sql` on production:
   that script drops live RADIUS/accounting tables.
 
-## Server-owned traffic peak correction (prepared, NOT deployed)
+## Server-owned traffic peak correction (deployed to production 2026-09-22)
+- Production site-specific deployment: `/www/wwwroot/27.147.201.165/panel/`.
+  Two additive `tbl_mobile_radius_speed_*` tables, CLI collector, peak reader,
+  authenticated API/dashboard and `mobile-data?section=home` mapping are live.
+  The live API retains production's `jm_live_snapshot_cached` optimization.
+- `/etc/cron.d/arivo-radius-peaks` runs the collector as `www` every minute;
+  stderr is `/var/log/arivo-radius-peaks.err` (logrotate configured).
+  Live validation found 30 persisted customer peaks; direct dashboard/Home
+  data functions both returned `has_record=true`. This does not prove that
+  an older installed APK displays the field; update to Android 1.0.5+6.
+- Protected backup directory `/root/arivo-release-backups/20260922-173904/`
+  holds the prior Nginx/PHP CLI config, site archive (~32 MB), and read-only
+  62-table Panel database SQL snapshot (~14 MB). Restore was NOT rehearsed.
+  Do not treat this as evidence that other separately configured DBs are backed up.
+- Production CLI PHP 8.3 duplicate extension block/OPcache JIT issue repaired;
+  all 11 audited live PHP files passed normal syntax checks.
+- Production payment webhook authentication is NOT deployed until the SMS
+  forwarder's existing secret transmission has been verified; its appconfig
+  secret and receipt-ledger unique index do exist. Never disable a live sender
+  through an untested auth change.
 - `system/mobile/traffic-peaks-migration.sql` creates additive state/peak tables.
 - `system/mobile/collect-radius-peaks.php` is CLI-only; run it as a dedicated
   once-per-minute scheduled job after migration and backup on the backend VM.

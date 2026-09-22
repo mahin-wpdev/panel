@@ -7,6 +7,8 @@
 declare(strict_types=1);
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 ini_set('display_errors', '0');
+$_SERVER['SERVER_PORT'] ??= 443;
+$_SERVER['HTTP_HOST'] ??= 'localhost';
 $isApi = true;
 require dirname(__DIR__, 2) . '/init.php';
 require_once __DIR__ . '/monthly-usage.php';
