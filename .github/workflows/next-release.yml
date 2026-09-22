@@ -1,0 +1,33 @@
+name: Next release checks
+on:
+  push:
+    branches: [next-release]
+  pull_request:
+    branches: [next-release]
+jobs:
+  panel:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Release safety invariants
+        run: node tests/release/static_release_test.js
+      - name: First-party PHP syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in install/*.php system/mobile/*.php \
+            system/controllers/{accounts,customers,olts,onus,reseller}.php \
+            system/autoload/{OltManager,OltOnuRemoval}.php \
+            autorecharge/{autorecharge,bkash,bkash_merchant,nogod}.php; do
+            test -f "$file" || { echo "Missing: $file"; exit 1; }
+            php -l "$file" >/dev/null
+          done
+      - name: Role authorization regression
+        run: php tests/mobile/auth_role_test.php
