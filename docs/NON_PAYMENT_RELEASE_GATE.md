@@ -21,6 +21,9 @@ on this document.
   average since collector rollout, not instantaneous speed or earlier history.
 - Production read-only reseller check: 7 customer rows, 5 ONU rows; zero
   cross-reseller customer rows. No PPPoE/router passwords in these responses.
+- Monthly accounting scan: 30 active customers return a **partial-month**
+  usage value and 7 return unavailable because complete counters are absent.
+  Do not market these readings as full-calendar-month totals.
 - Android 1.0.5+6 Debug APK updated the existing 1.0.4 Debug install in place;
   original Android first-install timestamp remained unchanged. Owner confirmed
   current live UI. This is **not** public release signing acceptance.
