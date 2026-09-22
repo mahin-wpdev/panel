@@ -31,6 +31,31 @@ function autorecharge_gateway($gateway)
     return trim((string) $gateway);
 }
 
+function autorecharge_require_webhook_secret(array $data)
+{
+    $config = ORM::for_table('tbl_appconfig')
+        ->where('setting', 'auto_payment_sms_secret')
+        ->find_one();
+    $expected = $config ? trim((string) $config->value) : '';
+    $provided = trim((string) (
+        $_SERVER['HTTP_X_WEBHOOK_SECRET']
+        ?? $_SERVER['HTTP_X_API_KEY']
+        ?? ($data['secret'] ?? ($_GET['secret'] ?? ''))
+    ));
+
+    if ($expected !== '' && $provided !== '' && hash_equals($expected, $provided)) {
+        return;
+    }
+
+    http_response_code(403);
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'Webhook authentication failed',
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
+
 function autorecharge_phone($phone)
 {
     $digits = preg_replace('/\D+/', '', (string) $phone);

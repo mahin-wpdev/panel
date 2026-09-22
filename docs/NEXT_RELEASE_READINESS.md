@@ -9,11 +9,11 @@ of these commits.
 ## Verified in the audit
 - OLT pager fix was confirmed on the running server by two new `synced 26`
   entries after installation; the older 22 was only the first CLI page.
-- Flutter tests: 8 passed; `flutter analyze --no-pub`: no issues.
-- Fresh signed Android 1.0.4+5 APK build succeeded locally and apksigner
+- Flutter tests: 11 passed; `flutter analyze --no-pub`: no issues.
+- Fresh signed Android 1.0.5+6 APK build succeeded locally and apksigner
   verified APK Signature Scheme v2; release credentials were not committed.
-- Local PHP syntax parser accepted the touched first-party PHP, payment, OLT
-  and installer files. CI must separately validate with PHP 8.3 `php -l`.
+- Local PHP 8.2 syntax checks accepted the touched first-party PHP, payment,
+  mobile and installer files. CI separately validates the release set on PHP 8.3.
 - Added automatic release safety checks and branch-targeted CI definitions.
 
 ## Fixes prepared ONLY on next-release
@@ -28,6 +28,15 @@ of these commits.
   file extensions and the legacy endpoint. **It is not applied to production.**
 - Keep read-only ONU paging checks, separate OLT/Panel adapters, and
   single-offline-ONU removal protections.
+- bKash Personal, bKash Merchant and Nagad SMS webhooks now fail closed unless
+  `auto_payment_sms_secret` matches `X-Webhook-Secret`, `X-API-Key`, JSON
+  `secret`, or the legacy query-string `secret`. The configured secret is
+  never written to webhook logs.
+- `autorecharge/migration.sql` now creates the receipt ledger when missing and
+  enforces unique `(gateway,trxid)` replay protection before widening legacy
+  `transaction_id` values to `VARCHAR(100)`.
+- Tracked source backup files were removed from the release branch; runtime
+  logs, backup artifacts and signing material remain excluded from release source.
 
 ## Blockers BEFORE public rollout / production acceptance
 1. **Production web server needs hardening.** Audit observed unauthenticated

@@ -31,4 +31,15 @@ assert.match(nginx, /\/panel\/install\//);
 assert.match(nginx, /\blocation\b[\s\S]*log\|sql/);
 assert.match(read('system/autoload/OltManager.php'), /Press any key to continue/);
 assert.match(read('system/autoload/OltOnuRemoval.php'), /Press any key to continue/);
-console.log('PASS: installer guards, logs, legacy endpoint, Nginx template and ONU reader invariants');
+const autorecharge = read('autorecharge/autorecharge.php');
+assert.match(autorecharge, /auto_payment_sms_secret/);
+assert.match(autorecharge, /hash_equals\(/);
+for (const webhook of ['bkash.php', 'bkash_merchant.php', 'nogod.php']) {
+  assert.match(read('autorecharge/' + webhook), /autorecharge_require_webhook_secret\(/,
+    webhook + ' must fail closed behind the configured webhook secret');
+}
+const receiptMigration = read('autorecharge/migration.sql');
+assert.match(receiptMigration, /CREATE TABLE IF NOT EXISTS\s+`tbl_autorecharge_receipts`/i);
+assert.match(receiptMigration, /UNIQUE KEY[\s\S]*gateway[\s\S]*trxid/i,
+  'receipt ledger must enforce gateway + transaction id idempotency');
+console.log('PASS: installer, webhook auth, receipt idempotency, logs, Nginx and ONU safety invariants');

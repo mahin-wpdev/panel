@@ -8,6 +8,7 @@ header('Content-Type: application/json');
 
 try {
     $data = json_decode(file_get_contents('php://input'), true);
+    autorecharge_require_webhook_secret(is_array($data) ? $data : []);
     $msg = trim((string) ($data['msg'] ?? ''));
 
     if (!$data || $msg === '') {
