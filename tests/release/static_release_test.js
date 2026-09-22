@@ -47,6 +47,10 @@ assert.match(peakCollector, /PHP_SAPI\s*!==\s*'cli'/);
 assert.match(peakCollector, /GET_LOCK\('jm_radius_speed_peaks'/);
 assert.match(peakCollector, /\$_SERVER\['SERVER_PORT'\]\s*\?\?=/);
 assert.match(read('mobile-api.php'), /\['server_peak'\]/);
+assert.match(read('mobile-api.php'), /jm_live_snapshot_cached\(\$db,\$session\)/,
+  'live traffic must retain the production per-customer rate-limit cache');
+assert.match(read('system/mobile/live-traffic.php'), /function jm_live_snapshot_cached\(/);
+assert.match(read('system/mobile/live-traffic.php'), /flock\(\$file, LOCK_EX \| LOCK_NB\)/);
 assert.match(read('system/mobile/customer-dashboard.php'), /'traffic_peak'\s*=>/);
 assert.match(read('system/mobile/panel-app.php'), /'traffic_peak'\s*=>/);
 assert.match(read('system/mobile/traffic-peaks-migration.sql'), /CREATE TABLE IF NOT EXISTS tbl_mobile_radius_speed_peaks/);

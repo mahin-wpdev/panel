@@ -45,9 +45,10 @@ function jm_live_snapshot(PDO $db, array $session): array {
     $router=jm_mobile_query($db,
         'SELECT ip_address,username,password,enabled FROM tbl_routers WHERE name=? LIMIT 1',
         [$routerName])->fetch(PDO::FETCH_ASSOC);
-    // "radius" is a virtual billing/authentication mapping, not a MikroTik
-    // management device. Only use a fallback if exactly one router is enabled.
-    // Multiple routers must never be guessed for another customer's traffic.
+    // RADIUS is a billing/authentication target, not a RouterOS management
+    // device. Use the only enabled MikroTik for live monitoring if the
+    // recharge has the virtual "radius" router mapping. Never guess if
+    // multiple management routers are configured.
     if (!$router && strcasecmp($routerName, 'radius')===0) {
         $candidates=jm_mobile_query($db,
             'SELECT ip_address,username,password,enabled FROM tbl_routers WHERE enabled=1 LIMIT 2'
@@ -104,5 +105,160 @@ function jm_live_snapshot(PDO $db, array $session): array {
         // Avoid logging router credentials or returning internal topology/stack traces.
         error_log('JM live traffic: read-only RouterOS query failed ('.get_class($error).')');
         return jm_live_unavailable('Unable to read live PPPoE traffic from the assigned router.');
+    }
+}
+
+
+/**
+ * Shared one-second cache for customer-owned traffic.
+ *
+ * One foreground sample per customer at a time.
+ * Failed reads have a short retry cooldown.
+ * Stale samples are never represented as fresh measurements.
+ */
+function jm_live_snapshot_cached(PDO $db, array $session): array
+{
+    if (($session['actor_type'] ?? '') !== 'customer') {
+        respond(403, ['error' => 'FORBIDDEN']);
+    }
+
+    $customerId = (int)($session['actor_id'] ?? 0);
+
+    if ($customerId < 1) {
+        respond(403, ['error' => 'FORBIDDEN']);
+    }
+
+    global $_app_stage;
+
+    // Staging must never connect to a production router.
+    if (strtolower((string)($_app_stage ?? '')) === 'demo') {
+        return jm_live_snapshot($db, $session);
+    }
+
+    $directory = sys_get_temp_dir() . '/jm-mobile-traffic-v1';
+
+    if (!is_dir($directory)) {
+        @mkdir($directory, 0700);
+    }
+
+    if (
+        is_link($directory)
+        || !is_dir($directory)
+        || (fileperms($directory) & 0777) !== 0700
+        || !is_writable($directory)
+    ) {
+        return jm_live_unavailable(
+            'Traffic cache is temporarily unavailable.'
+        );
+    }
+
+    $name = hash('sha256', 'customer:' . $customerId);
+    $path = $directory . '/' . $name . '.json';
+
+    $file = @fopen($path, 'c+');
+
+    if ($file === false) {
+        return jm_live_unavailable(
+            'Traffic cache is temporarily unavailable.'
+        );
+    }
+
+    $read = static function () use ($file): ?array {
+        rewind($file);
+
+        $raw = stream_get_contents($file, 8192);
+
+        if (!$raw) {
+            return null;
+        }
+
+        $data = json_decode($raw, true);
+
+        if (
+            !is_array($data)
+            || !isset($data['at'])
+            || !isset($data['sample'])
+            || !is_array($data['sample'])
+        ) {
+            return null;
+        }
+
+        return $data;
+    };
+
+    try {
+        $cached = $read();
+        $now = microtime(true);
+
+        if ($cached !== null) {
+            $age = $now - (float)$cached['at'];
+
+            $ttl = ($cached['sample']['available'] ?? false)
+                ? 1.0
+                : 3.0;
+
+            if ($age >= 0 && $age < $ttl) {
+                return $cached['sample'];
+            }
+        }
+
+        // Another request is already collecting this customer's sample.
+        if (!flock($file, LOCK_EX | LOCK_NB)) {
+            if (
+                $cached !== null
+                && $now - (float)$cached['at'] < 5.0
+            ) {
+                $sample = $cached['sample'];
+
+                $sample['message'] =
+                    'Updating traffic; showing the last measurement.';
+
+                return $sample;
+            }
+
+            return jm_live_unavailable(
+                'Traffic measurement is in progress.'
+            );
+        }
+
+        try {
+            // Another request may have refreshed while we waited.
+            $cached = $read();
+            $now = microtime(true);
+
+            if ($cached !== null) {
+                $age = $now - (float)$cached['at'];
+
+                $ttl = ($cached['sample']['available'] ?? false)
+                    ? 1.0
+                    : 3.0;
+
+                if ($age >= 0 && $age < $ttl) {
+                    return $cached['sample'];
+                }
+            }
+
+            $sample = jm_live_snapshot($db, $session);
+
+            $payload = json_encode([
+                'at' => microtime(true),
+                'sample' => $sample
+            ]);
+
+            if ($payload !== false) {
+                rewind($file);
+                ftruncate($file, 0);
+                fwrite($file, $payload);
+                fflush($file);
+            }
+
+            return $sample;
+
+        } finally {
+            flock($file, LOCK_UN);
+        }
+
+    } finally {
+        fclose($file);
     }
 }

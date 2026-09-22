@@ -31,3 +31,5 @@ jobs:
           done
       - name: Role authorization regression
         run: php tests/mobile/auth_role_test.php
+      - name: Offline ONU fail-closed guards (no network)
+        run: php tests/olt/onu_removal_guard_test.php

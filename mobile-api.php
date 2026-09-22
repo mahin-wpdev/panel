@@ -94,7 +94,7 @@ try {
         if ($session['actor_type'] !== 'customer') respond(403,['error'=>'FORBIDDEN']);
         require_once __DIR__.'/system/mobile/live-traffic.php';
         require_once __DIR__.'/system/mobile/radius-peak.php';
-        $live = jm_live_snapshot($db,$session);
+        $live = jm_live_snapshot_cached($db,$session);
         $live['server_peak'] = jm_radius_peak_for_customer($db,(int)$session['actor_id']);
         respond(200,['success'=>true,'data'=>$live]);
     }

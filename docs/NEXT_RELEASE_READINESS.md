@@ -10,7 +10,7 @@ never run the installer SQL against an existing server.
 ## Verified in the audit
 - OLT pager fix was confirmed on the running server by two new `synced 26`
   entries after installation; the older 22 was only the first CLI page.
-- Flutter tests: 11 passed; `flutter analyze --no-pub`: no issues.
+- Flutter tests: 12 passed (including Home server-peak widget); `flutter analyze --no-pub`: no issues.
 - Fresh signed Android 1.0.5+6 APK build succeeded locally and apksigner
   verified APK Signature Scheme v2; release credentials were not committed.
 - Local PHP 8.2 syntax checks accepted the touched first-party PHP, payment,
@@ -87,6 +87,9 @@ never run the installer SQL against an existing server.
   Do not treat this as evidence that other separately configured DBs are backed up.
 - Production CLI PHP 8.3 duplicate extension block/OPcache JIT issue repaired;
   all 11 audited live PHP files passed normal syntax checks.
+- Production cache was copied back into next-release `live-traffic.php` and
+  `mobile-api.php` invokes its per-customer, single-flight wrapper. Static CI
+  prevents accidental cache removal. See `docs/NON_PAYMENT_RELEASE_GATE.md`.
 - Production payment webhook authentication is NOT deployed until the SMS
   forwarder's existing secret transmission has been verified; its appconfig
   secret and receipt-ledger unique index do exist. Never disable a live sender
