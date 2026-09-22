@@ -1037,5 +1037,6 @@
     "Continue_the_balance_top_up_process_": "Continue the balance top-up process?",
     "Routers_Geo_Location_Information": "Routers Geo Location Information",
     "Cron_has_not_run_for_over_1_hour__Please_check_your_setup_": "Cron has not run for over 1 hour. Please check your setup.",
-    "Get_Directions": "Get Directions"
+    "Get_Directions": "Get Directions",
+    "Failed_Login": "Failed Login"
 }
