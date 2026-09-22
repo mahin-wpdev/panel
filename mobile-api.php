@@ -91,8 +91,12 @@ try {
         respond(200,['success'=>true,'data'=>$dashboard]);
     }
     if ($action==='live-traffic' && $method==='GET') {
+        if ($session['actor_type'] !== 'customer') respond(403,['error'=>'FORBIDDEN']);
         require_once __DIR__.'/system/mobile/live-traffic.php';
-        respond(200,['success'=>true,'data'=>jm_live_snapshot($db,$session)]);
+        require_once __DIR__.'/system/mobile/radius-peak.php';
+        $live = jm_live_snapshot($db,$session);
+        $live['server_peak'] = jm_radius_peak_for_customer($db,(int)$session['actor_id']);
+        respond(200,['success'=>true,'data'=>$live]);
     }
     if ($action==='mobile-data' && $method==='GET') {
         require_once __DIR__.'/system/mobile/panel-app.php';

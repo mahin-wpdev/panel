@@ -79,6 +79,7 @@ function jm_app_home(PDO $db, array $identity): array {
         return ['available'=>true,'role'=>'customer','profile'=>$data['customer'],
             'package'=>$data['package'],'network'=>$data['network'],
             'monthly_usage'=>$data['monthly_usage'],
+            'traffic_peak'=>$data['traffic_peak'],
             'demo'=>(bool)$data['demo']];
     }
     $scope=jm_app_customer_scope($db,$identity);

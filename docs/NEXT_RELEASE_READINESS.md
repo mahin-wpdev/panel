@@ -61,3 +61,28 @@ of these commits.
 - Validate live deployment SHA matches the selected release commit before
   announcing the release. Do not use `install/radius.sql` on production:
   that script drops live RADIUS/accounting tables.
+
+## Server-owned traffic peak correction (prepared, NOT deployed)
+- `system/mobile/traffic-peaks-migration.sql` creates additive state/peak tables.
+- `system/mobile/collect-radius-peaks.php` is CLI-only; run it as a dedicated
+  once-per-minute scheduled job after migration and backup on the backend VM.
+- Collector reads existing RADIUS `radacct` interim counters. The first sample
+  of each session is a baseline; later positive counter deltas are divided by
+  elapsed seconds. Reconnects do not invent spikes. Duplicate PPPoE usernames
+  are ignored rather than attributed to the wrong customer.
+- Panel `mobile-api.php?action=live-traffic` returns `server_peak` for the
+  authenticated customer; mobile Home also returns `traffic_peak`.
+- Phone foreground graph remains a separate 60-second live visualization.
+  Phone-stored history is never used to display the highest speed.
+- The peak is the **maximum interval-average speed since deployment**, not an
+  instantaneous 1-second maximum. FreeRADIUS interim updates alone cannot
+  reconstruct unobserved 1-second spikes.
+- Never schedule via an unauthenticated URL. CLI only. Deploy a cron/systemd
+  timer after staging tests, with overlap protection and monitoring; verify
+  the existing RADIUS interim interval before choosing the schedule.
+- Acceptance: record a verified peak; close the phone; generate traffic during
+  another accounting interval; reopen/login on another device; see the same
+  server peak. Verify off-by-one session gaps and tenant isolation. Do not
+  backfill historical rates from cumulative totals.
+- Rollback: disable the scheduled collector and restore the previous API/app
+  files. Retain the additive tables for later review; do not drop live data.

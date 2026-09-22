@@ -35,6 +35,8 @@ SQL);
     require_once __DIR__ . '/monthly-usage.php';
     $pppoe = (string)($row['pppoe_username'] ?: $row['username']);
     $monthlyUsage = jm_mobile_monthly_usage($db, $pppoe);
+    require_once __DIR__ . '/radius-peak.php';
+    $serverPeak = jm_radius_peak_for_customer($db, $customerId);
 
     return [
         'customer' => [
@@ -54,6 +56,7 @@ SQL);
         ],
         'demo' => str_starts_with($row['username'], 'jm_demo_'),
         'monthly_usage' => $monthlyUsage,
+        'traffic_peak' => $serverPeak,
         'network' => [
             'pppoe_online' => null,
             'usage_download_bytes' => null,
