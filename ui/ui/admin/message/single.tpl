@@ -46,6 +46,8 @@
 							<br>
 							<b>[[company_name]]</b> - {Lang::T('Your Company Name')}
 							<br>
+							<b>[[app_download_link]]</b> - Latest JM Broadband APK download link
+							<br>
 							<b>[[payment_link]]</b> - <a href="{Text::url('docs')}/#Reminder%20with%20payment%20link"
 								target="_blank">{Lang::T('Read documentation')}</a>.
 						</p>

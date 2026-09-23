@@ -39,6 +39,7 @@ class Message
         if (empty($txt)) {
             return "";
         }
+        if (function_exists('jmapp_replace_placeholder')) $txt = jmapp_replace_placeholder($txt);
         run_hook('send_sms', [$phone, $txt]); #HOOK
         if (!empty($config['sms_url'])) {
             if (strlen($config['sms_url']) > 4 && substr($config['sms_url'], 0, 4) != "http") {
@@ -104,6 +105,7 @@ class Message
             return "kosong";
         }
 
+        if (function_exists('jmapp_replace_placeholder')) $txt = jmapp_replace_placeholder($txt);
         run_hook('send_whatsapp', [$phone, $txt]); // HOOK
 
         if (!empty($config['wa_url'])) {
@@ -129,6 +131,7 @@ class Message
         if (empty($to)) {
             return "";
         }
+        if (function_exists('jmapp_replace_placeholder')) $body = jmapp_replace_placeholder($body);
         run_hook('send_email', [$to, $subject, $body]); #HOOK
         if (empty($config['smtp_host'])) {
             $attr = "";
@@ -243,6 +246,7 @@ class Message
 
         // Replace placeholders in the message
         $msg = str_replace('[[bills]]', $note, $msg);
+        if (function_exists('jmapp_replace_placeholder')) $msg = jmapp_replace_placeholder($msg);
 
         if ($ds) {
             $msg = str_replace('[[expired_date]]', Lang::dateAndTimeFormat($ds['expiration'], $ds['time']), $msg);
@@ -373,6 +377,7 @@ class Message
 
         // Replace placeholders in the message
         $textInvoice = str_replace('[[bills]]', $note, $textInvoice);
+        if (function_exists('jmapp_replace_placeholder')) $textInvoice = jmapp_replace_placeholder($textInvoice);
 
         if ($config['user_notification_payment'] == 'sms') {
             Message::sendSMS($cust['phonenumber'], $textInvoice);
