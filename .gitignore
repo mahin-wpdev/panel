@@ -16,7 +16,6 @@ sms.php
 pages/
 system/cache/**
 system/plugin/*
-!system/plugin/mobileApp.php
 !system/cache/index.html
 !system/plugin/index.html
 system/paymentgateway/ui/**
@@ -26,7 +25,6 @@ system/paymentgateway/**
 !system/paymentgateway/index.html
 !system/plugin/ui/
 system/plugin/ui/*
-!system/plugin/ui/mobileApp.tpl
 !system/plugin/ui/index.html
 ui/ui_custom/**
 !ui/ui_custom/index.html

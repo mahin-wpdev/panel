@@ -13,6 +13,7 @@ use PEAR2\Net\RouterOS;
 require $root_path . 'system/autoload/mail/Exception.php';
 require $root_path . 'system/autoload/mail/PHPMailer.php';
 require $root_path . 'system/autoload/mail/SMTP.php';
+require_once $root_path . 'system/mobile/github-release.php';
 
 class Message
 {

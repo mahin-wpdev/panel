@@ -1,21 +1,15 @@
 <?php
-/** Stable download link used by [[app_download_link]]. */
+/** Stable public link: the APK always remains hosted and controlled by GitHub. */
 header('Cache-Control: no-store, max-age=0');
+header('Referrer-Policy: no-referrer');
 try {
-    require_once __DIR__ . '/system/vendor/autoload.php';
-    require_once __DIR__ . '/init.php';
-    $release = jmapp_release();
-    $file = (string) ($release['filename'] ?? '');
-    if (!$release || !preg_match('/^jm-broadband-[0-9]+-[a-f0-9]{16}\.apk$/', $file) ||
-        !is_file(__DIR__ . '/mobile-app-releases/' . $file)) {
-        http_response_code(404);
-        exit('No mobile app is currently published.');
-    }
-    if (parse_url(APP_URL, PHP_URL_SCHEME) !== 'https')
-        throw new RuntimeException('HTTPS is required.');
-    header('Location: ' . rtrim(APP_URL, '/') . '/mobile-app-releases/' . rawurlencode($file), true, 302);
-    exit;
+    require_once __DIR__ . '/system/mobile/github-release.php';
+    $release = jmapp_latest_release();
+    header('Location: ' . $release['github_url'], true, 302);
+} catch (OutOfBoundsException $e) {
+    http_response_code(404);
+    exit('No public GitHub APK release.');
 } catch (Throwable $e) {
     http_response_code(503);
-    exit('App download is temporarily unavailable.');
+    exit('GitHub download temporarily unavailable.');
 }
