@@ -58,6 +58,14 @@ Existing endpoint: `https://YOUR-PANEL/panel/mobile-api.php`
 Update manifest: `https://YOUR-PANEL/panel/mobile-app-version.php`
 Stable APK link: `https://YOUR-PANEL/panel/mobile-app-download.php`
 
+JM Broadband's Link-3 IP has an additional TLS-verified `:8443` entrypoint
+forwarded by MikroTik to the **same** HTTPS panel on `10.10.10.7:443`.
+LTE users reach `https://27.147.201.165:8443/panel`, while the original
+`:443` entrypoint stays unchanged for other networks. Manifest URLs are
+same-origin for both entrypoints, even if release metadata was cached by
+a request from the other entrypoint. `[[app_download_link]]` uses the public
+`:8443` URL for this ISP; no APK or signing key is hosted on the panel.
+
 `[[app_download_link]]` may be used in SMS, WhatsApp and email templates;
 it expands to the stable panel download link, which redirects to GitHub.
 PHP requires cURL, outbound HTTPS to `raw.githubusercontent.com` and

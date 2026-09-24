@@ -7,13 +7,30 @@ const JMAPP_APK_NAME = 'jm-broadband.apk';
 const JMAPP_GITHUB_RAW = 'https://raw.githubusercontent.com/mahin-wpdev/jm-broadband-android/main/mobile-release.json';
 
 function jmapp_link(): string {
-    return defined('APP_URL')
-        ? rtrim(APP_URL, '/') . '/mobile-app-download.php' : '';
+    if (!defined('APP_URL')) return '';
+    $base = rtrim(APP_URL, '/');
+    // Only this known HTTPS alternate public entrypoint may change the origin.
+    // Keep the original origin for standard 443 callers and other ISP panels.
+    if (parse_url($base, PHP_URL_HOST) === '27.147.201.165' &&
+        ($_SERVER['HTTP_HOST'] ?? '') === '27.147.201.165:8443') {
+        return 'https://27.147.201.165:8443/panel/mobile-app-download.php';
+    }
+    return $base . '/mobile-app-download.php';
+}
+
+function jmapp_contextualize_release(array $release): array {
+    // Cached snapshots must not leak a different request origin's download URL.
+    $release['download_url'] = jmapp_link();
+    return $release;
 }
 
 function jmapp_replace_placeholder(string $text): string {
     if (strpos($text, '[[app_download_link]]') === false) return $text;
-    return str_replace('[[app_download_link]]', jmapp_link(), $text);
+    // Messages may be read outside the customer's ISP; use the public LTE-safe URL.
+    $link = defined('APP_URL') && parse_url(APP_URL, PHP_URL_HOST) === '27.147.201.165'
+        ? 'https://27.147.201.165:8443/panel/mobile-app-download.php'
+        : jmapp_link();
+    return str_replace('[[app_download_link]]', $link, $text);
 }
 
 /** No release is a normal 404; all other invalid/unavailable data fail closed. */
@@ -63,11 +80,11 @@ function jmapp_latest_release(): array {
         $candidate = json_decode((string) @file_get_contents($cache), true);
         if (is_array($candidate) && preg_match('/^[a-f0-9]{64}$/', (string) ($candidate['sha256'] ?? ''))) {
             $saved = $candidate;
-            if ($age < 600) return $saved;
+            if ($age < 600) return jmapp_contextualize_release($saved);
         }
     }
     if (!function_exists('curl_init')) {
-        if ($saved !== null && $age < 86400) return $saved;
+        if ($saved !== null && $age < 86400) return jmapp_contextualize_release($saved);
         throw new RuntimeException('PHP cURL required.');
     }
     $curl = curl_init(JMAPP_GITHUB_RAW);
@@ -91,7 +108,7 @@ function jmapp_latest_release(): array {
     if ($status === 404) throw new OutOfBoundsException('No public release manifest.');
     if ($json === false || $status !== 200 || strlen($json) > 1048576) {
         // Temporary GitHub/CDN errors cannot override a recently verified release.
-        if ($saved !== null && $age < 86400) return $saved;
+        if ($saved !== null && $age < 86400) return jmapp_contextualize_release($saved);
         throw new RuntimeException('GitHub release manifest unavailable.');
     }
     $data = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
@@ -99,5 +116,5 @@ function jmapp_latest_release(): array {
     $release = jmapp_parse_github_release($data);
     @file_put_contents($cache . '.tmp', json_encode($release), LOCK_EX);
     @rename($cache . '.tmp', $cache);
-    return $release;
+    return jmapp_contextualize_release($release);
 }
