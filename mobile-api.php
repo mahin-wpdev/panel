@@ -103,6 +103,16 @@ try {
         $section=(string)($_GET['section']??'home');
         respond(200,['success'=>true,'data'=>jm_mobile_app_data($db,$session,$section)]);
     }
+    if ($action==='admin-recharge-search' && $method==='GET') {
+        require_once __DIR__.'/system/mobile/panel-app.php';
+        require_once __DIR__.'/system/mobile/admin-recharge.php';
+        respond(200,['success'=>true,'data'=>jm_mobile_recharge_search($db,$session,(string)($_GET['q']??''))]);
+    }
+    if ($action==='admin-recharge' && $method==='POST') {
+        require_once __DIR__.'/system/mobile/panel-app.php';
+        require_once __DIR__.'/system/mobile/admin-recharge.php';
+        respond(200,['success'=>true,'data'=>jm_mobile_recharge_submit($db,$session,body())]);
+    }
     if ($action==='logout' && $method==='POST') {
         jm_mobile_query($db,'UPDATE tbl_mobile_auth_sessions SET revoked_at=NOW() WHERE id=?',[(int)$session['id']]);
         respond(200,['success'=>true]);
