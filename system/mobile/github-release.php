@@ -2,7 +2,9 @@
 /** GitHub-only JM Broadband mobile release connector; no billing or DB writes. */
 const JMAPP_GITHUB_REPO = 'mahin-wpdev/jm-broadband-android';
 const JMAPP_APK_NAME = 'jm-broadband.apk';
-const JMAPP_GITHUB_API = 'https://api.github.com/repos/' . JMAPP_GITHUB_REPO . '/releases/latest';
+// A release snapshot committed by our signed GitHub Actions workflow avoids
+// the shared-IP GitHub API quota without placing a token on the panel server.
+const JMAPP_GITHUB_RAW = 'https://raw.githubusercontent.com/mahin-wpdev/jm-broadband-android/main/mobile-release.json';
 
 function jmapp_link(): string {
     return defined('APP_URL')
@@ -51,15 +53,24 @@ function jmapp_parse_github_release(array $data): array {
     ];
 }
 
-/** Cache successful GitHub reads briefly to stay below unauthenticated API limits. */
+/** Cache validated public GitHub release snapshots and tolerate brief CDN outages. */
 function jmapp_latest_release(): array {
-    $cache = sys_get_temp_dir() . '/jmapp-public-github-release-v1.json';
-    if (is_file($cache) && time() - filemtime($cache) < 90) {
-        $saved = json_decode((string) @file_get_contents($cache), true);
-        if (is_array($saved) && !empty($saved['sha256'])) return $saved;
+    $cache = sys_get_temp_dir() . '/jmapp-public-github-release-v2.json';
+    $saved = null;
+    $age = PHP_INT_MAX;
+    if (is_file($cache)) {
+        $age = max(0, time() - (int) @filemtime($cache));
+        $candidate = json_decode((string) @file_get_contents($cache), true);
+        if (is_array($candidate) && preg_match('/^[a-f0-9]{64}$/', (string) ($candidate['sha256'] ?? ''))) {
+            $saved = $candidate;
+            if ($age < 600) return $saved;
+        }
     }
-    if (!function_exists('curl_init')) throw new RuntimeException('PHP cURL required.');
-    $curl = curl_init(JMAPP_GITHUB_API);
+    if (!function_exists('curl_init')) {
+        if ($saved !== null && $age < 86400) return $saved;
+        throw new RuntimeException('PHP cURL required.');
+    }
+    $curl = curl_init(JMAPP_GITHUB_RAW);
     curl_setopt_array($curl, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_FOLLOWLOCATION => false,
@@ -67,21 +78,21 @@ function jmapp_latest_release(): array {
         CURLOPT_TIMEOUT => 12,
         CURLOPT_MAXREDIRS => 0,
         CURLOPT_HTTPHEADER => [
-            'Accept: application/vnd.github+json',
+            'Accept: application/json',
             'User-Agent: JM-Broadband-Mobile-Update',
-            'X-GitHub-Api-Version: 2022-11-28',
         ],
     ]);
     try {
         $json = curl_exec($curl);
-        $status = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-        if ($json === false) throw new RuntimeException('GitHub connection error.');
+        $status = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
     } finally {
         curl_close($curl);
     }
-    if ($status === 404) throw new OutOfBoundsException('No public release.');
-    if ($status !== 200 || strlen($json) > 1048576) {
-        throw new RuntimeException('GitHub API unavailable.');
+    if ($status === 404) throw new OutOfBoundsException('No public release manifest.');
+    if ($json === false || $status !== 200 || strlen($json) > 1048576) {
+        // Temporary GitHub/CDN errors cannot override a recently verified release.
+        if ($saved !== null && $age < 86400) return $saved;
+        throw new RuntimeException('GitHub release manifest unavailable.');
     }
     $data = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
     if (!is_array($data)) throw new UnexpectedValueException('GitHub JSON invalid.');

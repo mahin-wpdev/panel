@@ -37,11 +37,14 @@ certificate fingerprint, and refuses a changed key.
 5. For the next release, commit a higher version/build to `next-release`
    and rerun the GitHub Action. Existing tags cannot be re-used.
 
-The panel connector checks GitHub's public `/releases/latest` REST endpoint,
-validates tag, release policy, asset filename, size, SHA-256 digest and origin.
-It caches successful reads for 90 seconds to avoid rate limits.
-GitHub API errors or malformed releases fail closed; no fake update is shown.
-GitHub retains the APK; phpNuxBill never hosts or copies it.
+The signed release workflow publishes a public `mobile-release.json` snapshot
+on the Android repository's `main` branch after the APK Release is live.
+The panel reads this snapshot from `raw.githubusercontent.com` instead of
+using the shared-IP GitHub REST API quota. It still validates tag, update
+policy, asset name, size, SHA-256 digest and GitHub download URL. Validated
+metadata is cached for ten minutes; on temporary CDN failure, a previously
+validated snapshot may be used for up to 24 hours. Malformed data fails
+closed. GitHub retains the APK; phpNuxBill never hosts or copies it.
 
 ## Panel deployment
 
@@ -57,9 +60,10 @@ Stable APK link: `https://YOUR-PANEL/panel/mobile-app-download.php`
 
 `[[app_download_link]]` may be used in SMS, WhatsApp and email templates;
 it expands to the stable panel download link, which redirects to GitHub.
-PHP requires cURL, outbound HTTPS to `api.github.com`, and a working TLS
-certificate. Release metadata caching uses the PHP temporary directory.
-A new release becomes visible after at most ~90 seconds of cache lifetime.
+PHP requires cURL, outbound HTTPS to `raw.githubusercontent.com` and
+`github.com`, and a working TLS certificate. Release metadata caching uses
+the PHP temporary directory. Newly published metadata becomes visible after
+up to ten minutes of local caching, plus GitHub's raw-content cache.
 
 Existing 1.0.7 app lacks updater code and must receive the updater-bearing
 1.0.8 APK once through the conventional install/update path. Later releases

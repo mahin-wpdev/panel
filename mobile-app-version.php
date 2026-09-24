@@ -5,8 +5,12 @@ header('Cache-Control: no-store, max-age=0');
 try {
     require_once __DIR__ . '/system/mobile/github-release.php';
     if (!defined('APP_URL')) {
-        // The public panel URL is configured in phpNuxBill; not supplied by the caller.
-        require_once __DIR__ . '/config.php';
+        // phpNuxBill also supports a shared config.php one directory above /panel.
+        // Load configuration only: do not initialize billing, sessions or the database.
+        $configFile = is_file(__DIR__ . '/config.php')
+            ? __DIR__ . '/config.php' : dirname(__DIR__) . '/config.php';
+        if (!is_file($configFile)) throw new RuntimeException('Panel config missing.');
+        require_once $configFile;
     }
     if (!defined('APP_URL') || parse_url(APP_URL, PHP_URL_SCHEME) !== 'https') {
         throw new RuntimeException('HTTPS panel URL required.');
