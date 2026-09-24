@@ -12,7 +12,7 @@ function jm_mobile_recharge_admin(PDO $db, array $session): array {
 }
 function jm_mobile_recharge_plan(PDO $db, int $customerId): ?array {
     return jm_mobile_query($db, "SELECT c.id,c.username,c.fullname,c.status,
-        r.plan_id,r.routers,p.name_plan,p.price,p.type,p.validity,p.validity_unit
+        r.plan_id,r.routers,p.name_plan,p.price,p.type,p.validity,p.validity_unit,p.device,p.prepaid
         FROM tbl_customers c
         LEFT JOIN tbl_user_recharges r ON r.id=(
             SELECT MAX(x.id) FROM tbl_user_recharges x
@@ -26,7 +26,7 @@ function jm_mobile_recharge_search(PDO $db, array $session, string $query): arra
     if (mb_strlen($query)<2 || mb_strlen($query)>80) respond(400,['error'=>'SEARCH_2_TO_80_CHARS']);
     $like='%'.$query.'%';
     $rows=jm_mobile_query($db, "SELECT c.id,c.username,c.fullname,c.status,
-        r.plan_id,r.routers,p.name_plan,p.price,p.type,p.validity,p.validity_unit
+        r.plan_id,r.routers,p.name_plan,p.price,p.type,p.validity,p.validity_unit,p.device,p.prepaid
         FROM tbl_customers c
         LEFT JOIN tbl_user_recharges r ON r.id=(
             SELECT MAX(x.id) FROM tbl_user_recharges x
@@ -41,6 +41,33 @@ function jm_mobile_recharge_search(PDO $db, array $session, string $query): arra
     unset($row);
     return ['available'=>true,'items'=>$rows,
         'note'=>'Only active accounts with an existing internet plan can be renewed. Manual recharge is not bKash payment verification.'];
+}
+function jm_mobile_recharge_plan_eligible(array $current, array $plan): bool {
+    return ($current['status'] ?? '') === 'Active'
+        && (int)($current['plan_id'] ?? 0) > 0
+        && (int)($plan['enabled'] ?? 0) === 1
+        && (string)($plan['routers'] ?? '') === (string)($current['routers'] ?? '')
+        && in_array((string)($plan['type'] ?? ''), ['PPPOE','Hotspot'], true)
+        && (string)$plan['type'] === (string)($current['type'] ?? '')
+        && (string)($plan['device'] ?? '') === (string)($current['device'] ?? '')
+        && (string)($plan['prepaid'] ?? '') === (string)($current['prepaid'] ?? '');
+}
+function jm_mobile_recharge_options(PDO $db, array $session, int $customerId): array {
+    jm_mobile_recharge_admin($db,$session);
+    if ($customerId < 1) respond(400,['error'=>'INVALID_CUSTOMER']);
+    $current=jm_mobile_recharge_plan($db,$customerId);
+    if (!$current || $current['status']!=='Active' || !(int)$current['plan_id'])
+        respond(409,['error'=>'CUSTOMER_PLAN_UNAVAILABLE']);
+    $rows=jm_mobile_query($db,
+        "SELECT id,name_plan,price,type,routers,device,prepaid,validity,validity_unit,enabled
+         FROM tbl_plans WHERE enabled=1 AND routers=? AND type=? AND device=?
+         AND prepaid=? ORDER BY price ASC,id ASC LIMIT 100",
+        [$current['routers'],$current['type'],$current['device'],$current['prepaid']])
+        ->fetchAll(PDO::FETCH_ASSOC);
+    return ['available'=>true,'customer'=>$current,
+        'items'=>array_values(array_filter($rows,
+            static fn($plan)=>jm_mobile_recharge_plan_eligible($current,$plan))),
+        'note'=>'Available internet packages for this customer/router. Amount may also include configured invoices, tax or additional bills.'];
 }
 function jm_mobile_recharge_verify_password(PDO $db, array $admin, string $password): void {
     $ip=(string)($_SERVER['REMOTE_ADDR']??'unknown');
@@ -77,7 +104,11 @@ function jm_mobile_recharge_submit(PDO $db, array $session, array $input): array
     $key=(string)($input['request_key']??'');
     $password=(string)($input['admin_password']??'');
     $ack=$input['payment_verified']??false;
-    if (!$id || !preg_match('/^[a-f0-9]{32}$/D',$key) ||
+    $selectedPlan=filter_var($input['plan_id']??null,FILTER_VALIDATE_INT,
+        ['options'=>['min_range'=>1]]);
+    $expectedPlan=filter_var($input['expected_plan_id']??null,FILTER_VALIDATE_INT,
+        ['options'=>['min_range'=>1]]);
+    if (!$id || !$selectedPlan || !$expectedPlan || !preg_match('/^[a-f0-9]{32}$/D',$key) ||
         $ack!==true || strlen($password)>256 || $password==='')
         respond(400,['error'=>'INVALID_RECHARGE_REQUEST']);
     jm_mobile_recharge_verify_password($db,$admin,$password);
@@ -87,12 +118,18 @@ function jm_mobile_recharge_submit(PDO $db, array $session, array $input): array
         respond(409,['error'=>'CUSTOMER_PLAN_UNAVAILABLE']);
     if ((string)($input['username']??'')!==$customer['username'])
         respond(409,['error'=>'CUSTOMER_CHANGED']);
+    if ((int)$customer['plan_id']!==(int)$expectedPlan)
+        respond(409,['error'=>'PLAN_CHANGED_REFRESH_REQUIRED']);
+    $plan=jm_mobile_query($db,'SELECT id,name_plan,price,type,routers,device,prepaid,enabled FROM tbl_plans WHERE id=? LIMIT 1',[$selectedPlan])->fetch(PDO::FETCH_ASSOC);
+    if (!$plan || !jm_mobile_recharge_plan_eligible($customer,$plan))
+        respond(409,['error'=>'SELECTED_PLAN_NOT_ALLOWED']);
     $existing=jm_mobile_query($db,
         'SELECT * FROM tbl_mobile_admin_recharge_requests WHERE request_key=?',
         [$key])->fetch(PDO::FETCH_ASSOC);
     if ($existing) {
         if ((int)$existing['actor_id']!==$admin['id'] ||
-            (int)$existing['customer_id']!==(int)$id)
+            (int)$existing['customer_id']!==(int)$id ||
+            (int)$existing['plan_id']!==(int)$selectedPlan)
             respond(409,['error'=>'REQUEST_KEY_CONFLICT']);
         if ($existing['status']==='completed')
             return ['status'=>'completed','invoice'=>$existing['invoice'],'duplicate'=>true];
@@ -103,6 +140,10 @@ function jm_mobile_recharge_submit(PDO $db, array $session, array $input): array
     if ((int)jm_mobile_query($db,'SELECT GET_LOCK(?, 0)',[$lock])->fetchColumn()!==1)
         respond(409,['error'=>'RECHARGE_ALREADY_PROCESSING']);
     try {
+        $lockedCustomer=jm_mobile_recharge_plan($db,(int)$id);
+        if (!$lockedCustomer || (int)$lockedCustomer['plan_id']!==(int)$expectedPlan ||
+            !jm_mobile_recharge_plan_eligible($lockedCustomer,$plan))
+            respond(409,['error'=>'PLAN_CHANGED_REFRESH_REQUIRED']);
         $recent=jm_mobile_query($db,
             "SELECT 1 FROM tbl_mobile_admin_recharge_requests
              WHERE customer_id=? AND (status='pending' OR
@@ -113,12 +154,12 @@ function jm_mobile_recharge_submit(PDO $db, array $session, array $input): array
             "INSERT INTO tbl_mobile_admin_recharge_requests
              (request_key,actor_id,customer_id,plan_id,router,status,created_at)
              VALUES (?,?,?,?,?,'pending',NOW())",
-            [$key,$admin['id'],$id,$customer['plan_id'],$customer['routers']]);
+            [$key,$admin['id'],$id,$selectedPlan,$customer['routers']]);
         // Legacy Package::rechargeUser also changes PPPoE, invoices and billing.
         // It is not atomic with our request table: uncertain failures MUST be reviewed.
         $GLOBALS['admin']=$admin['actor'];
         $invoice=Package::rechargeUser((int)$id,(string)$customer['routers'],
-            (int)$customer['plan_id'],'Admin Manual',$admin['username'],
+            (int)$selectedPlan,'Admin Manual',$admin['username'],
             'Admin-confirmed manual recharge via JM Broadband mobile app');
         if (!$invoice) respond(409,['error'=>'RECHARGE_CHECK_PANEL_BEFORE_RETRY']);
         jm_mobile_query($db,
@@ -128,7 +169,7 @@ function jm_mobile_recharge_submit(PDO $db, array $session, array $input): array
         _log('Mobile admin '.$admin['username'].' recharged '.$customer['username'].
             ' ['.$invoice.']','Admin',$admin['id']);
         return ['status'=>'completed','invoice'=>(string)$invoice,'duplicate'=>false,
-            'username'=>$customer['username']];
+            'username'=>$customer['username'],'plan_id'=>(int)$selectedPlan];
     } finally {
         jm_mobile_query($db,'SELECT RELEASE_LOCK(?)',[$lock]);
     }

@@ -108,6 +108,11 @@ try {
         require_once __DIR__.'/system/mobile/admin-recharge.php';
         respond(200,['success'=>true,'data'=>jm_mobile_recharge_search($db,$session,(string)($_GET['q']??''))]);
     }
+    if ($action==='admin-recharge-options' && $method==='GET') {
+        require_once __DIR__.'/system/mobile/panel-app.php';
+        require_once __DIR__.'/system/mobile/admin-recharge.php';
+        respond(200,['success'=>true,'data'=>jm_mobile_recharge_options($db,$session,(int)($_GET['customer_id']??0))]);
+    }
     if ($action==='admin-recharge' && $method==='POST') {
         require_once __DIR__.'/system/mobile/panel-app.php';
         require_once __DIR__.'/system/mobile/admin-recharge.php';
