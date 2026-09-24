@@ -69,6 +69,42 @@ function jm_mobile_recharge_options(PDO $db, array $session, int $customerId): a
             static fn($plan)=>jm_mobile_recharge_plan_eligible($current,$plan))),
         'note'=>'Available internet packages for this customer/router. Amount may also include configured invoices, tax or additional bills.'];
 }
+function jm_mobile_recharge_calculate_preview(int $customerId, array $plan): array {
+    // Match Package::rechargeUser's existing-record branch; do not charge anything.
+    [$bills,$extra] = User::getBills($customerId);
+    $price = (float)$plan['price'];
+    $override = null;
+    $base = $price;
+    if ((string)$plan['validity_unit'] === 'Period') {
+        $invoice = User::getAttribute('Invoice',$customerId);
+        if (is_numeric($invoice) && (float)$invoice != 0.0) {
+            $base = (float)$invoice;
+            $override = $base;
+        }
+    }
+    $amount = round($base + (float)$extra,2);
+    return ['package_price_bdt'=>number_format($price,2,'.',''),
+        'period_invoice_override_bdt'=>$override===null?null:number_format($override,2,'.',''),
+        'additional_bills_bdt'=>number_format((float)$extra,2,'.',''),
+        'bills'=>$bills,
+        'expected_recorded_amount_bdt'=>number_format($amount,2,'.',''),
+        'note'=>'Estimate of the phpNuxBill transaction amount before recharge; '
+            .'no payment is collected or verified here. Confirm any separate tax, '
+            .'reseller settlement or outstanding payment independently.'];
+}
+function jm_mobile_recharge_preview(PDO $db, array $session, int $id, int $planId): array {
+    jm_mobile_recharge_admin($db,$session);
+    if ($id<1 || $planId<1) respond(400,['error'=>'INVALID_PREVIEW_REQUEST']);
+    $current=jm_mobile_recharge_plan($db,$id);
+    $plan=jm_mobile_query($db,'SELECT id,name_plan,price,type,routers,device,prepaid,enabled,validity_unit
+        FROM tbl_plans WHERE id=? LIMIT 1',[$planId])->fetch(PDO::FETCH_ASSOC);
+    if (!$current || !$plan || !jm_mobile_recharge_plan_eligible($current,$plan))
+        respond(409,['error'=>'SELECTED_PLAN_NOT_ALLOWED']);
+    return ['available'=>true,'customer_id'=>$id,'plan_id'=>$planId,
+        'current_plan_id'=>(int)$current['plan_id'],
+        'plan_name'=>$plan['name_plan'],
+        'preview'=>jm_mobile_recharge_calculate_preview($id,$plan)];
+}
 function jm_mobile_recharge_verify_password(PDO $db, array $admin, string $password): void {
     $ip=(string)($_SERVER['REMOTE_ADDR']??'unknown');
     $attemptKey=hash('sha256','mobile-recharge|'.$admin['id'].'|'.$ip);
@@ -120,9 +156,13 @@ function jm_mobile_recharge_submit(PDO $db, array $session, array $input): array
         respond(409,['error'=>'CUSTOMER_CHANGED']);
     if ((int)$customer['plan_id']!==(int)$expectedPlan)
         respond(409,['error'=>'PLAN_CHANGED_REFRESH_REQUIRED']);
-    $plan=jm_mobile_query($db,'SELECT id,name_plan,price,type,routers,device,prepaid,enabled FROM tbl_plans WHERE id=? LIMIT 1',[$selectedPlan])->fetch(PDO::FETCH_ASSOC);
+    $plan=jm_mobile_query($db,'SELECT id,name_plan,price,type,routers,device,prepaid,enabled,validity_unit FROM tbl_plans WHERE id=? LIMIT 1',[$selectedPlan])->fetch(PDO::FETCH_ASSOC);
     if (!$plan || !jm_mobile_recharge_plan_eligible($customer,$plan))
         respond(409,['error'=>'SELECTED_PLAN_NOT_ALLOWED']);
+    $expectedAmount=(string)($input['expected_preview_amount']??'');
+    if ($expectedAmount!=='' && (!preg_match('/^[0-9]+\\.[0-9]{2}$/D',$expectedAmount) ||
+        jm_mobile_recharge_calculate_preview((int)$id,$plan)['expected_recorded_amount_bdt']!==$expectedAmount))
+        respond(409,['error'=>'RECHARGE_PREVIEW_CHANGED']);
     $existing=jm_mobile_query($db,
         'SELECT * FROM tbl_mobile_admin_recharge_requests WHERE request_key=?',
         [$key])->fetch(PDO::FETCH_ASSOC);
@@ -144,6 +184,9 @@ function jm_mobile_recharge_submit(PDO $db, array $session, array $input): array
         if (!$lockedCustomer || (int)$lockedCustomer['plan_id']!==(int)$expectedPlan ||
             !jm_mobile_recharge_plan_eligible($lockedCustomer,$plan))
             respond(409,['error'=>'PLAN_CHANGED_REFRESH_REQUIRED']);
+        if ($expectedAmount!=='' &&
+            jm_mobile_recharge_calculate_preview((int)$id,$plan)['expected_recorded_amount_bdt']!==$expectedAmount)
+            respond(409,['error'=>'RECHARGE_PREVIEW_CHANGED']);
         $recent=jm_mobile_query($db,
             "SELECT 1 FROM tbl_mobile_admin_recharge_requests
              WHERE customer_id=? AND (status='pending' OR

@@ -113,6 +113,24 @@ try {
         require_once __DIR__.'/system/mobile/admin-recharge.php';
         respond(200,['success'=>true,'data'=>jm_mobile_recharge_options($db,$session,(int)($_GET['customer_id']??0))]);
     }
+    if ($action==='admin-customer-profile' && $method==='GET') {
+        require_once __DIR__.'/system/mobile/panel-app.php';
+        require_once __DIR__.'/system/mobile/admin-recharge.php';
+        require_once __DIR__.'/system/mobile/admin-operations.php';
+        respond(200,['success'=>true,'data'=>jm_mobile_admin_profile($db,$session,(int)($_GET['customer_id']??0))]);
+    }
+    if ($action==='admin-expiry' && $method==='GET') {
+        require_once __DIR__.'/system/mobile/panel-app.php';
+        require_once __DIR__.'/system/mobile/admin-recharge.php';
+        require_once __DIR__.'/system/mobile/admin-operations.php';
+        respond(200,['success'=>true,'data'=>jm_mobile_admin_expiry($db,$session,(string)($_GET['window']??'today'))]);
+    }
+    if ($action==='admin-recharge-preview' && $method==='GET') {
+        require_once __DIR__.'/system/mobile/panel-app.php';
+        require_once __DIR__.'/system/mobile/admin-recharge.php';
+        respond(200,['success'=>true,'data'=>jm_mobile_recharge_preview($db,$session,
+            (int)($_GET['customer_id']??0),(int)($_GET['plan_id']??0))]);
+    }
     if ($action==='admin-recharge' && $method==='POST') {
         require_once __DIR__.'/system/mobile/panel-app.php';
         require_once __DIR__.'/system/mobile/admin-recharge.php';

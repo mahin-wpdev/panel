@@ -33,3 +33,23 @@ requests block further recharge for that customer until an administrator
 checks the Panel and manually reconciles the request row. Do not simply
 delete a pending row or retry with a new key: external PPPoE effects and
 invoice creation are not one atomic SQL transaction.
+
+## v1.0.15 admin operations
+
+Additional GET-only admin endpoints:
+- `admin-customer-profile&customer_id=N`: scoped customer details, current plan,
+  last synced ONU if supported, monthly RADIUS usage, 25 recorded transactions,
+  and 20 admin mobile recharge audit rows.
+- `admin-expiry&window=today|3|7|overdue`: today/next days/past-expiry
+  dashboard from latest non-balance service expiry, first 150 shown and total count.
+- `admin-recharge-preview&customer_id=N&plan_id=N`: verifies compatibility;
+  estimates the *recorded* phpNuxBill amount from plan price, Period invoice
+  override and `User::getBills` (installments included).
+- `POST admin-recharge` accepts an optional `expected_preview_amount` from
+  new clients and fails closed with `RECHARGE_PREVIEW_CHANGED` if billing
+  changed before execution. Old clients retain the existing behavior.
+
+Preview is NOT proof of payment, settlement, a gateway transaction, or tax
+calculation; no customer app self-payment or auto-recharge endpoint was added.
+Every mutation still requires current admin password and a verified-payment
+declaration. Transactions are not guaranteed to be a receipt for collected cash.
