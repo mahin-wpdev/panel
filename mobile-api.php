@@ -128,7 +128,10 @@ try {
             respond(200,['success'=>true,'data'=>jm_ticket_notifications($db,$session)]);
         if ($action==='ticket-notification-read' && $method==='POST') {
             $input=body();
-            respond(200,['success'=>true,'data'=>jm_ticket_notification_read($db,$session,(int)($input['notification_id']??0))]);
+            respond(200,['success'=>true,'data'=>jm_ticket_notification_read(
+                $db,$session,(int)($input['notification_id']??0),
+                (string)($input['notification_type']??'support_ticket')
+            )]);
         }
         respond(404,['error'=>'UNKNOWN_ENDPOINT']);
     }

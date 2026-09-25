@@ -35,6 +35,37 @@ SQL);
     require_once __DIR__ . '/monthly-usage.php';
     $pppoe = (string)($row['pppoe_username'] ?: $row['username']);
     $monthlyUsage = jm_mobile_monthly_usage($db, $pppoe);
+    $pppoeOnline = null;
+    $connectedSince = null;
+    $connectedSeconds = null;
+    try {
+        $radius = jm_mobile_radius_db($db);
+        $schema = $radius->query("SELECT COUNT(DISTINCT COLUMN_NAME)
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='radacct'
+              AND COLUMN_NAME IN ('username','acctstarttime','acctstoptime')");
+        if ((int)$schema->fetchColumn() === 3) {
+            $sessionStmt = $radius->prepare("SELECT acctstarttime
+                FROM radacct
+                WHERE username=? AND BINARY username=BINARY ?
+                  AND acctstoptime IS NULL
+                ORDER BY acctstarttime DESC LIMIT 1");
+            $sessionStmt->execute([$pppoe, $pppoe]);
+            $sessionStart = $sessionStmt->fetchColumn();
+            if ($sessionStart !== false && $sessionStart !== null) {
+                $connectedSince = (string)$sessionStart;
+                $startedAt = strtotime($connectedSince);
+                if ($startedAt !== false) {
+                    $connectedSeconds = max(0, time() - $startedAt);
+                    $pppoeOnline = true;
+                }
+            } else {
+                $pppoeOnline = false;
+            }
+        }
+    } catch (Throwable $ignored) {
+        // Dashboard remains usable if live RADIUS session data is unavailable.
+    }
     require_once __DIR__ . '/radius-peak.php';
     $serverPeak = jm_radius_peak_for_customer($db, $customerId);
     $onuRx = null;
@@ -75,7 +106,9 @@ SQL);
         'monthly_usage' => $monthlyUsage,
         'traffic_peak' => $serverPeak,
         'network' => [
-            'pppoe_online' => null,
+            'pppoe_online' => $pppoeOnline,
+            'connected_since' => $connectedSince,
+            'connected_seconds' => $connectedSeconds,
             'usage_download_bytes' => null,
             'usage_upload_bytes' => null,
             'onu_rx_dbm' => $onuRx,

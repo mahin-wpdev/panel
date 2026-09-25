@@ -251,6 +251,13 @@
                                     href="{Text::url('message/send')}">{Lang::T('Single Customer')}</a></li>
                             <li {if $_routes[1] eq 'send_bulk' }class="active" {/if}><a
                                     href="{Text::url('message/send_bulk')}">{Lang::T('Bulk Customers')}</a></li>
+                            {if in_array($_admin['user_type'],['SuperAdmin','Admin'])}
+                                <li {if $_routes[0] eq 'appnotifications'}class="active"{/if}>
+                                    <a href="{Text::url('appnotifications/send')}">
+                                        <i class="fa fa-bell"></i> App Push Notifications
+                                    </a>
+                                </li>
+                            {/if}
                             {$_MENU_MESSAGE}
                         </ul>
                     </li>

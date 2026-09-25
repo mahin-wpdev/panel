@@ -1,5 +1,5 @@
 <?php
-/** Firebase Cloud Messaging for authenticated JM Broadband mobile devices. */
+/** Firebase Cloud Messaging for authenticated Arivo ISP Billing mobile devices. */
 declare(strict_types=1);
 
 function jm_push_ready(PDO $db): bool {
@@ -100,4 +100,17 @@ function jm_push_send_staff(PDO $db,string $title,string $body,
     foreach ($tokens as $token)
         if (jm_push_send_token($db,(string)$token,$title,$body,$data)) $sent++;
     return $sent;
+}
+
+function jm_push_alert_ready(PDO $db): bool {
+    return jm_app_table($db,'tbl_mobile_app_notifications');
+}
+function jm_push_store_alert(PDO $db,string $recipientType,int $recipientId,
+                             string $title,string $body,?int $adminId=null): int {
+    if (!jm_push_alert_ready($db) || $recipientId<1) return 0;
+    jm_mobile_query($db,"INSERT INTO tbl_mobile_app_notifications
+      (recipient_type,recipient_id,title,body,sent_by_admin_id,created_at,read_at)
+      VALUES (?,?,?,?,?,NOW(),NULL)",
+      [$recipientType,$recipientId,$title,$body,$adminId]);
+    return (int)$db->lastInsertId();
 }

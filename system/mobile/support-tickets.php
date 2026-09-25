@@ -161,23 +161,58 @@ function jm_ticket_update(PDO $db,array $session,array $input): array {
 function jm_ticket_notifications(PDO $db,array $session): array {
     $actor=jm_ticket_actor($db,$session);
     $type=$actor['role']==='admin'?'staff':'customer';
-    $count=(int)jm_mobile_query($db,
+    $supportCount=(int)jm_mobile_query($db,
       "SELECT COUNT(*) FROM tbl_mobile_support_notifications
         WHERE recipient_type=? AND recipient_id=? AND read_at IS NULL",
       [$type,$actor['id']])->fetchColumn();
-    $rows=jm_mobile_query($db,"SELECT id,ticket_id,title,created_at,read_at
-      FROM tbl_mobile_support_notifications WHERE recipient_type=?
-      AND recipient_id=? ORDER BY id DESC LIMIT 50",
+    $supportRows=jm_mobile_query($db,
+      "SELECT id,ticket_id,title,NULL AS body,created_at,read_at,
+              'support_ticket' AS kind
+       FROM tbl_mobile_support_notifications
+       WHERE recipient_type=? AND recipient_id=?
+       ORDER BY id DESC LIMIT 50",
       [$type,$actor['id']])->fetchAll(PDO::FETCH_ASSOC);
-    return ['available'=>true,'unread'=>$count,'items'=>$rows];
+
+    $appCount=0;
+    $appRows=[];
+    if (jm_app_table($db,'tbl_mobile_app_notifications')) {
+        $appCount=(int)jm_mobile_query($db,
+          "SELECT COUNT(*) FROM tbl_mobile_app_notifications
+           WHERE recipient_type=? AND recipient_id=? AND read_at IS NULL",
+          [$type,$actor['id']])->fetchColumn();
+        $appRows=jm_mobile_query($db,
+          "SELECT id,NULL AS ticket_id,title,body,created_at,read_at,
+                  'panel_message' AS kind
+           FROM tbl_mobile_app_notifications
+           WHERE recipient_type=? AND recipient_id=?
+           ORDER BY id DESC LIMIT 50",
+          [$type,$actor['id']])->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    $rows=array_merge($supportRows,$appRows);
+    usort($rows,static function(array $a,array $b): int {
+        $timeCmp=strcmp((string)$b['created_at'],(string)$a['created_at']);
+        if ($timeCmp!==0) return $timeCmp;
+        return ((int)$b['id'])<=>((int)$a['id']);
+    });
+    $rows=array_slice($rows,0,50);
+    return ['available'=>true,'unread'=>$supportCount+$appCount,'items'=>$rows];
 }
-function jm_ticket_notification_read(PDO $db,array $session,int $id): array {
+function jm_ticket_notification_read(PDO $db,array $session,int $id,
+                                     string $kind='support_ticket'): array {
     $actor=jm_ticket_actor($db,$session);
     if ($id<1) respond(400,['error'=>'INVALID_NOTIFICATION']);
     $type=$actor['role']==='admin'?'staff':'customer';
-    jm_mobile_query($db,"UPDATE tbl_mobile_support_notifications
-       SET read_at=COALESCE(read_at,NOW()) WHERE id=?
-       AND recipient_type=? AND recipient_id=?",
-       [$id,$type,$actor['id']]);
+    if ($kind==='panel_message' && jm_app_table($db,'tbl_mobile_app_notifications')) {
+        jm_mobile_query($db,"UPDATE tbl_mobile_app_notifications
+          SET read_at=COALESCE(read_at,NOW()) WHERE id=?
+          AND recipient_type=? AND recipient_id=?",
+          [$id,$type,$actor['id']]);
+    } else {
+        jm_mobile_query($db,"UPDATE tbl_mobile_support_notifications
+          SET read_at=COALESCE(read_at,NOW()) WHERE id=?
+          AND recipient_type=? AND recipient_id=?",
+          [$id,$type,$actor['id']]);
+    }
     return ['ok'=>true];
 }
