@@ -132,6 +132,20 @@ try {
         }
         respond(404,['error'=>'UNKNOWN_ENDPOINT']);
     }
+    if (str_starts_with($action,'admin-onu-')) {
+        require_once __DIR__.'/system/mobile/panel-app.php';
+        require_once __DIR__.'/system/mobile/admin-onus.php';
+        if ($action==='admin-onu-list' && $method==='GET')
+            respond(200,['success'=>true,'data'=>jm_mobile_onu_list(
+                $db,$session,(string)($_GET['q']??''),(string)($_GET['filter']??'all'))]);
+        if ($action==='admin-onu-assign' && $method==='POST')
+            respond(200,['success'=>true,'data'=>jm_mobile_onu_assign($db,$session,body())]);
+        if ($action==='admin-onu-unassign' && $method==='POST')
+            respond(200,['success'=>true,'data'=>jm_mobile_onu_unassign($db,$session,body())]);
+        if ($action==='admin-onu-remove' && $method==='POST')
+            respond(200,['success'=>true,'data'=>jm_mobile_onu_remove($db,$session,body())]);
+        respond(404,['error'=>'UNKNOWN_ENDPOINT']);
+    }
     if ($action==='admin-recharge-search' && $method==='GET') {
         require_once __DIR__.'/system/mobile/panel-app.php';
         require_once __DIR__.'/system/mobile/admin-recharge.php';

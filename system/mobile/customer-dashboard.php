@@ -37,6 +37,22 @@ SQL);
     $monthlyUsage = jm_mobile_monthly_usage($db, $pppoe);
     require_once __DIR__ . '/radius-peak.php';
     $serverPeak = jm_radius_peak_for_customer($db, $customerId);
+    $onuRx = null;
+    $onuStatus = null;
+    try {
+        $onuStmt = $db->prepare("SELECT rx_power,status FROM tbl_onus
+            WHERE customer_id=? AND status<>'REMOVED'
+            ORDER BY CASE WHEN status='ONLINE' THEN 0 ELSE 1 END,
+                     updated_at DESC,id DESC LIMIT 1");
+        $onuStmt->execute([$customerId]);
+        $onu = $onuStmt->fetch(PDO::FETCH_ASSOC);
+        if ($onu) {
+            $onuRx = $onu['rx_power'] === null ? null : (float)$onu['rx_power'];
+            $onuStatus = $onu['status'] ?: null;
+        }
+    } catch (Throwable $ignored) {
+        // Older installations may not have ONU inventory yet.
+    }
 
     return [
         'customer' => [
@@ -50,6 +66,7 @@ SQL);
             'name' => $row['name_plan'] ?: $row['namebp'],
             'speed' => $speed,
             'price_bdt' => $row['price'] === null ? null : (float)$row['price'],
+            'balance_bdt' => $row['balance'] === null ? null : (float)$row['balance'],
             'expiration' => $expiry,
             'days_remaining' => $days === null ? null : max(0, $days),
             'state' => !$hasPackage ? 'none' : ($isActive ? 'active' : 'expired'),
@@ -61,7 +78,8 @@ SQL);
             'pppoe_online' => null,
             'usage_download_bytes' => null,
             'usage_upload_bytes' => null,
-            'onu_rx_dbm' => null,
+            'onu_rx_dbm' => $onuRx,
+            'onu_status' => $onuStatus,
         ],
     ];
 }
