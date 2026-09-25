@@ -109,28 +109,22 @@ function jm_app_home(PDO $db, array $identity): array {
     return ['available'=>true,'role'=>$identity['role'],'summary'=>$summary,
         'note'=>'Monthly sales are totals of recorded transactions; not verified payments, cash balance, or net profit.'];
 }
-function jm_app_customers(PDO $db, array $identity): array {
+function jm_app_customers(PDO $db, array $identity, string $query=''): array {
     if ($identity['role']==='customer') respond(403,['error'=>'FORBIDDEN']);
     $scope=jm_app_customer_scope($db,$identity);
     if (!$scope) return jm_app_disabled('This Panel has no customer-to-reseller mapping.');
     [$where,$params]=$scope;
-    $rows=jm_app_rows($db,"SELECT c.id,c.username,c.fullname,c.status,c.pppoe_username FROM tbl_customers c WHERE $where ORDER BY c.id DESC LIMIT 60",$params);
-    require_once __DIR__ . '/monthly-usage.php';
-    foreach ($rows as &$customerRow) {
-        $pppoe = (string)($customerRow['pppoe_username'] ?: $customerRow['username']);
-        $usage = jm_mobile_monthly_view($db, $pppoe);
-        $customerRow['monthly_usage_month'] = $usage['month'];
-        $customerRow['monthly_download'] = $usage['available']
-            ? $usage['download_gb'] . ' GB' : 'Unavailable';
-        $customerRow['monthly_upload'] = $usage['available']
-            ? $usage['upload_gb'] . ' GB' : 'Unavailable';
-        $customerRow['monthly_total'] = $usage['available']
-            ? $usage['total_gb'] . ' GB' : 'Unavailable';
-        $customerRow['monthly_usage_note'] = $usage['note'];
+    $query=trim($query);
+    if (mb_strlen($query)>80) respond(400,['error'=>'SEARCH_TOO_LONG']);
+    if ($query!=='') {
+        $where.=" AND (c.username LIKE ? OR c.fullname LIKE ? OR c.pppoe_username LIKE ? OR c.phonenumber LIKE ?)";
+        $like='%'.$query.'%';
+        array_push($params,$like,$like,$like,$like);
     }
-    unset($customerRow);
+    $rows=jm_app_rows($db,"SELECT c.id,c.username,c.fullname,c.status,c.pppoe_username FROM tbl_customers c WHERE $where ORDER BY c.id DESC LIMIT 60",$params);
+    /* Monthly RADIUS usage is loaded on demand in the profile, not the list. */
     return ['available'=>true,'items'=>$rows,
-        'note'=>'RADIUS session totals, scoped on the server. A partial-month note means earlier traffic is not included. No PPPoE passwords are returned.'];
+        'note'=>'Showing up to 60 matching customers. Search by name, username, PPPoE or phone; details and RADIUS usage are available in Profile.'];
 }
 function jm_app_sales(PDO $db, array $identity): array {
     if (!jm_app_table($db,'tbl_transactions')) return jm_app_disabled('Transactions table is unavailable.');
@@ -195,7 +189,7 @@ function jm_mobile_app_data(PDO $db, array $session, string $section): array {
     if (!in_array($section,$allowed,true)) respond(404,['error'=>'UNKNOWN_ENDPOINT']);
     return match ($section) {
         'home'=>jm_app_home($db,$identity),
-        'customers'=>jm_app_customers($db,$identity),
+        'customers'=>jm_app_customers($db,$identity,(string)($_GET['q']??'')),
         'sales'=>jm_app_sales($db,$identity),
         'onus'=>jm_app_onus($db,$identity),
         'inbox'=>jm_app_inbox($db,$identity),

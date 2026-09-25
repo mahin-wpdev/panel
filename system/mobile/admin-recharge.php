@@ -105,6 +105,29 @@ function jm_mobile_recharge_preview(PDO $db, array $session, int $id, int $planI
         'plan_name'=>$plan['name_plan'],
         'preview'=>jm_mobile_recharge_calculate_preview($id,$plan)];
 }
+function jm_mobile_recharge_recover(PDO $db, array $request): ?string {
+    if (($request['status']??'')==='completed' && !empty($request['invoice']))
+        return (string)$request['invoice'];
+    if (empty($request['created_at'])) return null;
+    $invoice=jm_mobile_query($db,"SELECT t.invoice
+        FROM tbl_transactions t
+        JOIN tbl_plans p ON p.id=?
+        JOIN tbl_users u ON u.id=?
+        WHERE t.user_id=? AND t.admin_id=?
+          AND t.plan_name=p.name_plan
+          AND t.method=CONCAT('Admin Manual - ',u.username)
+          AND TIMESTAMP(t.recharged_on,t.recharged_time)>=
+              DATE_SUB(?,INTERVAL 2 MINUTE)
+        ORDER BY t.id DESC LIMIT 1",
+        [(int)$request['plan_id'],(int)$request['actor_id'],
+         (int)$request['customer_id'],(int)$request['actor_id'],
+         (string)$request['created_at']])->fetchColumn();
+    if (!$invoice) return null;
+    jm_mobile_query($db,"UPDATE tbl_mobile_admin_recharge_requests
+        SET status='completed',invoice=?,completed_at=COALESCE(completed_at,NOW())
+        WHERE request_key=?",[(string)$invoice,(string)$request['request_key']]);
+    return (string)$invoice;
+}
 function jm_mobile_recharge_verify_password(PDO $db, array $admin, string $password): void {
     $ip=(string)($_SERVER['REMOTE_ADDR']??'unknown');
     $attemptKey=hash('sha256','mobile-recharge|'.$admin['id'].'|'.$ip);
@@ -171,8 +194,9 @@ function jm_mobile_recharge_submit(PDO $db, array $session, array $input): array
             (int)$existing['customer_id']!==(int)$id ||
             (int)$existing['plan_id']!==(int)$selectedPlan)
             respond(409,['error'=>'REQUEST_KEY_CONFLICT']);
-        if ($existing['status']==='completed')
-            return ['status'=>'completed','invoice'=>$existing['invoice'],'duplicate'=>true];
+        $recovered=jm_mobile_recharge_recover($db,$existing);
+        if ($recovered)
+            return ['status'=>'completed','invoice'=>$recovered,'duplicate'=>true,'recovered'=>true];
         respond(409,['error'=>'RECHARGE_CHECK_PANEL_BEFORE_RETRY']);
     }
     // Serialise requests per customer, including requests with different keys.
@@ -188,11 +212,16 @@ function jm_mobile_recharge_submit(PDO $db, array $session, array $input): array
             jm_mobile_recharge_calculate_preview((int)$id,$plan)['expected_recorded_amount_bdt']!==$expectedAmount)
             respond(409,['error'=>'RECHARGE_PREVIEW_CHANGED']);
         $recent=jm_mobile_query($db,
-            "SELECT 1 FROM tbl_mobile_admin_recharge_requests
+            "SELECT * FROM tbl_mobile_admin_recharge_requests
              WHERE customer_id=? AND (status='pending' OR
                  created_at>DATE_SUB(NOW(),INTERVAL 60 SECOND))
-             LIMIT 1",[$id])->fetchColumn();
-        if ($recent) respond(409,['error'=>'RECENT_RECHARGE_CHECK_PANEL']);
+             ORDER BY created_at DESC LIMIT 1",[$id])->fetch(PDO::FETCH_ASSOC);
+        if ($recent) {
+            $recovered=jm_mobile_recharge_recover($db,$recent);
+            if ($recovered)
+                return ['status'=>'completed','invoice'=>$recovered,'duplicate'=>true,'recovered'=>true];
+            respond(409,['error'=>'RECENT_RECHARGE_CHECK_PANEL']);
+        }
         jm_mobile_query($db,
             "INSERT INTO tbl_mobile_admin_recharge_requests
              (request_key,actor_id,customer_id,plan_id,router,status,created_at)
@@ -201,16 +230,35 @@ function jm_mobile_recharge_submit(PDO $db, array $session, array $input): array
         // Legacy Package::rechargeUser also changes PPPoE, invoices and billing.
         // It is not atomic with our request table: uncertain failures MUST be reviewed.
         $GLOBALS['admin']=$admin['actor'];
-        $invoice=Package::rechargeUser((int)$id,(string)$customer['routers'],
-            (int)$selectedPlan,'Admin Manual',$admin['username'],
-            'Admin-confirmed manual recharge via JM Broadband mobile app');
+        // The reference lets us recover a saved invoice even if a later
+        // optional notification hook fails. Never call rechargeUser twice.
+        $reference='JM_APP_REQUEST_KEY='.$key;
+        $invoice=null;
+        try {
+            $invoice=Package::rechargeUser((int)$id,(string)$customer['routers'],
+                (int)$selectedPlan,'Admin Manual',$admin['username'],
+                $reference.' Admin-confirmed manual recharge');
+        } catch (Throwable $error) {
+            error_log('JM mobile recharge post-start error: '.$error->getMessage());
+        }
+        if (!$invoice) {
+            $invoice=jm_mobile_query($db,
+                'SELECT invoice FROM tbl_transactions
+                 WHERE user_id=? AND note LIKE ?
+                 ORDER BY id DESC LIMIT 1',
+                [$id,'%'.$reference.'%'])->fetchColumn();
+        }
         if (!$invoice) respond(409,['error'=>'RECHARGE_CHECK_PANEL_BEFORE_RETRY']);
         jm_mobile_query($db,
             "UPDATE tbl_mobile_admin_recharge_requests
              SET status='completed',invoice=?,completed_at=NOW()
              WHERE request_key=?",[(string)$invoice,$key]);
-        _log('Mobile admin '.$admin['username'].' recharged '.$customer['username'].
-            ' ['.$invoice.']','Admin',$admin['id']);
+        try {
+            _log('Mobile admin '.$admin['username'].' recharged '.$customer['username'].
+                ' ['.$invoice.']','Admin',$admin['id']);
+        } catch (Throwable $error) {
+            error_log('JM mobile recharge audit warning: '.$error->getMessage());
+        }
         return ['status'=>'completed','invoice'=>(string)$invoice,'duplicate'=>false,
             'username'=>$customer['username'],'plan_id'=>(int)$selectedPlan];
     } finally {

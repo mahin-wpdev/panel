@@ -103,6 +103,25 @@ try {
         $section=(string)($_GET['section']??'home');
         respond(200,['success'=>true,'data'=>jm_mobile_app_data($db,$session,$section)]);
     }
+    if (str_starts_with($action,'ticket-')) {
+        require_once __DIR__.'/system/mobile/panel-app.php';
+        require_once __DIR__.'/system/mobile/support-tickets.php';
+        if ($action==='ticket-list' && $method==='GET')
+            respond(200,['success'=>true,'data'=>jm_ticket_list($db,$session)]);
+        if ($action==='ticket-detail' && $method==='GET')
+            respond(200,['success'=>true,'data'=>jm_ticket_detail($db,$session,(int)($_GET['ticket_id']??0))]);
+        if ($action==='ticket-create' && $method==='POST')
+            respond(200,['success'=>true,'data'=>jm_ticket_create($db,$session,body())]);
+        if ($action==='ticket-update' && $method==='POST')
+            respond(200,['success'=>true,'data'=>jm_ticket_update($db,$session,body())]);
+        if ($action==='ticket-notifications' && $method==='GET')
+            respond(200,['success'=>true,'data'=>jm_ticket_notifications($db,$session)]);
+        if ($action==='ticket-notification-read' && $method==='POST') {
+            $input=body();
+            respond(200,['success'=>true,'data'=>jm_ticket_notification_read($db,$session,(int)($input['notification_id']??0))]);
+        }
+        respond(404,['error'=>'UNKNOWN_ENDPOINT']);
+    }
     if ($action==='admin-recharge-search' && $method==='GET') {
         require_once __DIR__.'/system/mobile/panel-app.php';
         require_once __DIR__.'/system/mobile/admin-recharge.php';
