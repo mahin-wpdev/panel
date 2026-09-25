@@ -95,6 +95,11 @@ function jm_ticket_create(PDO $db,array $session,array $input): array {
             $event,'New ticket #'.$id.': '.$subject,true);
         $db->commit();
     } catch(Throwable $e) {$db->rollBack();throw $e;}
+    if (function_exists('jm_push_send_staff')) {
+        jm_push_send_staff($db,'New support ticket','#'.$id.' '.$subject,
+          ['type'=>'support_ticket','ticket_id'=>(string)$id,
+           'event'=>'created','status'=>'open']);
+    }
     return ['id'=>$id,'status'=>'open'];
 }
 function jm_ticket_update(PDO $db,array $session,array $input): array {
@@ -141,6 +146,16 @@ function jm_ticket_update(PDO $db,array $session,array $input): array {
           $actor['role']!=='admin');
         $db->commit();
     } catch(Throwable $e) {$db->rollBack();throw $e;}
+    if ($actor['role']==='admin' && function_exists('jm_push_send_actor')) {
+        jm_push_send_actor($db,'customer',(int)$ticket['customer_id'],
+          'Support ticket update','#'.$id.' '.$message,
+          ['type'=>'support_ticket','ticket_id'=>(string)$id,
+           'event'=>$action,'status'=>$next]);
+    } elseif ($actor['role']!=='admin' && function_exists('jm_push_send_staff')) {
+        jm_push_send_staff($db,'Customer replied','#'.$id.' '.$message,
+          ['type'=>'support_ticket','ticket_id'=>(string)$id,
+           'event'=>$action,'status'=>$next]);
+    }
     return ['id'=>$id,'status'=>$next];
 }
 function jm_ticket_notifications(PDO $db,array $session): array {

@@ -103,8 +103,18 @@ try {
         $section=(string)($_GET['section']??'home');
         respond(200,['success'=>true,'data'=>jm_mobile_app_data($db,$session,$section)]);
     }
+    if (str_starts_with($action,'push-')) {
+        require_once __DIR__.'/system/mobile/panel-app.php';
+        require_once __DIR__.'/system/mobile/push.php';
+        if ($action==='push-register' && $method==='POST')
+            respond(200,['success'=>true,'data'=>jm_push_register($db,$session,body())]);
+        if ($action==='push-unregister' && $method==='POST')
+            respond(200,['success'=>true,'data'=>jm_push_unregister($db,$session,body())]);
+        respond(404,['error'=>'UNKNOWN_ENDPOINT']);
+    }
     if (str_starts_with($action,'ticket-')) {
         require_once __DIR__.'/system/mobile/panel-app.php';
+        require_once __DIR__.'/system/mobile/push.php';
         require_once __DIR__.'/system/mobile/support-tickets.php';
         if ($action==='ticket-list' && $method==='GET')
             respond(200,['success'=>true,'data'=>jm_ticket_list($db,$session)]);
