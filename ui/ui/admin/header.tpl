@@ -132,12 +132,12 @@
                     {if in_array($_admin['user_type'],['SuperAdmin','Admin'])}
                         <li class="reseller-only {if $_routes[0] eq 'reseller' }active{/if} treeview">
                             <a href="#"><i class="fa fa-sitemap"></i><span>Reseller Management</span><span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
-                            <ul class="treeview-menu"><li><a href="{Text::url('reseller/dashboard')}"><i class="fa fa-dashboard"></i> Dashboard</a></li><li><a href="{Text::url('reseller/resellers')}"><i class="fa fa-users"></i> Resellers</a></li><li><a href="{Text::url('reseller/ownership')}"><i class="fa fa-object-group"></i> Customers &amp; Ownership</a></li><li><a href="{Text::url('reseller/packages')}"><i class="fa fa-cubes"></i> Packages</a></li><li><a href="{Text::url('reseller/earnings')}"><i class="fa fa-line-chart"></i> Earnings</a></li><li><a href="{Text::url('reseller/settlements')}"><i class="fa fa-money"></i> Settlements</a></li><li><a href="{Text::url('reseller/activity')}"><i class="fa fa-history"></i> Activity Logs</a></li></ul>
+                            <ul class="treeview-menu"><li><a href="{Text::url('reseller/dashboard')}"><i class="fa fa-dashboard"></i> Dashboard</a></li><li><a href="{Text::url('reseller/resellers')}"><i class="fa fa-users"></i> Resellers</a></li><li><a href="{Text::url('reseller/ownership')}"><i class="fa fa-exchange"></i> Customers &amp; Ownership</a></li><li><a href="{Text::url('reseller/packages')}"><i class="fa fa-cubes"></i> Packages</a></li><li><a href="{Text::url('reseller/earnings')}"><i class="fa fa-line-chart"></i> Earnings</a></li><li><a href="{Text::url('reseller/settlements')}"><i class="fa fa-money"></i> Settlements</a></li><li><a href="{Text::url('reseller/activity')}"><i class="fa fa-history"></i> Activity Logs</a></li></ul>
                         </li>
                     {/if}
                     {if $_admin['user_type'] neq 'Agent'}
                     <li {if $_system_menu eq 'customers' }class="active" {/if}>
-                        <a href="{Text::url('customers/list&main=1')}">
+                        <a href="{Text::url('customers')}">
                             <i class="fa fa-user"></i>
                             <span>{Lang::T('Customer')}</span>
                         </a>
@@ -251,6 +251,13 @@
                                     href="{Text::url('message/send')}">{Lang::T('Single Customer')}</a></li>
                             <li {if $_routes[1] eq 'send_bulk' }class="active" {/if}><a
                                     href="{Text::url('message/send_bulk')}">{Lang::T('Bulk Customers')}</a></li>
+                            {if in_array($_admin['user_type'],['SuperAdmin','Admin'])}
+                                <li {if $_routes[0] eq 'appnotifications'}class="active"{/if}>
+                                    <a href="{Text::url('appnotifications/send')}">
+                                        <i class="fa fa-bell"></i> App Push Notifications
+                                    </a>
+                                </li>
+                            {/if}
                             {$_MENU_MESSAGE}
                         </ul>
                     </li>
@@ -275,7 +282,7 @@
                                 {$_MENU_NETWORK}
                             </ul>
                         </li>
-
+                        {$_MENU_AFTER_NETWORKS}
                         <li class="{if $_routes[0] eq 'olts' || $_routes[0] eq 'onus'}active{/if} treeview">
                             <a href="#"><i class="fa fa-server"></i> <span>OLT Management</span><span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
                             <ul class="treeview-menu">
@@ -286,7 +293,6 @@
                                 <li {if $_routes[0] eq 'onus' && $_routes[1] eq 'los'}class="active"{/if}><a href="{Text::url('onus/los')}"><i class="fa fa-warning"></i> LOS Alerts</a></li>
                             </ul>
                         </li>
-                        {$_MENU_AFTER_NETWORKS}
                         {if $_c['radius_enable']}
                             <li class="{if $_system_menu eq 'radius'}active{/if} treeview">
                                 <a href="#">

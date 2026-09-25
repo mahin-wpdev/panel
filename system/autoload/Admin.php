@@ -77,8 +77,10 @@ class Admin
     public static function setCookie($aid)
     {
         global $db_pass, $config;
-        $enable_session_timeout = $config['enable_session_timeout'];
-        $session_timeout_duration = intval($config['session_timeout_duration']) * 60; // Convert minutes to seconds
+        $enable_session_timeout = $config['enable_session_timeout'] == 1;
+        $session_timeout_duration = !empty($config['session_timeout_duration'])
+            ? intval($config['session_timeout_duration']) * 60
+            : 60 * 60; // Default to 60 minutes when the setting is empty/zero
 
         if (isset($aid)) {
             $time = time();
