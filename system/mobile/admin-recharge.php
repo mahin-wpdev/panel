@@ -161,16 +161,14 @@ function jm_mobile_recharge_submit(PDO $db, array $session, array $input): array
     $id=filter_var($input['customer_id']??null,FILTER_VALIDATE_INT,
         ['options'=>['min_range'=>1]]);
     $key=(string)($input['request_key']??'');
-    $password=(string)($input['admin_password']??'');
     $ack=$input['payment_verified']??false;
     $selectedPlan=filter_var($input['plan_id']??null,FILTER_VALIDATE_INT,
         ['options'=>['min_range'=>1]]);
     $expectedPlan=filter_var($input['expected_plan_id']??null,FILTER_VALIDATE_INT,
         ['options'=>['min_range'=>1]]);
     if (!$id || !$selectedPlan || !$expectedPlan || !preg_match('/^[a-f0-9]{32}$/D',$key) ||
-        $ack!==true || strlen($password)>256 || $password==='')
+        $ack!==true)
         respond(400,['error'=>'INVALID_RECHARGE_REQUEST']);
-    jm_mobile_recharge_verify_password($db,$admin,$password);
     $customer=jm_mobile_recharge_plan($db,(int)$id);
     if (!$customer || $customer['status']!=='Active' || !(int)$customer['plan_id'] ||
         trim((string)$customer['routers'])==='')
