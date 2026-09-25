@@ -23,11 +23,15 @@
     <div class="col-lg-3 col-md-6"><div class="small-box bg-light-blue"><div class="inner"><h3>{$service_active_total}/{$service_inactive_total}</h3><p>Service Active / Inactive</p></div><div class="icon"><i class="fa fa-user"></i></div><a href="{Text::url('customers/list')}" class="small-box-footer">View customers <i class="fa fa-arrow-circle-right"></i></a></div></div>
     <div class="col-lg-3 col-md-6"><div class="small-box bg-teal"><div class="inner"><h3>{$onu_online_total}/{$onu_offline_total}</h3><p>ONU Online / Offline</p></div><div class="icon"><i class="fa fa-wifi"></i></div><a href="{Text::url('onus')}" class="small-box-footer">View ONU status <i class="fa fa-arrow-circle-right"></i></a></div></div>
     <div class="col-lg-3 col-md-6"><div class="small-box bg-red"><div class="inner"><h3>{$onu_los_total}</h3><p>ONU LOS Alert</p></div><div class="icon"><i class="fa fa-warning"></i></div><a href="{Text::url('onus')}" class="small-box-footer">Review ONU alerts <i class="fa fa-arrow-circle-right"></i></a></div></div>
-    <div class="col-lg-3 col-md-6"><div class="small-box bg-orange"><div class="inner"><h3>{$olt_online_total}/{$olt_total}</h3><p>OLT Online / Total</p></div><div class="icon"><i class="fa fa-server"></i></div><a href="{Text::url('olts')}" class="small-box-footer">View OLT health <i class="fa fa-arrow-circle-right"></i></a></div></div>
+    <div class="col-lg-3 col-md-6"><div class="small-box bg-orange"><div class="inner"><h3>{$olt_online_total}/{$olt_total}</h3><p>OLT Online / Total</p><p style="font-size:12px;margin:4px 0 0">Last Sync: {if $olt_last_sync_at}<span class="label {if $olt_last_sync_status eq 'success'}label-success{else}label-danger{/if}" style="text-transform:uppercase">{$olt_last_sync_status}</span> {$olt_last_sync_at}{else}Never{/if}</p></div><div class="icon"><i class="fa fa-server"></i></div><a href="{Text::url('olts')}" class="small-box-footer">View OLT health <i class="fa fa-arrow-circle-right"></i></a></div></div>
 </div>
 <div class="row">
     <div class="col-lg-3 col-md-6"><div class="small-box bg-maroon"><div class="inner"><h3>{$onu_unassigned_total}</h3><p>Unassigned ONU</p></div><div class="icon"><i class="fa fa-link"></i></div><a href="{Text::url('onus')}" class="small-box-footer">Assign ONU <i class="fa fa-arrow-circle-right"></i></a></div></div>
 </div>
+{/if}
+
+{if $tipeUser eq 'Admin' && $ispUsageWidget}
+    {$ispUsageWidget}
 {/if}
 
 {assign rows explode(".", $_c[$dtipe])}

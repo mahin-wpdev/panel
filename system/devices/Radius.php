@@ -197,6 +197,18 @@ class Radius
 
     function online_customer($customer, $router_name)
     {
+        if (empty($customer['username'])) {
+            return false;
+        }
+        try {
+            return $this->getTableAcct()
+                ->where('username', $customer['username'])
+                ->where_null('acctstoptime')
+                ->count() > 0;
+        } catch (Throwable $e) {
+            error_log('RADIUS online check failed: ' . $e->getMessage());
+            return false;
+        }
     }
 
     function connect_customer($customer, $ip, $mac_address, $router_name)
@@ -299,6 +311,7 @@ class Radius
     public function customerAddPlan($customer, $plan, $expired = '')
     {
         global $config;
+        if ($plan['type'] === 'PPPOE' && !empty($customer['pppoe_username'])) { $customer = is_array($customer) ? $customer : $customer->as_array(); $customer['username'] = $customer['pppoe_username']; }
         if ($this->customerUpsert($customer, $plan)) {
             $p = $this->getTableUserPackage()->where_equal('username', $customer['username'])->findOne();
             if ($p) {
@@ -369,7 +382,7 @@ class Radius
             }
 
             $this->disconnectCustomer($customer['username']);
-            $this->getTableAcct()->where_equal('username', $customer['username'])->delete_many();
+            // Preserve accounting history across renewals and plan changes.
             // expired user
             if ($expired != '') {
                 //extend session time only if the plan are the same
@@ -400,7 +413,7 @@ class Radius
 				$this->upsertCustomerAttr($customer['username'], 'Framed-IP-Netmask', '255.255.255.0', ':=');
 					}else{
                 $this->upsertCustomerAttr($customer['username'], 'Framed-Pool', $plan['pool'], ':=');
-				$this->upsertCustomerAttr($customer['username'], 'Framed-IP-Address', '0.0.0.0', ':=');
+				$this->upsertCustomerAttr($customer['username'], 'Framed-IP-Address', '255.255.255.254', ':=');
 				$this->upsertCustomerAttr($customer['username'], 'Framed-IP-Netmask', '255.255.255.0', ':=');
 				}
             }
@@ -483,26 +496,36 @@ class Radius
 
     public function disconnectCustomer($username)
     {
-        global $_app_stage;
-        if ($_app_stage == 'demo') {
-            return null;
-        }
-        /**
-         * Fix loop to all Nas but still detecting Hotspot Multylogin from other Nas
-         */
-        $act = ORM::for_table('radacct')->where_raw("acctstoptime IS NULL")->where('username', $username)->find_one();
-        $nas = $this->getTableNas()->where('nasname', $act['nasipaddress'])->find_many();
-        $count = count($nas) * 15;
-        set_time_limit($count);
-        $result = [];
-        foreach ($nas as $n) {
-            $port = 3799;
-            if (!empty($n['ports'])) {
-                $port = $n['ports'];
+        $results = [];
+        $sessions = $this->getTableAcct()->where_null('acctstoptime')->where('username', $username)->find_many();
+        foreach ($sessions as $act) {
+            $nas = $this->getTableNas()->where('nasname', $act['nasipaddress'])->find_one();
+            if (!$nas) continue;
+            $attrs = '';
+            foreach ([1 => $username, 44 => $act['acctsessionid']] as $type => $value) {
+                if (strlen($value) > 253) throw new RuntimeException('Invalid RADIUS attribute length');
+                $attrs .= chr($type) . chr(strlen($value) + 2) . $value;
             }
-            $result[] = $n['nasname'] . ': ' . @shell_exec("echo 'User-Name = $username,Framed-IP-Address = " . $act['framedipaddress'] . "' | radclient -x " . trim($n['nasname']) . ":$port disconnect '" . $n['secret'] . "'");
+            if (filter_var($act['framedipaddress'], FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                $attrs .= chr(8) . chr(6) . inet_pton($act['framedipaddress']);
+            }
+            $id = random_int(0, 255);
+            $head = pack('CCn', 40, $id, 20 + strlen($attrs));
+            $auth = md5($head . str_repeat("\0", 16) . $attrs . $nas['secret'], true);
+            $port = (int)($nas['ports'] ?: 3799);
+            $socket = @stream_socket_client('udp://' . $nas['nasname'] . ':' . $port, $errno, $error, 3);
+            if (!$socket) throw new RuntimeException('RADIUS disconnect connection failed');
+            stream_set_timeout($socket, 3);
+            fwrite($socket, $head . $auth . $attrs);
+            $response = fread($socket, 4096);
+            fclose($socket);
+            if (strlen($response) < 20 || ord($response[1]) !== $id) throw new RuntimeException('No valid RADIUS disconnect response');
+            $expected = md5(substr($response, 0, 4) . $auth . substr($response, 20) . $nas['secret'], true);
+            if (!hash_equals($expected, substr($response, 4, 16))) throw new RuntimeException('Invalid RADIUS disconnect authenticator');
+            if (ord($response[0]) !== 41) throw new RuntimeException('RADIUS disconnect was not acknowledged');
+            $results[] = 'Disconnect acknowledged for ' . $username;
         }
-        return $result;
+        return $results;
     }
 
     public function addBandwidth($customer, $plan)

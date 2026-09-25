@@ -89,6 +89,12 @@ try {
         $_COOKIE['uid'] = $_GET['uid'];
     }
     $admin = Admin::_info();
+    // An Agent is a reseller-only account.  Keep the restriction on the
+    // server, not merely in the sidebar, so a typed URL cannot expose an
+    // administrative controller or another customer's data.
+    if ($admin && $admin['user_type'] === 'Agent' && !in_array($handler, ['reseller', 'dashboard', 'logout', 'login'], true)) {
+        r2(getUrl('reseller'));
+    }
     $sys_render = $root_path . File::pathFixer('system/controllers/' . $handler . '.php');
     if (file_exists($sys_render)) {
         $menus = array();

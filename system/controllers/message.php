@@ -130,8 +130,9 @@ EOT;
         $group = $_REQUEST['group'] ?? '';
         $message = $_REQUEST['message'] ?? '';
         $via = $_REQUEST['via'] ?? '';
-        $batch = $_REQUEST['batch'] ?? 100;
-        $page = $_REQUEST['page'] ?? 0;
+        $batch = max(1, min(50, (int) ($_REQUEST['batch'] ?? 1)));
+        $page = max(0, (int) ($_REQUEST['page'] ?? 0));
+        if ($via === 'wa' || $via === 'both') { $batch = 1; }
         $router = $_REQUEST['router'] ?? null;
         $test = isset($_REQUEST['test']) && $_REQUEST['test'] === 'on' ? true : false;
         $service = $_REQUEST['service'] ?? '';
@@ -144,6 +145,7 @@ EOT;
         $startpoint = $page * $batch;
         $customers = [];
         $totalCustomers = 0;
+        $routerName = 'All Routers';
 
         if (isset($router) && !empty($router)) {
             switch ($router) {
@@ -289,10 +291,19 @@ EOT;
         $totalWhatsappFailed = 0;
         $batchStatus = [];
 
+        $currentMessage = $message;
         foreach ($customers as $customer) {
+            $customerId = $customer['id'] ?? ($customer['customer_id'] ?? null);
+            if ($customerId) { $fullCustomer = ORM::for_table('tbl_customers')->find_one($customerId); if ($fullCustomer) { $customer = $fullCustomer; } }
+            $recharge = ORM::for_table('tbl_user_recharges')->where('customer_id', $customer['id'])->where('status', 'on')->order_by_desc('id')->find_one();
+            if (!$recharge) { $recharge = ORM::for_table('tbl_user_recharges')->where('customer_id', $customer['id'])->order_by_desc('id')->find_one(); }
+            $plan = $recharge ? ORM::for_table('tbl_plans')->find_one($recharge['plan_id']) : false;
+            $paymentLink = '';
+            if (strpos($message, '[[payment_link]]') !== false && $recharge) { $token = User::generateToken($customer['id'], 1); if (!empty($token['token'])) { $paymentLink = APP_URL . '/?_route=home&recharge=' . $recharge['id'] . '&uid=' . urlencode($token['token']); } }
+            $appDownloadLink = 'https://github.com/mahin-wpdev/jm-broadband-android/releases/latest/download/jm-broadband.apk';
             $currentMessage = str_replace(
-                ['[[name]]', '[[user_name]]', '[[phone]]', '[[company_name]]'],
-                [$customer['fullname'], $customer['username'], $customer['phonenumber'], $config['CompanyName']],
+                ['[[name]]','[[username]]','[[user_name]]','[[phone]]','[[email]]','[[address]]','[[city]]','[[district]]','[[state]]','[[zip]]','[[account_type]]','[[service_type]]','[[pppoe_username]]','[[pppoe_ip]]','[[balance]]','[[status]]','[[created_at]]','[[last_login]]','[[company_name]]','[[package]]','[[package_price]]','[[expiration]]','[[payment_link]]','[[login_link]]','[[url]]','[[app_link]]','[[app_download_link]]'],
+                [$customer['fullname'] ?? '',$customer['username'] ?? '',$customer['username'] ?? '',$customer['phonenumber'] ?? '',$customer['email'] ?? '',$customer['address'] ?? '',$customer['city'] ?? '',$customer['district'] ?? '',$customer['state'] ?? '',$customer['zip'] ?? '',$customer['account_type'] ?? '',$customer['service_type'] ?? '',$customer['pppoe_username'] ?? '',$customer['pppoe_ip'] ?? '',Lang::moneyFormat($customer['balance'] ?? 0),$customer['status'] ?? '',$customer['created_at'] ?? '',$customer['last_login'] ?? '',$config['CompanyName'] ?? '',$recharge ? ($recharge['namebp'] ?? '') : '',$plan ? Lang::moneyFormat($plan['price'] ?? 0) : '',$recharge ? Lang::dateAndTimeFormat($recharge['expiration'],$recharge['time']) : '',$paymentLink,APP_URL . '/?_route=login',APP_URL . '/?_route=login',$appDownloadLink,$appDownloadLink],
                 $message
             );
 
@@ -382,20 +393,62 @@ EOT;
                 if ($customer) {
                     $messageSent = false;
 
+                    $recharge = ORM::for_table('tbl_user_recharges')
+                        ->where('customer_id', $customer['id'])
+                        ->where('status', 'on')
+                        ->order_by_desc('id')
+                        ->find_one();
+                    $paymentLink = '';
+                    if (strpos($message, '[[payment_link]]') !== false && $recharge) {
+                        $token = User::generateToken($customer['id'], 1);
+                        if (!empty($token['token'])) {
+                            $paymentLink = APP_URL . '/?_route=home&recharge=' . $recharge['id']
+                                . '&uid=' . urlencode($token['token']);
+                        }
+                    }
+                    $plan = $recharge ? ORM::for_table('tbl_plans')->find_one($recharge['plan_id']) : false;
+                    $currentMessage = str_replace(
+                        [
+                            '[[name]]', '[[username]]', '[[user_name]]', '[[phone]]',
+                            '[[email]]', '[[address]]', '[[city]]', '[[district]]',
+                            '[[state]]', '[[zip]]', '[[account_type]]', '[[service_type]]',
+                            '[[pppoe_username]]', '[[pppoe_ip]]', '[[balance]]',
+                            '[[status]]', '[[created_at]]', '[[last_login]]',
+                            '[[company_name]]', '[[package]]', '[[package_price]]',
+                            '[[expiration]]', '[[payment_link]]', '[[login_link]]', '[[url]]', '[[app_link]]', '[[app_download_link]]'
+                        ],
+                        [
+                            $customer['fullname'], $customer['username'], $customer['username'],
+                            $customer['phonenumber'], $customer['email'], $customer['address'],
+                            $customer['city'], $customer['district'], $customer['state'],
+                            $customer['zip'], $customer['account_type'], $customer['service_type'],
+                            $customer['pppoe_username'], $customer['pppoe_ip'],
+                            Lang::moneyFormat($customer['balance']), $customer['status'],
+                            $customer['created_at'], $customer['last_login'],
+                            $config['CompanyName'], $recharge ? $recharge['namebp'] : '',
+                            $plan ? Lang::moneyFormat($plan['price']) : '',
+                            $recharge ? Lang::dateAndTimeFormat($recharge['expiration'], $recharge['time']) : '',
+                            $paymentLink, APP_URL . '/?_route=login', APP_URL . '/?_route=login',
+                            'https://github.com/mahin-wpdev/jm-broadband-android/releases/latest/download/jm-broadband.apk',
+                            'https://github.com/mahin-wpdev/jm-broadband-android/releases/latest/download/jm-broadband.apk'
+                        ],
+                        $message
+                    );
+
                     // Check the message type and send accordingly
                     try {
                         if ($via === 'sms' || $via === 'all') {
-                            $messageSent = Message::sendSMS($customer['phonenumber'], $message);
+                            $messageSent = Message::sendSMS($customer['phonenumber'], $currentMessage);
                         }
                         if (!$messageSent && ($via === 'wa' || $via === 'all')) {
-                            $messageSent = Message::sendWhatsapp($customer['phonenumber'], $message);
+                            $messageSent = Message::sendWhatsapp($customer['phonenumber'], $currentMessage);
                         }
                         if (!$messageSent && ($via === 'inbox' || $via === 'all')) {
-                            Message::addToInbox($customer['id'], $subject, $message, $form);
+                            Message::addToInbox($customer['id'], $subject, $currentMessage, $form);
                             $messageSent = true;
                         }
                         if (!$messageSent && ($via === 'email' || $via === 'all')) {
-                            $messageSent = Message::sendEmail($customer['email'], $subject, $message);
+                            $messageSent = Message::sendEmail($customer['email'], $subject, $currentMessage);
                         }
                     } catch (Throwable $e) {
                         $messageSent = false;

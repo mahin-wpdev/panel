@@ -59,17 +59,7 @@
                     <div class="form-group">
                         <label class="col-md-2 control-label">{Lang::T('Message per time')}</label>
                         <div class="col-md-6">
-                            <select class="form-control" name="batch" id="batch">
-                                <option value="5" {if $batch=='5' }selected{/if}>{Lang::T('5 Messages')}</option>
-                                <option value="10" {if $batch=='10' }selected{/if}>{Lang::T('10 Messages')}</option>
-                                <option value="15" {if $batch=='15' }selected{/if}>{Lang::T('15 Messages')}</option>
-                                <option value="20" {if $batch=='20' }selected{/if}>{Lang::T('20 Messages')}</option>
-                                <option value="30" {if $batch=='30' }selected{/if}>{Lang::T('30 Messages')}</option>
-                                <option value="40" {if $batch=='40' }selected{/if}>{Lang::T('40 Messages')}</option>
-                                <option value="50" {if $batch=='50' }selected{/if}>{Lang::T('50 Messages')}</option>
-                                <option value="60" {if $batch=='60' }selected{/if}>{Lang::T('60 Messages')}</option>
-                            </select>
-                            {Lang::T('Use 20 and above if you are sending to all customers to avoid server time out')}
+                            <select class="form-control" name="batch" id="batch"><option value="1" selected>1 Message (recommended)</option><option value="2">2 Messages</option><option value="5">5 Messages</option><option value="10">10 Messages</option></select><span class="help-block">WhatsApp processes one customer at a time to prevent timeout.</span>
                         </div>
                     </div>
                     <div class="form-group">
@@ -79,17 +69,7 @@
                             <input name="test" id="test" type="checkbox">
                             {Lang::T('Testing [if checked no real message is sent]')}
                         </div>
-                        <p class="help-block col-md-4">
-                            {Lang::T('Use placeholders:')}
-                            <br>
-                            <b>[[name]]</b> - {Lang::T('Customer Name')}
-                            <br>
-                            <b>[[user_name]]</b> - {Lang::T('Customer Username')}
-                            <br>
-                            <b>[[phone]]</b> - {Lang::T('Customer Phone')}
-                            <br>
-                            <b>[[company_name]]</b> - {Lang::T('Your Company Name')}
-                        </p>
+                        <p class="help-block col-md-4"><b>Available placeholders - click to insert:</b><br><span id="bulkPlaceholders"><button type="button" class="btn btn-default btn-xs bulk-ph" data-value="[[name]]">[[name]]</button> <button type="button" class="btn btn-default btn-xs bulk-ph" data-value="[[username]]">[[username]]</button> <button type="button" class="btn btn-default btn-xs bulk-ph" data-value="[[phone]]">[[phone]]</button> <button type="button" class="btn btn-default btn-xs bulk-ph" data-value="[[email]]">[[email]]</button> <button type="button" class="btn btn-default btn-xs bulk-ph" data-value="[[address]]">[[address]]</button> <button type="button" class="btn btn-default btn-xs bulk-ph" data-value="[[city]]">[[city]]</button> <button type="button" class="btn btn-default btn-xs bulk-ph" data-value="[[district]]">[[district]]</button> <button type="button" class="btn btn-default btn-xs bulk-ph" data-value="[[state]]">[[state]]</button> <button type="button" class="btn btn-default btn-xs bulk-ph" data-value="[[zip]]">[[zip]]</button> <button type="button" class="btn btn-default btn-xs bulk-ph" data-value="[[account_type]]">[[account_type]]</button> <button type="button" class="btn btn-default btn-xs bulk-ph" data-value="[[service_type]]">[[service_type]]</button> <button type="button" class="btn btn-default btn-xs bulk-ph" data-value="[[pppoe_username]]">[[pppoe_username]]</button> <button type="button" class="btn btn-default btn-xs bulk-ph" data-value="[[pppoe_ip]]">[[pppoe_ip]]</button> <button type="button" class="btn btn-default btn-xs bulk-ph" data-value="[[balance]]">[[balance]]</button> <button type="button" class="btn btn-default btn-xs bulk-ph" data-value="[[status]]">[[status]]</button> <button type="button" class="btn btn-default btn-xs bulk-ph" data-value="[[created_at]]">[[created_at]]</button> <button type="button" class="btn btn-default btn-xs bulk-ph" data-value="[[last_login]]">[[last_login]]</button> <button type="button" class="btn btn-default btn-xs bulk-ph" data-value="[[company_name]]">[[company_name]]</button> <button type="button" class="btn btn-default btn-xs bulk-ph" data-value="[[package]]">[[package]]</button> <button type="button" class="btn btn-default btn-xs bulk-ph" data-value="[[package_price]]">[[package_price]]</button> <button type="button" class="btn btn-default btn-xs bulk-ph" data-value="[[expiration]]">[[expiration]]</button> <button type="button" class="btn btn-default btn-xs bulk-ph" data-value="[[payment_link]]">[[payment_link]]</button> <button type="button" class="btn btn-default btn-xs bulk-ph" data-value="[[login_link]]">[[login_link]]</button> <button type="button" class="btn btn-default btn-xs bulk-ph" data-value="[[app_link]]">[[app_link]]</button></span></p>
                     </div>
                     <div class="form-group">
                         <div class="col-lg-offset-2 col-lg-10">
@@ -143,6 +123,13 @@
         responsive: true
     });
 
+    $('#bulkPlaceholders').on('click', '.bulk-ph', function () {
+        var field=document.getElementById('message'), value=$(this).data('value');
+        var start=field.selectionStart||field.value.length, end=field.selectionEnd||field.value.length;
+        field.value=field.value.substring(0,start)+value+field.value.substring(end);
+        field.focus(); field.selectionStart=field.selectionEnd=start+value.length;
+    });
+
     function sendBatch() {
         if (!hasMore) return;
 
@@ -160,6 +147,7 @@
                 service: $('#service').val(),
             },
             dataType: 'json',
+            timeout: 60000,
             beforeSend: function () {
                 $('#status').html(`
                     <div class="alert alert-info">
@@ -202,8 +190,10 @@
                                 <i class="fas fa-check-circle"></i> All batches sent! Total Sent: ${totalSent}, Failed: ${totalFailed}
                             </div>
                         `);
+                        $('#startBulk').prop('disabled', false);
                     }
                 } else {
+                    $('#startBulk').prop('disabled', false);
                     console.error("Unexpected response format:", response);
                     $('#status').html(`
                         <div class="alert alert-danger">
@@ -213,6 +203,7 @@
                 }
             },
             error: function () {
+                $('#startBulk').prop('disabled', false);
                 $('#status').html(`
                     <div class="alert alert-danger">
                         <i class="fas fa-exclamation-circle"></i> Error: Failed to send batch ${page + 1}.
@@ -224,6 +215,8 @@
 
     // Start sending on button click
     $('#startBulk').on('click', function () {
+        if (!$.trim($('#message').val())) { alert('Please write a message first.'); return; }
+        $('#startBulk').prop('disabled', true);
         page = 0;
         totalSent = 0;
         totalFailed = 0;

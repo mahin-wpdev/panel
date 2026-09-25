@@ -15,14 +15,6 @@
     <div class="col-sm-12">
         <div class="panel panel-hovered mb20 panel-primary">
             <div class="panel-heading">
-                {if in_array($_admin['user_type'],['SuperAdmin','Admin'])}
-                <div class="btn-group pull-right">
-                    <a class="btn btn-primary btn-xs" title="save"
-                        href="{Text::url('customers/csv&token=', $csrf_token)}"
-                        onclick="return ask(this, '{Lang::T("This will export to CSV")}?')"><span
-                            class="glyphicon glyphicon-download" aria-hidden="true"></span> CSV</a>
-                </div>
-                {/if}
                 <i class="fa fa-address-book"></i> Customer Directory
             </div>
             <div class="panel-body">
@@ -109,6 +101,7 @@
                                 <th>{Lang::T('Service Type')}</th>
                                 <th>PPPOE</th>
                                 <th>{Lang::T('Status')}</th>
+                                <th>Approval</th>
                                 <th>{Lang::T('Created On')}</th>
                                 <th>{Lang::T('Manage')}</th>
                             </tr>
@@ -152,6 +145,7 @@
                                     {$ds['pppoe_ip']}
                                 </td>
                                 <td>{Lang::T($ds['status'])}</td>
+                                <td>{if $ds['approval_status']=='pending'}<span class="label label-warning">Waiting for admin</span>{else}<span class="label label-success">Approved</span>{/if}</td>
                                 <td>{Lang::dateTimeFormat($ds['created_at'])}</td>
                                 <td align="center">
                                     <a href="{Text::url('reseller/customer-view/')}{$ds['id']}" id="{$ds['id']}"

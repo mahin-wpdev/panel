@@ -1109,7 +1109,21 @@ switch ($action) {
         } else {
             $ui->assign('plans', []);
         }
-        $query = ORM::for_table('tbl_user_recharges')->order_by_desc('id');
+        $query = ORM::for_table('tbl_user_recharges')
+            // Only the newest RADIUS entitlement is shown per customer/type.
+            // Older expired/replaced rows remain stored for auditing.
+            ->where_raw("NOT EXISTS (
+                SELECT 1 FROM tbl_user_recharges newer
+                JOIN tbl_plans newer_plan ON newer_plan.id = newer.plan_id
+                    AND newer_plan.is_radius = 1
+                JOIN tbl_plans current_plan
+                    ON current_plan.id = tbl_user_recharges.plan_id
+                    AND current_plan.is_radius = 1
+                WHERE newer.customer_id = tbl_user_recharges.customer_id
+                    AND newer.type = tbl_user_recharges.type
+                    AND newer.id > tbl_user_recharges.id
+            )")
+            ->order_by_desc('id');
 
         if ($search != '') {
             $query->where_like("username", "%$search%");

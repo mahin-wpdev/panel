@@ -6,6 +6,9 @@
  **/
 
 _admin();
+if ($admin['user_type'] === 'Agent') {
+    r2(getUrl('reseller'), 'e', 'Customer access is available from your reseller dashboard only.');
+}
 $ui->assign('_title', Lang::T('Customer'));
 $ui->assign('_system_menu', 'customers');
 
@@ -14,6 +17,21 @@ $ui->assign('_admin', $admin);
 
 if (empty($action)) {
     $action = 'list';
+}
+
+// Preserve the administrator's reseller-customer context across native
+// View/Edit/Sync/Recharge/Delete flows. The Main Customer menu explicitly
+// clears this scope with main=1.
+if (in_array($admin['user_type'], ['SuperAdmin', 'Admin'], true)) {
+    if (_req('main') === '1') {
+        unset($_SESSION['admin_customer_scope_reseller']);
+    } elseif ($action === 'list' && !empty($_SESSION['admin_customer_scope_reseller'])) {
+        $scopeReseller = ORM::for_table('tbl_resellers')->find_one((int) $_SESSION['admin_customer_scope_reseller']);
+        if ($scopeReseller) {
+            r2(getUrl('reseller/customers/') . $scopeReseller['id']);
+        }
+        unset($_SESSION['admin_customer_scope_reseller']);
+    }
 }
 
 $leafletpickerHeader = <<<EOT
@@ -31,6 +49,7 @@ switch ($action) {
         }
 
         $cs = ORM::for_table('tbl_customers')
+            ->where_null('reseller_id')
             ->select('tbl_customers.id', 'id')
             ->select('tbl_customers.username', 'username')
             ->select('fullname')
@@ -88,6 +107,7 @@ switch ($action) {
         }
 
         $cs = ORM::for_table('tbl_customers')
+            ->where_null('tbl_customers.reseller_id')
             ->select('tbl_customers.id', 'id')
             ->select('tbl_customers.username', 'username')
             ->select('fullname')
@@ -337,6 +357,11 @@ switch ($action) {
         _log('ONU assigned #'.$onu->id.' customer #'.$customerId);
         r2(getUrl('customers/view/') . $customerId, 's', 'ONU assigned to customer');
         break;
+    case 'traffic':
+        if (!in_array($admin['user_type'], ['SuperAdmin', 'Admin'], true)) { http_response_code(403); header('Content-Type: application/json'); echo json_encode(['error'=>'Forbidden']); exit; }
+        $customer = ORM::for_table('tbl_customers')->find_one((int)$routes['2']);
+        if (!$customer) { http_response_code(404); header('Content-Type: application/json'); echo json_encode(['error'=>'Customer not found']); exit; }
+        header('Content-Type: application/json'); echo json_encode(CustomerTraffic::json($customer)); exit;
     case 'viewu':
         $customer = ORM::for_table('tbl_customers')->where('username', $routes['2'])->find_one();
     case 'view':
@@ -422,6 +447,9 @@ switch ($action) {
                 }
             }
             $ui->assign('d', $d);
+        $ui->assign('customer_list_title', 'Main ISP Customers');
+        $ui->assign('customer_list_url', Text::url('customers'));
+        $ui->assign('reseller_customer_view', false);
             $ui->assign('statuses', ORM::for_table('tbl_customers')->getEnum("status"));
             $ui->assign('customFields', $customFields);
             $ui->assign('xheader', $leafletpickerHeader);
@@ -862,12 +890,12 @@ switch ($action) {
         if ($search != '') {
             $like = '%' . $search . '%';
             $query = ORM::for_table('tbl_customers')
-                ->whereRaw("username LIKE ? OR fullname LIKE ? OR address LIKE ? " .
-                    "OR phonenumber LIKE ? OR email LIKE ? AND status = ?",
+                ->where_null('reseller_id')
+                ->whereRaw("(username LIKE ? OR fullname LIKE ? OR address LIKE ? OR phonenumber LIKE ? OR email LIKE ?) AND status = ?",
                     [$like, $like, $like, $like, $like, $filter]);
         } else {
             $query = ORM::for_table('tbl_customers');
-            $query->where("status", $filter);
+            $query->where_null('reseller_id')->where("status", $filter);
         }
         if ($order == 'lastname') {
             $query->order_by_expr("SUBSTR(fullname, INSTR(fullname, ' ')) $orderby");

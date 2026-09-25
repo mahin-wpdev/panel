@@ -41,6 +41,13 @@ class Package
 
         $p = ORM::for_table('tbl_plans')->where('id', $plan_id)->find_one();
 
+        // RADIUS plans are independent of the incoming MikroTik/router label.
+        // Normalize all recharge paths (SMS, gateway, admin and app).
+        if ($p && (int) $p['is_radius'] === 1
+            && $router_name !== 'balance' && $router_name !== 'Custom Balance') {
+            $router_name = 'radius';
+        }
+
         if (!$isVoucher) {
             $c = ORM::for_table('tbl_customers')->where('id', $id_customer)->find_one();
             if ($c['status'] != 'Active') {
@@ -126,7 +133,6 @@ class Package
             ->select('tbl_user_recharges.type', 'type')
             ->select('admin_id')
             ->select('prepaid')
-            ->where('tbl_user_recharges.routers', $router_name)
             ->where('tbl_user_recharges.Type', $p['type'])
             # PPPOE or Hotspot only can have 1 per customer prepaid or postpaid
             # because 1 customer can have 1 PPPOE and 1 Hotspot Plan in mikrotik
@@ -136,6 +142,15 @@ class Package
             $query->where('username', $c['username']);
         } else {
             $query->where('customer_id', $id_customer);
+        }
+        // Always reuse the newest RADIUS entitlement, even if a legacy
+        // incoming router name once put it under 'Mikrotik'. Never renew an
+        // older expired row instead of a later paid subscription.
+        if ((int) $p['is_radius'] === 1) {
+            $query->where('tbl_plans.is_radius', 1)
+                ->order_by_desc('tbl_user_recharges.id');
+        } else {
+            $query->where('tbl_user_recharges.routers', $router_name);
         }
         $b = $query->find_one();
 
@@ -316,6 +331,8 @@ class Package
             }
             $t->save();
 
+            ResellerProfit::record($c, $t, $p);
+
             if ($p['validity_unit'] == 'Period') {
                 // insert price to fields for invoice next month
                 $fl = ORM::for_table('tbl_customers_fields')->where('field_name', 'Invoice')->where('customer_id', $c['id'])->find_one();
@@ -428,6 +445,9 @@ class Package
             }
             $t->type = $p['type'];
             $t->save();
+            // Keep reseller profit separate from billing.  A unique ledger key
+            // prevents duplicate earnings if a gateway/webhook retries.
+            ResellerProfit::record($c, $t, $p);
 
             if ($p['validity_unit'] == 'Period' && $p['price'] != 0) {
                 // insert price to fields for invoice next month

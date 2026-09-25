@@ -1,4 +1,25 @@
 {include file="customer/header.tpl"}
+{if isset($arivoUsage)}
+<div class="row">
+    <div class="col-md-6 col-md-offset-3">
+        <div class="panel panel-info panel-hovered mb20">
+            <div class="panel-heading"><strong>Monthly RADIUS Usage ({$arivoUsage.month|escape})</strong></div>
+            <div class="panel-body">
+                {if $arivoUsage.available}
+                <div class="row text-center">
+                    <div class="col-xs-4"><b>Download</b><h4>{$arivoUsage.download_gb|escape} GB</h4></div>
+                    <div class="col-xs-4"><b>Upload</b><h4>{$arivoUsage.upload_gb|escape} GB</h4></div>
+                    <div class="col-xs-4"><b>Total</b><h4>{$arivoUsage.total_gb|escape} GB</h4></div>
+                </div>
+                {else}
+                <div class="alert alert-warning">Accounting unavailable for this account.</div>
+                {/if}
+                <small class="text-muted">{$arivoUsage.note|escape}</small>
+            </div>
+        </div>
+    </div>
+</div>
+{/if}
 <!-- user-profile -->
 
 <div class="row">

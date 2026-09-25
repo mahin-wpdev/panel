@@ -321,6 +321,49 @@ class MikrotikPppoe
         return $id;
     }
 
+    /* Read-only session counters and current interface rate for one PPPoE user. */
+    function traffic_customer($customer, $router_name)
+    {
+        $mikrotik = $this->info($router_name);
+        if (!$mikrotik) return null;
+        $client = $this->getClient($mikrotik['ip_address'], $mikrotik['username'], $mikrotik['password']);
+        $names = array_values(array_unique(array_filter([$customer['pppoe_username'], $customer['username']])));
+        /* Intentionally mirror mikrotik_monitor_get_ppp_online_users():
+           fetch active PPP and interface counters from the same API calls. */
+        $activeUsers = $client->sendSync(new RouterOS\Request('/ppp/active/print'));
+        $interfaces = $client->sendSync(new RouterOS\Request('/interface/print'));
+        $interfaceData = [];
+        foreach ($interfaces as $item) $interfaceData[$item->getProperty('name')] = $item;
+        foreach ($activeUsers as $response) {
+            $name = (string)$response->getProperty('name');
+            if (!in_array($name, $names, true)) continue;
+            /* Match the installed MikroTik Monitor plugin: PPP active +
+               the per-user dynamic interface counters (<pppoe-username>). */
+            $interface = '<pppoe-' . $name . '>';
+            $interfaceResponse = $interfaceData[$interface] ?? null;
+            $data = [
+                'connected' => true,
+                'bytes_in' => $interfaceResponse ? (float)$interfaceResponse->getProperty('rx-byte') : 0,
+                'bytes_out' => $interfaceResponse ? (float)$interfaceResponse->getProperty('tx-byte') : 0,
+                'uptime' => (string)$response->getProperty('uptime'),
+                'address' => (string)$response->getProperty('address'),
+                'rx_bps' => 0,
+                'tx_bps' => 0,
+            ];
+            if ($interfaceResponse) {
+                try {
+                    $monitor = new RouterOS\Request('/interface/monitor-traffic');
+                    $monitor->setArgument('interface', $interface)->setArgument('once', '');
+                    $rate = $client->sendSync($monitor);
+                    $data['rx_bps'] = (float)$rate->getProperty('rx-bits-per-second');
+                    $data['tx_bps'] = (float)$rate->getProperty('tx-bits-per-second');
+                } catch (Throwable $e) { /* counters remain available */ }
+            }
+            return $data;
+        }
+        return ['connected' => false, 'bytes_in' => 0, 'bytes_out' => 0, 'uptime' => '', 'address' => '', 'rx_bps' => 0, 'tx_bps' => 0];
+    }
+
     function info($name)
     {
         return ORM::for_table('tbl_routers')->where('name', $name)->find_one();

@@ -9,6 +9,15 @@ _admin();
 $ui->assign('_title', Lang::T('Dashboard'));
 $ui->assign('_admin', $admin);
 
+// Agent accounts that have an active reseller profile always land on their
+// restricted reseller dashboard instead of the global administrative widgets.
+if ($admin['user_type'] === 'Agent') {
+    $agentReseller = ORM::for_table('tbl_resellers')->where('user_id', $admin['id'])->where('status', 'active')->find_one();
+    if ($agentReseller) {
+        r2(getUrl('reseller'));
+    }
+}
+
 if (isset($_GET['refresh'])) {
     $files = scandir($CACHE_PATH);
     foreach ($files as $file) {
@@ -44,6 +53,47 @@ $ui->assign('current_date', $current_date);
 $tipeUser = $admin['user_type'];
 if (in_array($tipeUser, ['SuperAdmin', 'Admin'])) {
     $tipeUser = 'Admin';
+    try {
+        $ui->assign('olt_total', ORM::for_table('tbl_olts')->count());
+        $ui->assign('olt_online_total', ORM::for_table('tbl_olts')->where('status', 'Online')->count());
+        $lastOltSync = ORM::for_table('tbl_olts')->where_not_null('last_sync_at')->order_by_desc('last_sync_at')->find_one();
+        $ui->assign('olt_last_sync_status', $lastOltSync ? ($lastOltSync['last_sync_status'] ?: 'unknown') : 'never');
+        $ui->assign('olt_last_sync_at', $lastOltSync ? $lastOltSync['last_sync_at'] : null);
+        $ui->assign('onu_total', ORM::for_table('tbl_onus')->count());
+        $ui->assign('onu_online_total', ORM::for_table('tbl_onus')->where('status', 'ONLINE')->count());
+        $ui->assign('onu_offline_total', ORM::for_table('tbl_onus')->where('status', 'OFFLINE')->count());
+        $ui->assign('onu_los_total', ORM::for_table('tbl_onus')->where('status', 'LOS')->count());
+        $ui->assign('onu_unassigned_total', ORM::for_table('tbl_onus')->where_null('customer_id')->count());
+    } catch (Throwable $e) {
+        $ui->assign('olt_total', 0); $ui->assign('onu_total', 0);
+        $ui->assign('olt_online_total', 0); $ui->assign('onu_online_total', 0);
+        $ui->assign('olt_last_sync_status', 'never'); $ui->assign('olt_last_sync_at', null);
+        $ui->assign('onu_offline_total', 0); $ui->assign('onu_los_total', 0);
+        $ui->assign('onu_unassigned_total', 0);
+    }
+    try {
+        $resellerTotal = ORM::for_table('tbl_resellers')->count();
+        $resellerActive = ORM::for_table('tbl_resellers')->where('status', 'active')->count();
+        $resellerCustomers = ORM::for_table('tbl_customers')->where_not_null('reseller_id')->count();
+        $serviceActive = ORM::for_table('tbl_customers')->where('status', 'Active')->count();
+        $serviceInactive = ORM::for_table('tbl_customers')->where_not_equal('status', 'Active')->count();
+        $earned = (float) ORM::for_table('tbl_reseller_earnings')->where('status', 'earned')->sum('profit_amount');
+        $settled = (float) ORM::for_table('tbl_reseller_settlements')->sum('amount');
+        $monthProfit = (float) ORM::for_table('tbl_reseller_earnings')
+            ->where_gte('created_at', date('Y-m-01') . ' 00:00:00')->sum('profit_amount');
+        $ui->assign('reseller_total', $resellerTotal);
+        $ui->assign('reseller_active_total', $resellerActive);
+        $ui->assign('reseller_customer_total', $resellerCustomers);
+        $ui->assign('reseller_profit_due', max(0, $earned - $settled));
+        $ui->assign('reseller_month_profit', $monthProfit);
+        $ui->assign('service_active_total', $serviceActive);
+        $ui->assign('service_inactive_total', $serviceInactive);
+    } catch (Throwable $e) {
+        $ui->assign('reseller_total', 0); $ui->assign('reseller_active_total', 0);
+        $ui->assign('reseller_customer_total', 0); $ui->assign('reseller_profit_due', 0);
+        $ui->assign('reseller_month_profit', 0); $ui->assign('service_active_total', 0);
+        $ui->assign('service_inactive_total', 0);
+    }
 }
 
 $widgets = ORM::for_table('tbl_widgets')->where("enabled", 1)->where('user', $tipeUser)->order_by_asc("orders")->findArray();

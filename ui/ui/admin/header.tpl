@@ -131,13 +131,13 @@
                     {/if}
                     {if in_array($_admin['user_type'],['SuperAdmin','Admin'])}
                         <li class="reseller-only {if $_routes[0] eq 'reseller' }active{/if} treeview">
-                            <a href="#"><i class="fa fa-handshake-o"></i><span>Reseller Management</span><span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
+                            <a href="#"><i class="fa fa-sitemap"></i><span>Reseller Management</span><span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
                             <ul class="treeview-menu"><li><a href="{Text::url('reseller/dashboard')}"><i class="fa fa-dashboard"></i> Dashboard</a></li><li><a href="{Text::url('reseller/resellers')}"><i class="fa fa-users"></i> Resellers</a></li><li><a href="{Text::url('reseller/ownership')}"><i class="fa fa-object-group"></i> Customers &amp; Ownership</a></li><li><a href="{Text::url('reseller/packages')}"><i class="fa fa-cubes"></i> Packages</a></li><li><a href="{Text::url('reseller/earnings')}"><i class="fa fa-line-chart"></i> Earnings</a></li><li><a href="{Text::url('reseller/settlements')}"><i class="fa fa-money"></i> Settlements</a></li><li><a href="{Text::url('reseller/activity')}"><i class="fa fa-history"></i> Activity Logs</a></li></ul>
                         </li>
                     {/if}
                     {if $_admin['user_type'] neq 'Agent'}
                     <li {if $_system_menu eq 'customers' }class="active" {/if}>
-                        <a href="{Text::url('customers')}">
+                        <a href="{Text::url('customers/list&main=1')}">
                             <i class="fa fa-user"></i>
                             <span>{Lang::T('Customer')}</span>
                         </a>
@@ -272,11 +272,18 @@
                                         href="{Text::url('pool/port')}">Port Pool</a></li>
                                 <li {if $_routes[0] eq 'odp' and $_routes[1] eq '' }class="active" {/if}><a
                                         href="{Text::url('odp')}">ODP List</a></li>
-                                <li {if $_routes[0] eq 'olts' }class="active" {/if}><a
-                                        href="{Text::url('olts')}"><i class="fa fa-sitemap"></i> OLT Management</a></li>
-                                <li {if $_routes[0] eq 'onus' }class="active" {/if}><a
-                                        href="{Text::url('onus')}"><i class="fa fa-plug"></i> ONU Management</a></li>
                                 {$_MENU_NETWORK}
+                            </ul>
+                        </li>
+
+                        <li class="{if $_routes[0] eq 'olts' || $_routes[0] eq 'onus'}active{/if} treeview">
+                            <a href="#"><i class="fa fa-server"></i> <span>OLT Management</span><span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
+                            <ul class="treeview-menu">
+                                <li {if $_routes[0] eq 'olts' && ($_routes[1] eq '' || $_routes[1] eq 'list')}class="active"{/if}><a href="{Text::url('olts')}"><i class="fa fa-list"></i> OLT List</a></li>
+                                <li {if $_routes[0] eq 'olts' && $_routes[1] eq 'add'}class="active"{/if}><a href="{Text::url('olts/add')}"><i class="fa fa-plus-circle"></i> Add OLT</a></li>
+                                <li {if $_routes[0] eq 'onus' && $_routes[1] eq ''}class="active"{/if}><a href="{Text::url('onus')}"><i class="fa fa-sitemap"></i> All ONU</a></li>
+                                <li {if $_routes[0] eq 'onus' && $_routes[1] eq 'unassigned'}class="active"{/if}><a href="{Text::url('onus/unassigned')}"><i class="fa fa-unlink"></i> Unassigned ONU</a></li>
+                                <li {if $_routes[0] eq 'onus' && $_routes[1] eq 'los'}class="active"{/if}><a href="{Text::url('onus/los')}"><i class="fa fa-warning"></i> LOS Alerts</a></li>
                             </ul>
                         </li>
                         {$_MENU_AFTER_NETWORKS}

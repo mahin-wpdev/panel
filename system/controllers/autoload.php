@@ -126,7 +126,7 @@ switch ($action) {
         }
         break;
     case 'plan_is_active':
-        $ds = ORM::for_table('tbl_user_recharges')->where('customer_id', $routes['2'])->find_array();
+        $ds = ORM::for_table('tbl_user_recharges')->where('customer_id', $routes['2'])->where('status', 'on')->find_array();
         if ($ds) {
             $ps = [];
             $c = ORM::for_table('tbl_customers')->find_one($routes['2']);

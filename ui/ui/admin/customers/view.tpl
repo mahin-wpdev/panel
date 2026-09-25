@@ -5,9 +5,13 @@
         <div class="box box-{if $d['status']=='Active'}primary{else}danger{/if}">
             <div class="box-body box-profile">
                 <img class="profile-user-img img-responsive img-circle"
+                    {if $d['photo'] && strpos($d['photo'], 'default') === false}
                     onclick="window.location.href = '{$app_url}/{$UPLOAD_PATH}{$d['photo']}'"
                     src="{$app_url}/{$UPLOAD_PATH}{$d['photo']}.thumb.jpg"
-                    onerror="this.src='{$app_url}/{$UPLOAD_PATH}/user.default.jpg'" alt="avatar">
+                    {else}
+                    src="{$app_url}/system/uploads/admin.default.png"
+                    {/if}
+                    onerror="this.onerror=null;this.src='{$app_url}/system/uploads/admin.default.png';" alt="avatar">
                 <h3 class="profile-username text-center">{$d['fullname']}</h3>
                 <ul class="list-group list-group-unbordered">
                     <li class="list-group-item">
@@ -125,6 +129,25 @@
         </div>
     </div>
     <div class="col-sm-8 col-md-8">
+        {if isset($arivoUsage)}
+        <div class="box box-info">
+            <div class="box-header with-border">
+                <h3 class="box-title">Monthly RADIUS Usage ({$arivoUsage.month|escape})</h3>
+            </div>
+            <div class="box-body">
+                {if $arivoUsage.available}
+                <div class="row text-center">
+                    <div class="col-xs-4"><b>Download</b><h4>{$arivoUsage.download_gb|escape} GB</h4></div>
+                    <div class="col-xs-4"><b>Upload</b><h4>{$arivoUsage.upload_gb|escape} GB</h4></div>
+                    <div class="col-xs-4"><b>Total</b><h4>{$arivoUsage.total_gb|escape} GB</h4></div>
+                </div>
+                {else}
+                <div class="alert alert-warning">Accounting unavailable for this customer.</div>
+                {/if}
+                <small class="text-muted">{$arivoUsage.note|escape}</small>
+            </div>
+        </div>
+        {/if}
         <div class="box box-info">
             <ul class="nav nav-tabs">
                 <li role="presentation" {if $v=='order' }class="active" {/if}><a

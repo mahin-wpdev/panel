@@ -1,30 +1,23 @@
 {include file="sections/header.tpl"}
-<div class="row">
-    <div class="col-md-4"><div class="small-box bg-aqua"><div class="inner"><h3>{$onus|@count}</h3><p>Filtered ONU</p></div><div class="icon"><i class="fa fa-plug"></i></div></div></div>
-</div>
-<div class="row"><div class="col-md-12"><div class="box box-primary">
-    <div class="box-header"><h3 class="box-title">ONU Management</h3><div class="pull-right">
-        <a class="btn btn-xs btn-default" href="{Text::url('onus')}">All</a>
-        <a class="btn btn-xs btn-success" href="{Text::url('onus/online')}">Online</a>
-        <a class="btn btn-xs btn-warning" href="{Text::url('onus/offline')}">Offline</a>
-        <a class="btn btn-xs btn-info" href="{Text::url('onus/unassigned')}">Unassigned</a>
-    </div></div>
-    <div class="box-body table-responsive"><table class="table table-bordered table-striped">
-        <thead><tr><th>Status</th><th>Customer / PPPoE</th><th>OLT / PON / ONU</th><th>MAC</th><th>RX / TX</th><th>Distance</th><th>Last Seen</th><th>Customer Mapping</th></tr></thead>
-        <tbody>{foreach $onus as $o}<tr>
-            <td>{$o['status']}</td>
-            <td>{if $o['customer_id']}{$o['fullname']|escape}<br><small>{$o['username']|escape}</small>{else}—{/if}</td>
-            <td>{$o['name']|escape}<br><small>PON {$o['slot_number']}/{$o['pon_port']}, ONU {$o['onu_id']}</small></td>
-            <td>{$o['mac_address']}</td>
-            <td>{if $o['rx_power']!==null}{$o['rx_power']} / {$o['tx_power']} dBm{else}N/A{/if}</td>
-            <td>{if $o['distance']!==null}{$o['distance']} m{else}N/A{/if}</td>
-            <td>{$o['last_seen']}</td>
-            <td>{if !$o['customer_id']}
-                <form method="post" action="{Text::url('onus/assign/', $o['id'])}"><input type="hidden" name="token" value="{$csrf_token}"><select name="customer_id" class="form-control input-sm" required><option value="">Customer…</option>{foreach $customers as $c}<option value="{$c['id']}">{$c['fullname']|escape} ({$c['username']|escape})</option>{/foreach}</select><button class="btn btn-xs btn-primary">Assign</button></form>
-            {else}
-                <form method="post" action="{Text::url('onus/unassign/', $o['id'])}" onsubmit="return confirm('Remove this ONU from the customer?');"><input type="hidden" name="token" value="{$csrf_token}"><button class="btn btn-xs btn-warning">Unassign</button></form>
-            {/if}</td>
-        </tr>{foreachelse}<tr><td colspan="8" class="text-center">No ONU data available. Run OLT Sync.</td></tr>{/foreach}</tbody>
-    </table></div>
-</div></div></div>
+<style>{literal}.onu-card{border-radius:10px;overflow:hidden;box-shadow:0 5px 16px rgba(30,50,80,.12)}.onu-filter{padding:15px;background:#f7f9fc;border:1px solid #e1e7ef;border-radius:8px;margin-bottom:16px}.onu-table td{vertical-align:middle!important}.onu-id{font-family:monospace}.signal-good{color:#00a65a;font-weight:bold}.signal-warn{color:#f39c12;font-weight:bold}.signal-bad{color:#dd4b39;font-weight:bold}.assign-box{min-width:260px}.assign-box .select2{width:100%!important}.onu-meta{color:#6b778c;font-size:12px}.onu-actions form{margin:2px 0}{/literal}</style>
+<div class="row"><div class="col-md-12"><h3 style="margin-top:0"><i class="fa fa-sitemap text-primary"></i> ONU Assignment &amp; Management <small>OLT discovery, customer mapping and optical status</small></h3></div>
+<div class="col-lg-3 col-sm-6"><div class="small-box bg-aqua onu-card"><div class="inner"><h3>{$onu_total}</h3><p>Total ONU</p></div><div class="icon"><i class="fa fa-sitemap"></i></div><a href="{Text::url('onus')}" class="small-box-footer">Show all <i class="fa fa-arrow-circle-right"></i></a></div></div>
+<div class="col-lg-3 col-sm-6"><div class="small-box bg-green onu-card"><div class="inner"><h3>{$onu_online}</h3><p>Online</p></div><div class="icon"><i class="fa fa-check-circle"></i></div><a href="{Text::url('onus/online')}" class="small-box-footer">View online <i class="fa fa-arrow-circle-right"></i></a></div></div>
+<div class="col-lg-2 col-sm-6"><div class="small-box bg-yellow onu-card"><div class="inner"><h3>{$onu_offline}</h3><p>Offline</p></div><div class="icon"><i class="fa fa-power-off"></i></div><a href="{Text::url('onus/offline')}" class="small-box-footer">View offline <i class="fa fa-arrow-circle-right"></i></a></div></div>
+<div class="col-lg-2 col-sm-6"><div class="small-box bg-red onu-card"><div class="inner"><h3>{$onu_los}</h3><p>LOS Alert</p></div><div class="icon"><i class="fa fa-warning"></i></div><a href="{Text::url('onus/los')}" class="small-box-footer">Review LOS <i class="fa fa-arrow-circle-right"></i></a></div></div>
+<div class="col-lg-2 col-sm-6"><div class="small-box bg-purple onu-card"><div class="inner"><h3>{$onu_unassigned}</h3><p>Unassigned</p></div><div class="icon"><i class="fa fa-link"></i></div><a href="{Text::url('onus/unassigned')}" class="small-box-footer">Assign now <i class="fa fa-arrow-circle-right"></i></a></div></div></div>
+
+<div class="box box-primary"><div class="box-header with-border"><h3 class="box-title"><i class="fa fa-plug"></i> ONU Directory</h3><div class="box-tools"><a class="btn btn-default btn-xs" href="{Text::url('olts')}"><i class="fa fa-server"></i> Manage OLT</a></div></div><div class="box-body">
+<form class="onu-filter" method="get" action="{Text::url('onus')}"><input type="hidden" name="_route" value="onus"><div class="row"><div class="col-md-4"><input class="form-control" name="search" value="{$onu_search|escape}" placeholder="Search MAC, serial, customer or PPPoE"></div><div class="col-md-3"><select class="form-control" name="olt_id"><option value="0">All OLTs</option>{foreach $olts as $olt}<option value="{$olt['id']}" {if $onu_olt_filter==$olt['id']}selected{/if}>{$olt['name']|escape}</option>{/foreach}</select></div><div class="col-md-3"><select class="form-control" name="status"><option value="all">All status</option><option value="online" {if $onu_status_filter=='online'}selected{/if}>Online</option><option value="offline" {if $onu_status_filter=='offline'}selected{/if}>Offline</option><option value="los" {if $onu_status_filter=='los'}selected{/if}>LOS</option><option value="unassigned" {if $onu_status_filter=='unassigned'}selected{/if}>Unassigned</option></select></div><div class="col-md-2"><button class="btn btn-primary btn-block"><i class="fa fa-search"></i> Filter</button></div></div></form>
+<div class="table-responsive"><table class="table table-bordered table-striped table-hover onu-table"><thead><tr><th>Status</th><th>Customer / Owner</th><th>OLT Location</th><th>ONU Identity</th><th>Optical Signal</th><th>Distance / Last Seen</th><th>Customer Assignment</th><th>OLT Action</th></tr></thead><tbody>{foreach $onus as $o}<tr>
+<td>{if $o['status']=='ONLINE'}<span class="label label-success"><i class="fa fa-circle"></i> ONLINE</span>{elseif $o['status']=='LOS'}<span class="label label-danger"><i class="fa fa-warning"></i> LOS</span>{else}<span class="label label-default">{$o['status']|escape}</span>{/if}</td>
+<td>{if $o['customer_id']}<b>{$o['fullname']|escape}</b><br><small>{$o['username']|escape}{if $o['pppoe_username']} / {$o['pppoe_username']|escape}{/if}</small><br>{if $o['reseller_name']}<span class="label label-primary">{$o['reseller_name']|escape}</span>{else}<span class="label label-default">Main ISP</span>{/if}{else}<span class="label label-warning">Not assigned</span>{/if}</td>
+<td><b>{$o['name']|escape}</b><br><span class="onu-meta">PON {$o['slot_number']}/{$o['pon_port']} &bull; ONU {$o['onu_id']}</span></td>
+<td class="onu-id">{if $o['serial_number']}SN: {$o['serial_number']|escape}<br>{/if}MAC: {$o['mac_address']|escape}</td>
+<td>{if $o['rx_power']!==null}<span class="{if $o['rx_power']>=-25}signal-good{elseif $o['rx_power']>=-28}signal-warn{else}signal-bad{/if}">RX {$o['rx_power']} dBm</span><br><small>TX {$o['tx_power']} dBm</small>{else}<span class="text-muted">N/A</span>{/if}</td>
+<td>{if $o['distance']!==null}{$o['distance']} m{else}N/A{/if}<br><small class="onu-meta">{$o['last_seen']|escape}</small></td>
+<td class="assign-box">{if !$o['customer_id']}<form method="post" action="{Text::url('onus/assign/', $o['id'])}" onsubmit="return confirm('Assign this ONU to the selected customer?');"><input type="hidden" name="token" value="{$csrf_token}"><select name="customer_id" class="form-control input-sm select2" required><option value="">Select available customer...</option>{foreach $customers as $c}<option value="{$c['id']}">{$c['fullname']|escape} ({$c['username']|escape}){if $c['reseller_name']} - {$c['reseller_name']|escape}{else} - Main ISP{/if}</option>{/foreach}</select><button class="btn btn-xs btn-primary btn-block" style="margin-top:5px"><i class="fa fa-link"></i> Assign Customer</button></form>{else}<a class="btn btn-xs btn-success" href="{Text::url('customers/view/')}{$o['customer_id']}"><i class="fa fa-user"></i> View Customer</a><form method="post" action="{Text::url('onus/unassign/', $o['id'])}" onsubmit="return confirm('Unlink customer only? The ONU will remain on the OLT.');"><input type="hidden" name="token" value="{$csrf_token}"><button class="btn btn-xs btn-warning"><i class="fa fa-unlink"></i> Unassign</button></form>{/if}</td>
+<td class="onu-actions">{if $o['status']=='OFFLINE' && !$o['customer_id']}<form method="post" action="{Text::url('onus/remove-from-olt/', $o['id'])}" onsubmit="return confirm('Remove this OFFLINE and unassigned ONU from the OLT? PON {$o['pon_port']}, ONU {$o['onu_id']}, MAC {$o['mac_address']}');"><input type="hidden" name="token" value="{$csrf_token}"><input type="hidden" name="mac_address" value="{$o['mac_address']|escape}"><button class="btn btn-xs btn-danger"><i class="fa fa-trash"></i> Remove from OLT</button></form><small class="text-muted">Live OLT verification required.</small>{else}<span class="text-muted">Removal requires offline + unassigned</span>{/if}</td>
+</tr>{foreachelse}<tr><td colspan="8" class="text-center text-muted" style="padding:30px"><i class="fa fa-info-circle"></i> No ONU matches the selected filters. Run OLT Sync if discovery data is missing.</td></tr>{/foreach}</tbody></table></div>
+</div></div>
 {include file="sections/footer.tpl"}

@@ -17,16 +17,18 @@
             <div class="panel-heading">
                 {if in_array($_admin['user_type'],['SuperAdmin','Admin'])}
                 <div class="btn-group pull-right">
-                    <a class="btn btn-primary btn-xs" title="save"
+                    {if !$reseller_customer_view}<a class="btn btn-primary btn-xs" title="save"
                         href="{Text::url('customers/csv&token=', $csrf_token)}"
                         onclick="return ask(this, '{Lang::T("This will export to CSV")}?')"><span
-                            class="glyphicon glyphicon-download" aria-hidden="true"></span> CSV</a>
+                            class="glyphicon glyphicon-download" aria-hidden="true"></span> CSV</a>{/if}
                 </div>
                 {/if}
-                {Lang::T('Manage Contact')}
+                {$customer_list_title|default:'Main ISP Customers'|escape}
+                {if $reseller_customer_view}<a class="btn btn-default btn-xs pull-right" style="margin-right:8px" href="{Text::url('reseller/resellers')}"><i class="fa fa-arrow-left"></i> Reseller List</a>{/if}
             </div>
             <div class="panel-body">
-                <form id="site-search" method="post" action="{Text::url('customers')}">
+                {if $reseller_customer_view}<div class="alert alert-info"><b>Approval:</b> <a href="{$customer_list_url}">All</a> | <a href="{$customer_list_url}&approval=pending">Pending</a> | <a href="{$customer_list_url}&approval=approved">Approved</a></div>{/if}
+                <form id="site-search" method="post" action="{$customer_list_url}">
                     <input type="hidden" name="csrf_token" value="{$csrf_token}">
                     <div class="md-whiteframe-z1 mb20 text-center" style="padding: 15px">
                         <div class="col-lg-4">
@@ -64,6 +66,7 @@
                             <div class="input-group">
                                 <span class="input-group-addon">{Lang::T('Status')}</span>
                                 <select class="form-control" id="filter" name="filter">
+                                    {if $reseller_customer_view}<option value="all" {if $filter eq 'all'}selected{/if}>All Status</option>{/if}
                                     {foreach $statuses as $status}
                                     <option value="{$status}" {if $filter eq $status }selected{/if}>{Lang::T($status)}
                                     </option>
@@ -108,6 +111,7 @@
                                 <th>{Lang::T('Service Type')}</th>
                                 <th>PPPOE</th>
                                 <th>{Lang::T('Status')}</th>
+                                {if $reseller_customer_view}<th>Approval</th>{/if}
                                 <th>{Lang::T('Created On')}</th>
                                 <th>{Lang::T('Manage')}</th>
                             </tr>
@@ -152,9 +156,10 @@
                                     {$ds['pppoe_ip']}
                                 </td>
                                 <td>{Lang::T($ds['status'])}</td>
+                                {if $reseller_customer_view}<td>{if $ds['approval_status']=='pending'}<span class="label label-warning">Pending</span>{else}<span class="label label-success">Approved</span>{/if}</td>{/if}
                                 <td>{Lang::dateTimeFormat($ds['created_at'])}</td>
                                 <td align="center">
-                                    <a href="{Text::url('customers/view/')}{$ds['id']}" id="{$ds['id']}"
+                                    {if $reseller_customer_view && $ds['approval_status']=='pending'}<form method="post" action="{Text::url('reseller/approve-customer')}" style="display:inline"><input type="hidden" name="csrf_token" value="{$csrf_token}"><input type="hidden" name="customer_id" value="{$ds['id']}"><button class="btn btn-warning btn-xs" onclick="return confirm('Approve this customer?')"><i class="fa fa-check"></i> Approve</button></form>{/if} <a href="{Text::url('customers/view/')}{$ds['id']}" id="{$ds['id']}"
                                         style="margin: 0px; color:black"
                                         class="btn btn-success btn-xs">&nbsp;&nbsp;{Lang::T('View')}&nbsp;&nbsp;</a>
                                     <a href="{Text::url('customers/edit/', $ds['id'], '&token=', $csrf_token)}"
