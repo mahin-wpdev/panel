@@ -17,6 +17,7 @@
 - Hardened first-run public endpoint/billing inputs and atomic secure mobile-release configuration writes.
 - Hardened WhatsApp admin actions to require both successful HTTP status and JSON `success: true`.
 - Expanded CI to cover public-surface restrictions, clean installer smoke, service health, schema, RADIUS, backup/restore and rollback.
+- Updated GitHub Actions runtime dependencies to `actions/checkout@v7` and `actions/setup-node@v7` to use the current Node 24 action runtime and remove the Node 20 deprecation warning.
 
 ## 2024.10.23
 
