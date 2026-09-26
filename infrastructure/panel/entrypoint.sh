@@ -22,17 +22,20 @@ until mysqladmin ping -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASSWORD" --silent; do ec
 MYSQL=(mysql --protocol=tcp -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME")
 if ! "${MYSQL[@]}" -Nse "SHOW TABLES LIKE 'tbl_users'" | grep -q tbl_users; then
   "${MYSQL[@]}" < /var/www/html/install/phpnuxbill.sql
+fi
+if ! "${MYSQL[@]}" -Nse "SHOW TABLES LIKE 'radcheck'" | grep -q radcheck; then
   "${MYSQL[@]}" < /var/www/html/install/radius.sql
 fi
 for migration in \
   /var/www/html/autorecharge/migration.sql \
+  /var/www/html/system/reseller/migration.sql \
   /var/www/html/system/mobile/migration.sql \
   /var/www/html/system/mobile/admin-recharge-migration.sql \
   /var/www/html/system/mobile/push-migration.sql \
-  /var/www/html/system/mobile/session-revocation.sql \
   /var/www/html/system/mobile/support-tickets-migration.sql \
-  /var/www/html/system/mobile/traffic-peaks-migration.sql; do
-  [ ! -f "$migration" ] || "${MYSQL[@]}" --force < "$migration"
+  /var/www/html/system/mobile/traffic-peaks-migration.sql \
+  /var/www/html/system/mobile/session-revocation.sql; do
+  [ ! -f "$migration" ] || "${MYSQL[@]}" < "$migration"
 done
 admin_user="${ADMIN_USERNAME:-admin}"; admin_name="${ADMIN_FULLNAME:-Administrator}"; company="${COMPANY_NAME:-JM Broadband}"
 sql_escape() { printf %s "$1" | sed "s/'/''/g"; }

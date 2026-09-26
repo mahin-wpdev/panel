@@ -80,6 +80,7 @@ services:
     restart: unless-stopped
     depends_on:
       database: { condition: service_healthy }
+      panel: { condition: service_healthy }
     environment:
       DB_HOST: database
       DB_NAME: ${DB_NAME:-jm_panel}
@@ -87,12 +88,13 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       RADIUS_SHARED_SECRET: ${RADIUS_SHARED_SECRET}
       RADIUS_CLIENT_NETWORK: ${RADIUS_CLIENT_NETWORK:-0.0.0.0/0}
+      RADIUS_DEBUG: ${RADIUS_DEBUG:-0}
     ports:
       - "1812:1812/udp"
       - "1813:1813/udp"
       - "3799:3799/udp"
     healthcheck:
-      test: ["CMD", "freeradius", "-XC"]
+      test: ["CMD-SHELL", "freeradius -XC >/dev/null 2>&1 && mariadb --protocol=tcp -h\"$$DB_HOST\" -u\"$$DB_USER\" -p\"$$DB_PASSWORD\" \"$$DB_NAME\" -Nse \"SELECT 1 FROM radcheck LIMIT 1\" >/dev/null 2>&1"]
       interval: 30s
       timeout: 10s
       retries: 3

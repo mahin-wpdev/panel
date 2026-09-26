@@ -88,6 +88,53 @@ jobs:
           docker compose logs --tail=200
           exit 1
 
+      - name: Verify reseller schema
+        run: |
+          DB_NAME="$(sed -n 's/^DB_NAME=//p' .env)"
+          DB_USER="$(sed -n 's/^DB_USER=//p' .env)"
+          DB_PASSWORD="$(sed -n 's/^DB_PASSWORD=//p' .env)"
+          db() { docker compose exec -T database mariadb -N -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" "$@"; }
+          table_count="$(db -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$DB_NAME' AND table_name IN ('tbl_resellers','tbl_reseller_packages','tbl_reseller_earnings','tbl_reseller_settlements','tbl_reseller_activity_logs')")"
+          test "$table_count" -eq 5
+          column_count="$(db -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='$DB_NAME' AND table_name='tbl_customers' AND column_name IN ('reseller_id','approval_status')")"
+          test "$column_count" -eq 2
+          trigger_count="$(db -e "SELECT COUNT(*) FROM information_schema.triggers WHERE trigger_schema='$DB_NAME' AND trigger_name IN ('trg_mobile_customer_revoke','trg_mobile_staff_revoke','trg_mobile_reseller_revoke')")"
+          test "$trigger_count" -eq 3
+
+      - name: Verify RADIUS authentication and accounting
+        run: |
+          DB_NAME="$(sed -n 's/^DB_NAME=//p' .env)"
+          DB_USER="$(sed -n 's/^DB_USER=//p' .env)"
+          DB_PASSWORD="$(sed -n 's/^DB_PASSWORD=//p' .env)"
+          RADIUS_SHARED_SECRET="$(sed -n 's/^RADIUS_SHARED_SECRET=//p' .env)"
+          docker compose exec -T database mariadb -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" -e "DELETE FROM radcheck WHERE username='ci-radius'; INSERT INTO radcheck (username,attribute,op,value) VALUES ('ci-radius','Cleartext-Password',':=','ci-pass');"
+          auth_output="$(docker compose exec -T radius radtest ci-radius ci-pass 127.0.0.1 0 "$RADIUS_SHARED_SECRET" 2>&1)"
+          printf '%s\n' "$auth_output"
+          grep -q "Access-Accept" <<<"$auth_output"
+          printf '%s\n' 'User-Name = "ci-radius"' 'Acct-Status-Type = Start' 'Acct-Session-Id = "ci-session-1"' 'NAS-IP-Address = 127.0.0.1' 'NAS-Port = 1' 'Service-Type = Framed-User' 'Framed-Protocol = PPP' 'Framed-IP-Address = 10.10.10.200' | docker compose exec -T radius radclient -x 127.0.0.1:1813 acct "$RADIUS_SHARED_SECRET"
+          acct_count="$(docker compose exec -T database mariadb -N -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" -e "SELECT COUNT(*) FROM radacct WHERE username='ci-radius' AND acctsessionid='ci-session-1'")"
+          test "$acct_count" -ge 1
+
+      - name: Verify migrations are repeatable
+        run: |
+          DB_NAME="$(sed -n 's/^DB_NAME=//p' .env)"
+          DB_USER="$(sed -n 's/^DB_USER=//p' .env)"
+          DB_PASSWORD="$(sed -n 's/^DB_PASSWORD=//p' .env)"
+          docker compose restart panel
+          for attempt in $(seq 1 40); do
+            panel_id="$(docker compose ps -q panel)"
+            state="$(docker inspect --format='{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{end}}' "$panel_id")"
+            if [ "$state" = "running healthy" ]; then
+              trigger_count="$(docker compose exec -T database mariadb -N -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" -e "SELECT COUNT(*) FROM information_schema.triggers WHERE trigger_schema='$DB_NAME' AND trigger_name IN ('trg_mobile_customer_revoke','trg_mobile_staff_revoke','trg_mobile_reseller_revoke')")"
+              test "$trigger_count" -eq 3
+              exit 0
+            fi
+            sleep 3
+          done
+          docker compose ps --all
+          docker compose logs panel --tail=200
+          exit 1
+
       - name: Stop stack
         if: always()
         run: docker compose down -v --remove-orphans

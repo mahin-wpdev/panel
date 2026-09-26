@@ -7,6 +7,7 @@
 
 DELIMITER $$
 
+DROP TRIGGER IF EXISTS trg_mobile_customer_revoke$$
 CREATE TRIGGER trg_mobile_customer_revoke
 AFTER UPDATE ON tbl_customers
 FOR EACH ROW
@@ -23,6 +24,7 @@ BEGIN
     END IF;
 END$$
 
+DROP TRIGGER IF EXISTS trg_mobile_staff_revoke$$
 CREATE TRIGGER trg_mobile_staff_revoke
 AFTER UPDATE ON tbl_users
 FOR EACH ROW
@@ -39,6 +41,7 @@ BEGIN
     END IF;
 END$$
 
+DROP TRIGGER IF EXISTS trg_mobile_reseller_revoke$$
 CREATE TRIGGER trg_mobile_reseller_revoke
 AFTER UPDATE ON tbl_resellers
 FOR EACH ROW

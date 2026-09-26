@@ -5,8 +5,7 @@ sql {
   port = 3306
   login = "${DB_USER}"
   password = "${DB_PASSWORD}"
-  database = "${DB_NAME}"
-  radius_db = "radius"
+  radius_db = "${DB_NAME}"
   acct_table1 = "radacct"
   acct_table2 = "radacct"
   postauth_table = "radpostauth"
@@ -16,6 +15,15 @@ sql {
   groupreply_table = "radgroupreply"
   usergroup_table = "radusergroup"
   delete_stale_sessions = yes
-  pool { start = 5 min = 4 max = 32 spare = 3 uses = 0 retry_delay = 30 lifetime = 0 idle_timeout = 60 }
+  pool {
+    start = 1
+    min = 1
+    max = 16
+    spare = 3
+    uses = 0
+    retry_delay = 1
+    lifetime = 0
+    idle_timeout = 60
+  }
   $INCLUDE ${modconfdir}/sql/main/${dialect}/queries.conf
 }
