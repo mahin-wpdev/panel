@@ -1,4 +1,4 @@
-# Arivo / phpNuxBill RADIUS migration — staged cutover
+# Arivo / Arivo ISP Billing RADIUS migration — staged cutover
 
 Status: **NOT DEPLOYED to production.** This is a version-controlled rollout and rollback plan. Do not run the old `install/radius.sql` against an existing database: it contains DROP TABLE statements.
 
@@ -25,7 +25,7 @@ Status: **NOT DEPLOYED to production.** This is a version-controlled rollout and
 - Compare the customer session, assigned IP, rate limit, expiry, and auto-recharge behavior with the pre-migration baseline.
 
 ## 2. Move authentication in controlled batches
-- Ensure a Radius radcheck/radreply/radusergroup record is created and updated for the test customer by the existing phpNuxBill Radius device.
+- Ensure a Radius radcheck/radreply/radusergroup record is created and updated for the test customer by the existing Arivo ISP Billing Radius device.
 - Confirm successful authentication **through RADIUS**, not just continued local PPP secret authentication. RouterOS prefers a matching local PPP secret.
 - Check package speed, expiration, blocking after expiry, payment-triggered re-enable, resend/duplicate payment, reseller-specific pricing, and customer ownership.
 - Only after a test customer passes, migrate other secrets in controlled batches; retain a working management login and revert path.

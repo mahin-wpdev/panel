@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>PHPNuxBill  Installer</title>
+    <title>Arivo ISP Billing  Installer</title>
     <link rel="shortcut icon" type="image/x-icon" href="img/favicon.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -20,7 +20,7 @@
         <hr>
 
 		<div class="span12">
-			<h4> PHPNuxBill  Installer </h4>
+			<h4> Arivo ISP Billing  Installer </h4>
 			<?php
 			if (isset($_GET['_error']) && ($_GET['_error']) == '1') {
 				echo '<h4 style="color: red;"> Unable to Connect Database, Please make sure database info is correct and try again ! </h4>';
@@ -60,8 +60,8 @@
 					</div>
 
                     <div class="form-group">
-						<label for="radius"><input type="checkbox" class="form-" id="radius" name="radius" value="yes"> Install <a href="https://github.com/hotspotbilling/phpnuxbill/wiki/FreeRadius" target="_blank">Radius</a> Table?</label>
-						<span class='help-block'>You Don't need this if you planning to use <a href="https://github.com/hotspotbilling/phpnuxbill/wiki/FreeRadius-Rest" target="_blank">FreeRadius REST</a></span>
+						<label for="radius"><input type="checkbox" class="form-" id="radius" name="radius" value="yes"> Install <a href="https://github.com/mahin-wpdev/panel/blob/next-release/docs/new-freeradius-deploy-ubuntu24.md" target="_blank">Radius</a> Table?</label>
+						<span class='help-block'>You Don't need this if you planning to use <a href="https://github.com/mahin-wpdev/panel/blob/next-release/docs/new-freeradius-deploy-ubuntu24.md" target="_blank">FreeRadius REST</a></span>
 					</div>
 
 					<button type="submit" class="btn btn-primary">Submit</button>
@@ -69,7 +69,6 @@
 			</form>
 		</div>
 	</div>
-	<div class="footer">Copyright &copy; 2021 PHPNuxBill. All Rights Reserved<br/><br/></div>
+	<div class="footer">Copyright &copy; 2026 Mustafizur Rahman Mahin. Arivo ISP Billing<br/><br/></div>
 </body>
 </html>
-

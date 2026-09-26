@@ -1,7 +1,8 @@
 <?php
 /**
- *  PHP Mikrotik Billing (https://github.com/hotspotbilling/phpnuxbill/)
- *  by https://t.me/ibnux
+ *  Arivo ISP Billing
+ *  Maintainer: Mustafizur Rahman Mahin
+ *  Upstream: https://github.com/hotspotbilling/phpnuxbill
  **/
 
 $sessionSecure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';

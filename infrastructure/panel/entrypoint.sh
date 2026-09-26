@@ -23,7 +23,7 @@ MYSQL=(mysql --protocol=tcp -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME
 fresh_install=0
 if ! "${MYSQL[@]}" -Nse "SHOW TABLES LIKE 'tbl_users'" | grep -q tbl_users; then
   fresh_install=1
-  "${MYSQL[@]}" < /var/www/html/install/phpnuxbill.sql
+  "${MYSQL[@]}" < /var/www/html/install/arivo_isp_billing.sql
 fi
 if ! "${MYSQL[@]}" -Nse "SHOW TABLES LIKE 'radcheck'" | grep -q radcheck; then
   "${MYSQL[@]}" < /var/www/html/install/radius.sql

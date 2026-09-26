@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * Refuse installer access when this PHPNuxBill checkout has been configured.
+ * Refuse installer access when this Arivo ISP Billing checkout has been configured.
  * This file must be the first include in EVERY installer entry point, even
  * before the legacy installer writes config.php or executes destructive SQL.
  */

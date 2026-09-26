@@ -1,8 +1,9 @@
 <?php
 
 /**
- *  PHP Mikrotik Billing (https://github.com/hotspotbilling/phpnuxbill/)
- *  by https://t.me/ibnux
+ *  Arivo ISP Billing
+ *  Maintainer: Mustafizur Rahman Mahin
+ *  Upstream: https://github.com/hotspotbilling/phpnuxbill
  **/
 
 _admin();
@@ -67,7 +68,7 @@ switch ($action) {
         header('Expires: 0');
         header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
         header("Content-type: text/csv");
-        header('Content-Disposition: attachment;filename="phpnuxbill_customers_' . date('Y-m-d_H_i') . '.csv"');
+        header('Content-Disposition: attachment;filename="arivo_isp_billing_customers_' . date('Y-m-d_H_i') . '.csv"');
         header('Content-Transfer-Encoding: binary');
 
         $headers = [
@@ -130,7 +131,7 @@ switch ($action) {
         header('Expires: 0');
         header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
         header("Content-type: text/csv");
-        header('Content-Disposition: attachment;filename="phpnuxbill_prepaid_users' . date('Y-m-d_H_i') . '.csv"');
+        header('Content-Disposition: attachment;filename="arivo_isp_billing_prepaid_users' . date('Y-m-d_H_i') . '.csv"');
         header('Content-Transfer-Encoding: binary');
 
         $headers = [
@@ -921,7 +922,7 @@ switch ($action) {
             header('Expires: 0');
             header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
             header("Content-type: text/csv");
-            header('Content-Disposition: attachment;filename="phpnuxbill_customers_' . $filter . '_' . date('Y-m-d_H_i') . '.csv"');
+            header('Content-Disposition: attachment;filename="arivo_isp_billing_customers_' . $filter . '_' . date('Y-m-d_H_i') . '.csv"');
             header('Content-Transfer-Encoding: binary');
 
             $headers = [

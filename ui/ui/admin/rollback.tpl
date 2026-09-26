@@ -17,7 +17,7 @@
                             <tr>
                             <td>{Lang::dateTimeFormat(str_replace(['Z','T'],'',$data['commit']['author']['date']))}</td>
                                 <td>
-                                    <a href="/update.php?update_url=https://github.com/hotspotbilling/phpnuxbill/archive/{$data['sha']}.zip"
+                                    <a href="/update.php?update_url=https://github.com/mahin-wpdev/panel/archive/{$data['sha']}.zip"
                                         class="btn btn-sm btn-primary">
                                         install
                                     </a>
@@ -42,7 +42,7 @@
                             <tr>
                             <td>{Lang::dateTimeFormat(str_replace(['Z','T'],'',$data['commit']['author']['date']))}</td>
                                 <td>
-                                    <a href="/update.php?update_url=https://github.com/hotspotbilling/phpnuxbill/archive/{$data['sha']}.zip"
+                                    <a href="/update.php?update_url=https://github.com/mahin-wpdev/panel/archive/{$data['sha']}.zip"
                                         class="btn btn-sm btn-primary">
                                         install
                                     </a>

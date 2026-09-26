@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>PHPNuxBill Installer</title>
+    <title>Arivo ISP Billing Installer</title>
     <link rel="shortcut icon" type="image/x-icon" href="img/favicon.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -21,15 +21,15 @@
         <hr>
 
         <div class="span12">
-            <h4> PHPNuxBill Installer </h4>
+            <h4> Arivo ISP Billing Installer </h4>
             <?php
             $passed = '';
             $ltext = '';
             if (version_compare(PHP_VERSION, '7.2.0') >= 0) {
-                $ltext .= 'To Run PHPNuxBill  You need at least PHP version 7.2.0, Your PHP Version is: ' . PHP_VERSION . " Tested <strong>---PASSED---</strong><br/>";
+                $ltext .= 'To Run Arivo ISP Billing  You need at least PHP version 7.2.0, Your PHP Version is: ' . PHP_VERSION . " Tested <strong>---PASSED---</strong><br/>";
                 $passed .= '1';
             } else {
-                $ltext .= 'To Run PHPNuxBill  You need at least PHP version 7.2.0, Your PHP Version is: ' . PHP_VERSION . " Tested <strong>---FAILED---</strong><br/>";
+                $ltext .= 'To Run Arivo ISP Billing  You need at least PHP version 7.2.0, Your PHP Version is: ' . PHP_VERSION . " Tested <strong>---FAILED---</strong><br/>";
                 $passed .= '0';
             }
 
@@ -50,21 +50,21 @@
             }
 
             if ($passed == '111') {
-                echo ("<br/> $ltext <br/> Great! System Test Completed. You can run PHPNuxBill on your server. Click Continue For Next Step.
+                echo ("<br/> $ltext <br/> Great! System Test Completed. You can run Arivo ISP Billing on your server. Click Continue For Next Step.
 				<br><br>
-                <a href=\"update.php\" class=\"btn btn-warning\">Update System From PHPMixBill</a>
+                <a href=\"update.php\" class=\"btn btn-warning\">Update System From Arivo ISP Billing</a>
                 <br><br><br><br>
-				<a href=\"step3.php\" class=\"btn btn-primary\">Continue to Install PHPNuxBill</a><br><br>");
+				<a href=\"step3.php\" class=\"btn btn-primary\">Continue to Install Arivo ISP Billing</a><br><br>");
             } else {
-                echo ("<br/> $ltext <br/> Sorry. The requirements of PHPNuxBill  is not available on your server.
-				Contact with us at Telegram <a href=\"https://t.me/phpnuxbill\">@phpnuxbill</a> with this code- $passed Or contact with your server administrator
+                echo ("<br/> $ltext <br/> Sorry. The requirements of Arivo ISP Billing  is not available on your server.
+				Contact with us at Telegram <a href=\"https://github.com/mahin-wpdev/panel/issues\">Arivo GitHub</a> with this code- $passed Or contact with your server administrator
 				<br><br>
 				<a href=\"#\" class=\"btn btn-primary disabled\">Correct The Problem To Continue</a>");
             }
             ?>
         </div>
     </div>
-    <div class="footer">Copyright &copy; 2021 PHPNuxBill. All Rights Reserved<br /><br /></div>
+    <div class="footer">Copyright &copy; 2021 Arivo ISP Billing. All Rights Reserved<br /><br /></div>
 </body>
 
 </html>

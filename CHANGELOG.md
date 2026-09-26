@@ -1,13 +1,16 @@
-![PHPNuxBill](install/img/logo.png)
+![Arivo ISP Billing](install/img/logo.png)
 
 # CHANGELOG
 
 ## 2026.09.27 — Arivo ISP Billing next-release
 
-This release turns the PHPNuxBill base into a broader ISP operations platform. The list below is source-audited against current upstream PHPNuxBill master rather than relying only on the inherited README/CHANGELOG.
+This release establishes Arivo ISP Billing as a broader ISP operations platform maintained by Mustafizur Rahman Mahin. The list below is source-audited against the current upstream codebase rather than relying only on inherited documentation.
 
 ### Platform, deployment and lifecycle
 
+- Rebranded current product/UI/installer/package metadata to **Arivo ISP Billing** and set **Mustafizur Rahman Mahin** as the Arivo author/maintainer; retained required upstream and third-party provenance notices.
+- Renamed the fresh-install schema file to `install/arivo_isp_billing.sql`, sample database to `arivo_isp_billing`, Arivo CSS assets, export filenames and update/cache identifiers, with all internal references updated.
+- Added `NOTICE.md` and replaced the stale legacy documentation landing page with an Arivo ISP Billing documentation index.
 - Added full Docker Compose stack: MariaDB 11.4, panel, cron worker, bundled WhatsApp, FreeRADIUS, backup service and Caddy gateway.
 - Added one-command installer for Ubuntu 22.04/24.04 and Debian 12 with host/resource/network preflight.
 - Added first-run setup wizard for company, public endpoint, admin, billing, network, WhatsApp and mobile-release settings.
@@ -114,6 +117,10 @@ This release turns the PHPNuxBill base into a broader ISP operations platform. T
 - Custom `rad.php` still contains raw request-derived SQL expressions and should receive a dedicated parameterization/input-safety review.
 - Legacy SHA-1 admin/staff password hashing remains inherited technical debt.
 - `version.json` still reports the upstream-style `2025.3.20`; define an independent Arivo panel version when formal panel releases begin.
+
+## Legacy upstream history
+
+The entries below predate the Arivo rebrand and are retained as historical change records.
 
 ## 2024.10.23
 
@@ -433,7 +440,7 @@ This release turns the PHPNuxBill base into a broader ISP operations platform. T
 
 ## 2024.2.23
 
-- Integrate with PhpNuxBill Printer
+- Integrate with the legacy upstream printer
 - Fix Invoice
 - add admin ID in transaction
 
@@ -701,7 +708,7 @@ Customer can be move to expired pool after plan expired by cron
 
 ## 2023.8.1
 
-- Add Update file script, one click updating PHPNuxBill
+- Add update-file script for one-click legacy upstream application updates
 - Add Custom UI folder, to custome your own template
 - Delete debug text
 - Fix Vendor JS
@@ -717,12 +724,12 @@ Customer can be move to expired pool after plan expired by cron
 ## 2023.6.20
 
 - Hide time for Created date.
-  Because the first time phpmixbill created, plan validity only for days and Months, many request ask for minutes and hours, i change it, but not the database.
+  Because the legacy upstream project originally supported plan validity only for days and months, later requests added minutes and hours without changing the database.
 ## 2023.6.15
 
 - Customer can connect to internet from Customer Dashboard
 - Fix Confirm when delete
-- Change Logo PHPNuxBill
+- Change legacy upstream logo
 - Using Composer
 - Fix Search Customer
 - Fix Customer check, if not found will logout

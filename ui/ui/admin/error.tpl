@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <title>Error - PHPNuxBill</title>
+    <title>Error - Arivo ISP Billing</title>
     <link rel="shortcut icon" href="{$app_url}/ui/ui/images/logo.png" type="image/x-icon" />
 
     <link rel="stylesheet" href="{$app_url}/ui/ui/styles/bootstrap.min.css">
@@ -52,20 +52,20 @@
                                 <li>{Lang::T('Make sure you use API Port, Default 8728')}</li>
                                 <li>{Lang::T('Make sure Username and Password are correct')}</li>
                                 <li>{Lang::T('Make sure your hosting not blocking port to external')}</li>
-                                <li>{Lang::T('Make sure your Mikrotik accessible from PHPNuxBill')}</li>
+                                <li>{Lang::T('Make sure your Mikrotik accessible from Arivo ISP Billing')}</li>
                             </ul>
-                            {Lang::T('If you just update PHPNuxBill from upload files, try click Update')} Database
+                            {Lang::T('If you just update Arivo ISP Billing from upload files, try click Update')} Database
                         </div>
                         <div class="box-footer">
                             <div class="btn-group btn-group-justified" role="group" aria-label="...">
                                 <a href="./update.php?step=4" style="color: black;" class="btn btn-info btn-sm btn-block">{Lang::T('Update')} Database</a>
-                                <a href="{Text::url('community#update')}" style="color: black;" class="btn btn-success btn-sm btn-block">{Lang::T('Update PHPNuxBill')}</a>
+                                <a href="{Text::url('community#update')}" style="color: black;" class="btn btn-success btn-sm btn-block">{Lang::T('Update Arivo ISP Billing')}</a>
                             </div>
                             <br>
                             <div class="btn-group btn-group-justified" role="group" aria-label="...">
-                            <a href="https://github.com/hotspotbilling/phpnuxbill/discussions" target="_blank"
+                            <a href="https://github.com/mahin-wpdev/panel/issues" target="_blank"
                             class="btn btn-success btn-sm btn-block" style="color: black;">{Lang::T('Ask Github Community')}</a>
-                                <a href="https://t.me/phpnuxbill" target="_blank"
+                                <a href="https://github.com/mahin-wpdev/panel/issues" target="_blank"
                                     class="btn btn-primary btn-sm btn-block">{Lang::T('Ask Telegram Community')}</a>
                             </div>
                             <br><br>

@@ -1,4 +1,5 @@
-/**
+/*
+ * Arivo maintainer: Mustafizur Rahman Mahin*
  * Developed by Mohammad Rameez Imdad (Rameez Scripts)
  * WhatsApp: https://wa.me/923224083545 (For Custom Projects)
  * YouTube: https://www.youtube.com/@rameezimdad (Subscribe for more!)
@@ -81,7 +82,7 @@ export class WhatsAppService {
     const socket = makeWASocket({
       ...(this.version ? { version: this.version } : {}),
       logger: this.logger,
-      browser: Browsers.ubuntu('Rameez Baileys API'),
+      browser: Browsers.ubuntu('Arivo ISP Billing WhatsApp'),
       auth: {
         creds: state.creds,
         keys: makeCacheableSignalKeyStore(state.keys, this.logger)

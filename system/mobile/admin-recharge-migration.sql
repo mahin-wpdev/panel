@@ -1,5 +1,5 @@
 -- Apply once before exposing the admin manual-recharge API.
--- Deliberately separate from existing phpNuxBill and bKash payment tables.
+-- Deliberately separate from existing Arivo ISP Billing and bKash payment tables.
 CREATE TABLE IF NOT EXISTS tbl_mobile_admin_recharge_requests (
   request_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
   actor_id INT NOT NULL,

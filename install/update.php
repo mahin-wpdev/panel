@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>PHPNuxBill Updaters</title>
+    <title>Arivo ISP Billing Updaters</title>
     <link rel="shortcut icon" type="image/x-icon" href="img/favicon.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -21,7 +21,7 @@
         <hr>
 
         <div class="span12">
-            <h4> PHPNuxBill Updater </h4>
+            <h4> Arivo ISP Billing Updater </h4>
             <pre><?php
             include '../config.php';
             try{
@@ -101,7 +101,7 @@
             ?></pre>
         </div>
     </div>
-    <div class="footer">Copyright &copy; 2021 PHPNuxBill. All Rights Reserved<br /><br /></div>
+    <div class="footer">Copyright &copy; 2021 Arivo ISP Billing. All Rights Reserved<br /><br /></div>
 </body>
 
 </html>

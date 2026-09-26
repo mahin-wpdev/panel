@@ -2,8 +2,7 @@
 </div>
 <footer class="main-footer">
     <div class="pull-right" id="version" onclick="location.href = '{Text::url('community')}#latestVersion';"></div>
-    PHPNuxBill by <a href="https://github.com/hotspotbilling/phpnuxbill" rel="nofollow noreferrer noopener"
-        target="_blank">iBNuX</a>, Theme by <a href="https://adminlte.io/" rel="nofollow noreferrer noopener"
+    Arivo ISP Billing by <a href="https://github.com/mahin-wpdev" rel="nofollow noreferrer noopener" target="_blank">Mustafizur Rahman Mahin</a>, Theme by <a href="https://adminlte.io/" rel="nofollow noreferrer noopener"
         target="_blank">AdminLTE</a>
 </footer>
 </div>

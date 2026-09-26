@@ -1,4 +1,5 @@
-/**
+/*
+ * Arivo maintainer: Mustafizur Rahman Mahin*
  * Developed by Mohammad Rameez Imdad (Rameez Scripts)
  * WhatsApp: https://wa.me/923224083545 (For Custom Projects)
  * YouTube: https://www.youtube.com/@rameezimdad (Subscribe for more!)

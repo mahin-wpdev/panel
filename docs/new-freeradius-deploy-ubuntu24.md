@@ -17,15 +17,15 @@
 ## 2. Isolated FreeRADIUS and SQL
 - On supported Ubuntu 24.04, install distro packages `freeradius` and `freeradius-mysql` with `apt`; install MariaDB only if no suitable SQL server already exists.
 - Use a dedicated RADIUS SQL database and least-privilege user, with independently generated random DB and NAS secrets; restrict secret files to root/freerad.
-- Use the *installed package's* `/etc/freeradius/3.0/mods-config/sql/main/mysql/schema.sql` **only for a freshly created empty RADIUS database**. Do not run phpNuxBill's destructive `install/radius.sql` on existing data.
+- Use the *installed package's* `/etc/freeradius/3.0/mods-config/sql/main/mysql/schema.sql` **only for a freshly created empty RADIUS database**. Do not run Arivo ISP Billing's destructive `install/radius.sql` on existing data.
 - Configure `mods-available/sql` for MariaDB and enable `mods-enabled/sql`; enable SQL in authorize, accounting, post-auth and required inner-tunnel paths after checking the installed version's configuration.
 - Add exactly the router's observed RADIUS source address as NAS client with the same shared secret; restrict UDP 1812/1813 to that address on the server's LAN firewall.
 - Check FreeRADIUS configuration with `freeradius -XC`; run a separate `freeradius -X` diagnostic only during an approved maintenance window and **never paste debug output containing usernames/secrets**.
 - Check a test SQL user via an appropriate local PAP test. Then verify a real PPPoE test identity, assigned IP, speed, expiry and billing outcome before moving any customer.
 
-## 3. Integrate phpNuxBill and preserve service
+## 3. Integrate Arivo ISP Billing and preserve service
 - Confirm production's actual Radius driver, SQL connection, and customer provisioning hooks. The Windows clone's `radius.php` is a debug stub; do not overwrite production with it.
-- Account for phpNuxBill-specific SQL columns such as `radgroupreply.plan_id`; add missing columns only via a reviewed additive migration.
+- Account for Arivo ISP Billing-specific SQL columns such as `radgroupreply.plan_id`; add missing columns only via a reviewed additive migration.
 - Point production's **separate** Radius SQL connection to the new database. Arivo's branch `feature/monthly-bandwidth-usage` includes the read-path fix and preflight script.
 - Test one customer from payment → recharge → RADIUS group/rate-limit → PPPoE login → expiry/disable and re-enable.
 

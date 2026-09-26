@@ -1,6 +1,6 @@
 # JM Broadband: GitHub-managed Android updates
 
-GitHub is the single release manager. phpNuxBill reads a validated public GitHub
+GitHub is the single release manager. Arivo ISP Billing reads a validated public GitHub
 release snapshot and offers same-origin manifest and stable download endpoints.
 The panel does not host APK files or signing keys. The first-run wizard stores
 the selected repository, release channel and default update policy in the
@@ -48,7 +48,7 @@ GitHub REST API quota. It validates tag, update policy, asset name, size,
 SHA-256 digest and a download URL belonging to the configured repository.
 Validated metadata is cached for 15 minutes; on temporary CDN failure, a
 previously validated snapshot may be used for up to 24 hours. Malformed data
-fails closed. GitHub retains the APK; phpNuxBill never hosts or copies it.
+fails closed. GitHub retains the APK; Arivo ISP Billing never hosts or copies it.
 
 ## Panel deployment
 

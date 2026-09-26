@@ -1,8 +1,9 @@
 <?php
 
 /**
- *  PHP Mikrotik Billing (https://github.com/hotspotbilling/phpnuxbill/)
- *  by https://t.me/ibnux
+ *  Arivo ISP Billing
+ *  Maintainer: Mustafizur Rahman Mahin
+ *  Upstream: https://github.com/hotspotbilling/phpnuxbill
  **/
 _admin();
 $ui->assign('_title', Lang::T('Settings'));
@@ -61,28 +62,28 @@ switch ($action) {
             if ($_app_stage == 'Demo') {
                 r2(getUrl('settings/app'), 'e', 'You cannot perform this action in Demo mode');
             }
-            $result = Message::sendWhatsapp(_get('testWa'), 'PHPNuxBill Test Whatsapp');
+            $result = Message::sendWhatsapp(_get('testWa'), 'Arivo ISP Billing Test Whatsapp');
             r2(getUrl('settings/app'), 's', 'Test Whatsapp has been send<br>Result: ' . $result);
         }
         if (!empty(_get('testSms'))) {
             if ($_app_stage == 'Demo') {
                 r2(getUrl('settings/app'), 'e', 'You cannot perform this action in Demo mode');
             }
-            $result = Message::sendSMS(_get('testSms'), 'PHPNuxBill Test SMS');
+            $result = Message::sendSMS(_get('testSms'), 'Arivo ISP Billing Test SMS');
             r2(getUrl('settings/app'), 's', 'Test SMS has been send<br>Result: ' . $result);
         }
         if (!empty(_get('testEmail'))) {
             if ($_app_stage == 'Demo') {
                 r2(getUrl('settings/app'), 'e', 'You cannot perform this action in Demo mode');
             }
-            Message::sendEmail(_get('testEmail'), 'PHPNuxBill Test Email', 'PHPNuxBill Test Email Body');
+            Message::sendEmail(_get('testEmail'), 'Arivo ISP Billing Test Email', 'Arivo ISP Billing Test Email Body');
             r2(getUrl('settings/app'), 's', 'Test Email has been send');
         }
         if (!empty(_get('testTg'))) {
             if ($_app_stage == 'Demo') {
                 r2(getUrl('settings/app'), 'e', 'You cannot perform this action in Demo mode');
             }
-            $result = Message::sendTelegram('PHPNuxBill Test Telegram');
+            $result = Message::sendTelegram('Arivo ISP Billing Test Telegram');
             r2(getUrl('settings/app'), 's', 'Test Telegram has been send<br>Result: ' . $result);
         }
 
@@ -223,7 +224,7 @@ switch ($action) {
                     $ui->assign("error_title", "RADIUS Error");
                     $ui->assign("error_message", "Radius table not found.<br><br>" .
                         $e->getMessage() .
-                        "<br><br>Download <a href=\"https://raw.githubusercontent.com/hotspotbilling/phpnuxbill/Development/install/radius.sql\">here</a> or <a href=\"https://raw.githubusercontent.com/hotspotbilling/phpnuxbill/master/install/radius.sql\">here</a> and import it to database.<br><br>Check config.php for radius connection details");
+                        "<br><br>Download <a href=\"https://raw.githubusercontent.com/mahin-wpdev/panel/next-release/install/radius.sql\">here</a> or <a href=\"https://raw.githubusercontent.com/mahin-wpdev/panel/next-release/install/radius.sql\">here</a> and import it to database.<br><br>Check config.php for radius connection details");
                     $ui->display('admin/error.tpl');
                     die();
                 }
@@ -999,7 +1000,7 @@ switch ($action) {
         header('Content-Type: application/force-download');
         header('Content-Type: application/octet-stream');
         header('Content-Type: application/download');
-        header('Content-Disposition: attachment;filename="phpnuxbill_' . count($tables) . '_tables_' . date('Y-m-d_H_i') . '.json"');
+        header('Content-Disposition: attachment;filename="arivo_isp_billing_' . count($tables) . '_tables_' . date('Y-m-d_H_i') . '.json"');
         header('Content-Transfer-Encoding: binary');
         $array = [];
         foreach ($tables as $table) {

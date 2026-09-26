@@ -1,12 +1,13 @@
 <?php
 
 /**
- *  PHP Mikrotik Billing (https://github.com/hotspotbilling/phpnuxbill/)
- *  by https://t.me/ibnux
+ *  Arivo ISP Billing
+ *  Maintainer: Mustafizur Rahman Mahin
+ *  Upstream: https://github.com/hotspotbilling/phpnuxbill
  **/
 
 _admin();
-$ui->assign('_title', 'PHPNuxBill Logs');
+$ui->assign('_title', 'Arivo ISP Billing Logs');
 $ui->assign('_system_menu', 'logs');
 
 $action = $routes['1'];

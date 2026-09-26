@@ -1,11 +1,11 @@
 <?php
-/** Public read-only GitHub release manifest; no phpNuxBill admin/session required. */
+/** Public read-only GitHub release manifest; no Arivo ISP Billing admin/session required. */
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, max-age=0');
 try {
     require_once __DIR__ . '/system/mobile/github-release.php';
     if (!defined('APP_URL')) {
-        // phpNuxBill also supports a shared config.php one directory above /panel.
+        // Arivo ISP Billing also supports a shared config.php one directory above /panel.
         // Load configuration only: do not initialize billing, sessions or the database.
         $configFile = is_file(__DIR__ . '/config.php')
             ? __DIR__ . '/config.php' : dirname(__DIR__) . '/config.php';

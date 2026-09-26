@@ -1,8 +1,9 @@
 <?php
 
 /**
- *  PHP Mikrotik Billing (https://github.com/hotspotbilling/phpnuxbill)
- *  by https://t.me/ibnux
+ *  Arivo ISP Billing
+ *  Maintainer: Mustafizur Rahman Mahin
+ *  Upstream: https://github.com/hotspotbilling/phpnuxbill
  *
  * Authorize
  *    - Voucher activation
@@ -302,7 +303,7 @@ try {
             }
             $d->macaddr = _post('macAddr');
             $d->dateAdded = date('Y-m-d H:i:s');
-            // pastikan data akunting yang disimpan memang customer aktif phpnuxbill
+            // pastikan data akunting yang disimpan memang customer aktif Arivo ISP Billing
             $tur = ORM::for_table('tbl_user_recharges')->whereRaw("BINARY username = '$username' AND `status` = 'on' AND `routers` = 'radius'")->find_one();
             if (!$tur) {
                 // check if pppoe_username
@@ -397,7 +398,7 @@ function process_radiust_rest($tur, $code)
     }
     // --- AKHIR KODE TAMBAHAN ---
 
-    
+
     $attrs['reply:Reply-Message'] = 'success';
     $attrs['Simultaneous-Use'] = $plan['shared_users'];
     $attrs['reply:Mikrotik-Wireless-Comment'] = $plan['name_plan'] . ' | ' . $tur['expiration'] . ' ' . $tur['time'];

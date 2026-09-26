@@ -227,7 +227,7 @@ function autorecharge_receipt($gateway, $trxid, $amount)
  * Save a successful receipt. Clean installs should use VARCHAR for
  * transaction_id (see migration.sql). For old installs where it is still INT,
  * fall back to the numeric suffix of values such as INV-116 so the webhook
- * does not fail after PHPNuxBill has already completed the recharge.
+ * does not fail after Arivo ISP Billing has already completed the recharge.
  */
 function autorecharge_save_success_receipt($row, $transactionId)
 {
@@ -375,7 +375,7 @@ function autoRechargeUser(array $payment)
         );
 
         if (!$transactionId) {
-            throw new Exception('PHPNuxBill recharge did not return a transaction ID');
+            throw new Exception('Arivo ISP Billing recharge did not return a transaction ID');
         }
 
         /* From this point onward the actual recharge has completed. */
@@ -408,7 +408,7 @@ function autoRechargeUser(array $payment)
             'transaction_id' => $transactionId,
         ];
     } catch (Throwable $e) {
-        /* If PHPNuxBill already recharged, never convert it into a retryable failure. */
+        /* If Arivo ISP Billing already recharged, never convert it into a retryable failure. */
         if ($rechargeCompleted) {
             autorecharge_log(
                 'autorecharge.log',

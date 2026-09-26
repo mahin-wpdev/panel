@@ -8,11 +8,11 @@ class RadiusRest {
         return [
             'title' => 'Radius Rest API',
             'description' => 'This devices will handle Radius Connection using Rest API',
-            'author' => 'ibnu maksum',
+            'author' => 'Mustafizur Rahman Mahin (Arivo maintainer)',
             'url' => [
-                'Wiki Tutorial' => 'https://github.com/hotspotbilling/phpnuxbill/wiki/FreeRadius-Rest',
-                'Telegram' => 'https://t.me/phpnuxbill',
-                'Donate' => 'https://paypal.me/ibnux'
+                'Arivo RADIUS Guide' => 'https://github.com/mahin-wpdev/panel/blob/next-release/docs/new-freeradius-deploy-ubuntu24.md',
+                'Support' => 'https://github.com/mahin-wpdev/panel/issues',
+                'Maintainer' => 'https://github.com/mahin-wpdev'
             ]
         ];
     }
@@ -21,9 +21,9 @@ class RadiusRest {
     function add_customer($customer, $plan)
     {
     }
-	
+
 	function sync_customer($customer, $plan)
-    {	
+    {
         $this->add_customer($customer, $plan);
     }
 

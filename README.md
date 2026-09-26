@@ -2,9 +2,12 @@
 
 # Arivo ISP Billing
 
-Arivo ISP Billing is a production-oriented ISP billing and operations platform built on top of [PHPNuxBill](https://github.com/hotspotbilling/phpnuxbill).
+**Author & Maintainer:** Mustafizur Rahman Mahin
+**Project:** https://github.com/mahin-wpdev/panel
 
-It keeps the PHPNuxBill billing, voucher, customer, Hotspot, PPPoE, FreeRADIUS, payment-gateway and plugin foundation, then adds a larger operational layer for mobile apps, reseller management, OLT/ONU management, MikroTik provisioning, automated payments, WhatsApp, deployment, backup/restore and release safety.
+Arivo ISP Billing is a production-oriented ISP billing, network operations, mobile and automation platform maintained by Mustafizur Rahman Mahin.
+
+It provides billing, voucher, customer, Hotspot, PPPoE, FreeRADIUS and payment/plugin foundations plus mobile apps, reseller management, OLT/ONU management, MikroTik provisioning, automated payments, WhatsApp, deployment, backup/restore and release safety.
 
 ## Release status
 
@@ -13,7 +16,7 @@ It keeps the PHPNuxBill billing, voucher, customer, Hotspot, PPPoE, FreeRADIUS, 
 - Upstream comparison baseline: `hotspotbilling/phpnuxbill` `master` at `fdbd7b84` (2026-08-06)
 - The project is still a release candidate until environment-specific financial and destructive network workflows are accepted on staging or an intentionally disposable device.
 
-## Core PHPNuxBill capabilities retained
+## Core billing capabilities
 
 - Voucher generation and printing
 - Hotspot and PPPoE plans
@@ -213,7 +216,7 @@ Use `uninstall.sh --purge-data` only when permanent data destruction is intended
 
 ## Upstream parity audit
 
-The 2026-09-27 source audit compared the tracked `next-release` tree directly with current PHPNuxBill `master`, rather than relying on README or CHANGELOG text.
+The 2026-09-27 source audit compared the tracked `next-release` tree directly with the current upstream codebase rather than relying on README or CHANGELOG text.
 
 Summary:
 
@@ -232,7 +235,7 @@ These are audit findings, not claims that the upstream project is generally bett
 4. Arivo OLT/ONU code references `tbl_olts`, `tbl_onus`, PON/history/sync tables, but this audit did not find their `CREATE TABLE` definitions in the tracked migration set or `system/updates.json`. Existing production may already contain them; add/verify a clean-install migration before relying on OLT features on a fresh deployment.
 5. The tracked `radius.php` is currently a small debug stub, while the custom REST-style RADIUS logic lives in `rad.php` and the Docker stack uses SQL FreeRADIUS. Clarify or block the legacy debug endpoint before public rollout.
 6. The custom `rad.php` contains several raw SQL expressions built from request-derived values. Perform a dedicated parameterization/input-safety review even though the newer upstream search-query hardening is already present elsewhere.
-7. Legacy SHA-1 staff/admin password storage is inherited from PHPNuxBill and remains technical debt.
+7. Legacy SHA-1 staff/admin password storage remains inherited technical debt.
 8. `version.json` still carries the upstream-style `2025.3.20` version. Define a separate Arivo panel version/release identifier if independent product releases are required.
 
 ## Changelog

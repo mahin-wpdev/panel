@@ -157,7 +157,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         r2(getUrl('reseller/customers/').$customer['reseller_id'].'&approval=pending','s','Customer approved successfully.');
     }
     if($action==='save'){
-        /* A reseller is always backed by PHPNuxBill's native Agent user.  An
+        /* A reseller is always backed by Arivo ISP Billing's native Agent user.  An
            administrator may select an existing Agent or create one here using
            the same validation and password hashing used by Settings > Users. */
         $mode=($_POST['account_mode']??'existing')==='new'?'new':'existing';

@@ -1,8 +1,9 @@
 <?php
 
 /**
- *  PHP Mikrotik Billing (https://github.com/hotspotbilling/phpnuxbill/)
- *  by https://t.me/ibnux
+ *  Arivo ISP Billing
+ *  Maintainer: Mustafizur Rahman Mahin
+ *  Upstream: https://github.com/hotspotbilling/phpnuxbill
  *
  * This is Core, don't modification except you want to contribute
  * better create new plugin
@@ -17,12 +18,13 @@ class MikrotikPppoe
     {
         return [
             'title' => 'Mikrotik PPPOE',
-            'description' => 'To handle connection between PHPNuxBill with Mikrotik PPPOE',
-            'author' => 'ibnux',
+            'description' => 'To handle connection between Arivo ISP Billing with Mikrotik PPPOE',
+            'author' => 'Mustafizur Rahman Mahin (Arivo maintainer)',
             'url' => [
-                'Github' => 'https://github.com/hotspotbilling/phpnuxbill/',
-                'Telegram' => 'https://t.me/phpnuxbill',
-                'Donate' => 'https://paypal.me/ibnux'
+                'Arivo GitHub' => 'https://github.com/mahin-wpdev/panel',
+                'Upstream' => 'https://github.com/hotspotbilling/phpnuxbill/',
+                'Support' => 'https://github.com/mahin-wpdev/panel/issues',
+                'Maintainer' => 'https://github.com/mahin-wpdev'
             ]
         ];
     }

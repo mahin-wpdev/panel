@@ -1,8 +1,9 @@
 <?php
 
 /**
- *  PHP Mikrotik Billing (https://github.com/hotspotbilling/phpnuxbill/)
- *  by https://t.me/ibnux
+ *  Arivo ISP Billing
+ *  Maintainer: Mustafizur Rahman Mahin
+ *  Upstream: https://github.com/hotspotbilling/phpnuxbill
  **/
 
 _admin();
@@ -245,7 +246,7 @@ $style
 $html
 EOF;
             $mpdf->WriteHTML($nhtml);
-            $mpdf->Output('phpnuxbill_reports_'.date('Ymd_His') . '.pdf', 'D');
+            $mpdf->Output('arivo_isp_billing_reports_'.date('Ymd_His') . '.pdf', 'D');
         } else {
             echo 'No Data';
         }

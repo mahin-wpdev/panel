@@ -88,7 +88,7 @@ function jm_mobile_recharge_calculate_preview(int $customerId, array $plan): arr
         'additional_bills_bdt'=>number_format((float)$extra,2,'.',''),
         'bills'=>$bills,
         'expected_recorded_amount_bdt'=>number_format($amount,2,'.',''),
-        'note'=>'Estimate of the phpNuxBill transaction amount before recharge; '
+        'note'=>'Estimate of the Arivo ISP Billing transaction amount before recharge; '
             .'no payment is collected or verified here. Confirm any separate tax, '
             .'reseller settlement or outstanding payment independently.'];
 }

@@ -1,16 +1,25 @@
 {
-    "name": "hotspotbilling/phpnuxbill",
+    "name": "mahin-wpdev/arivo-isp-billing",
     "type": "template",
-    "description": "PHPNuxBill a Hotspot Billing Software.",
-    "keywords": ["template","PHPMixBill","PHPnuxBill","Mikrotik","Hotspot","Billing"],
-    "homepage": "https://github.com/hotspotbilling/phpnuxbill",
+    "description": "Arivo ISP Billing - ISP billing, network operations, mobile and automation platform.",
+    "keywords": [
+        "Arivo ISP Billing",
+        "Mikrotik",
+        "Hotspot",
+        "PPPoE",
+        "RADIUS",
+        "ISP",
+        "Billing",
+        "OLT",
+        "ONU"
+    ],
+    "homepage": "https://github.com/mahin-wpdev/panel",
     "license": "MIT",
     "authors": [
         {
-            "name": "ibnux",
-            "email": "me@ibnux.net",
-            "homepage": "https://ibnux.net",
-            "role": "Developer"
+            "name": "Mustafizur Rahman Mahin",
+            "homepage": "https://github.com/mahin-wpdev",
+            "role": "Maintainer"
         }
     ]
 }

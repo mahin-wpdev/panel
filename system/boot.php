@@ -1,7 +1,9 @@
 <?php
 
 /**
- * PHP Mikrotik Billing (https://github.com/hotspotbilling/phpnuxbill/)
+ * Arivo ISP Billing
+ * Maintainer: Mustafizur Rahman Mahin
+ * Upstream: https://github.com/hotspotbilling/phpnuxbill
 
  **/
 
@@ -160,7 +162,7 @@ try {
         die();
     }
     $ui->assign("error_message", $e->getMessage() . '<br><pre>' . $e->getTraceAsString() . '</pre>');
-    $ui->assign("error_title", "PHPNuxBill Crash");
+    $ui->assign("error_title", "Arivo ISP Billing Crash");
     $ui->display('admin/error.tpl');
     die();
 } catch (Exception $e) {
@@ -174,7 +176,7 @@ try {
         die();
     }
     $ui->assign("error_message", $e->getMessage() . '<br><pre>' . $e->getTraceAsString() . '</pre>');
-    $ui->assign("error_title", "PHPNuxBill Crash");
+    $ui->assign("error_title", "Arivo ISP Billing Crash");
     $ui->display('admin/error.tpl');
     die();
 }

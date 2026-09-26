@@ -1,9 +1,9 @@
 name: Next release checks
 on:
   push:
-    branches: [next-release]
+    branches: [next-release, arivo-rebrand]
   pull_request:
-    branches: [next-release]
+    branches: [next-release, arivo-rebrand]
 jobs:
   panel:
     runs-on: ubuntu-24.04

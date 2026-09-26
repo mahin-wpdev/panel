@@ -43,7 +43,7 @@ Additional GET-only admin endpoints:
 - `admin-expiry&window=today|3|7|overdue`: today/next days/past-expiry
   dashboard from latest non-balance service expiry, first 150 shown and total count.
 - `admin-recharge-preview&customer_id=N&plan_id=N`: verifies compatibility;
-  estimates the *recorded* phpNuxBill amount from plan price, Period invoice
+  estimates the *recorded* Arivo ISP Billing amount from plan price, Period invoice
   override and `User::getBills` (installments included).
 - `POST admin-recharge` accepts an optional `expected_preview_amount` from
   new clients and fails closed with `RECHARGE_PREVIEW_CHANGED` if billing

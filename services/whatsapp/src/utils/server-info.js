@@ -1,4 +1,5 @@
-/**
+/*
+ * Arivo maintainer: Mustafizur Rahman Mahin*
  * Developed by Mohammad Rameez Imdad (Rameez Scripts)
  * WhatsApp: https://wa.me/923224083545 (For Custom Projects)
  * YouTube: https://www.youtube.com/@rameezimdad (Subscribe for more!)
@@ -10,7 +11,7 @@ const detectPublicIp = async () => {
   try {
     const response = await fetch('https://api.ipify.org?format=json', {
       signal: AbortSignal.timeout(3000),
-      headers: { 'user-agent': 'Rameez-Baileys-API/1.0' }
+      headers: { 'user-agent': 'Arivo-ISP-Billing-WhatsApp/1.0' }
     })
     if (response.ok) {
       const { ip } = await response.json()

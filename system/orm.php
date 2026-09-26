@@ -939,7 +939,7 @@ class ORM implements ArrayAccess
         return $this->_add_result_column($column, $alias);
     }
 
-    ## ibnux add function
+    ## Arivo maintainer extension
 
     /**
      * Add a column to the list of columns returned by the SELECT
@@ -967,7 +967,7 @@ class ORM implements ArrayAccess
         return explode("','", $matches[1]);
     }
 
-    ## END ibnux add function
+    ## END Arivo maintainer extension
 
     /**
      * Add an unquoted expression to the list of columns returned

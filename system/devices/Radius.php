@@ -1,8 +1,9 @@
 <?php
 
 /**
- *  PHP Mikrotik Billing (https://github.com/hotspotbilling/phpnuxbill/)
- *  by https://t.me/ibnux
+ *  Arivo ISP Billing
+ *  Maintainer: Mustafizur Rahman Mahin
+ *  Upstream: https://github.com/hotspotbilling/phpnuxbill
  *
  * This is Core, don't modification except you want to contribute
  * better create new plugin
@@ -17,11 +18,12 @@ class Radius
         return [
             'title' => 'Radius',
             'description' => 'Radius system with Mysql/Mariadb as database',
-            'author' => 'ibnux',
+            'author' => 'Mustafizur Rahman Mahin (Arivo maintainer)',
             'url' => [
-                'Github' => 'https://github.com/hotspotbilling/phpnuxbill/',
-                'Telegram' => 'https://t.me/phpnuxbill',
-                'Donate' => 'https://paypal.me/ibnux'
+                'Arivo GitHub' => 'https://github.com/mahin-wpdev/panel',
+                'Upstream' => 'https://github.com/hotspotbilling/phpnuxbill/',
+                'Support' => 'https://github.com/mahin-wpdev/panel/issues',
+                'Maintainer' => 'https://github.com/mahin-wpdev'
             ]
         ];
     }
@@ -104,9 +106,9 @@ class Radius
             $this->customerAddPlan($customer, $plan, $date_exp . ' ' . $time);
         }
     }
-	
+
 	function sync_customer($customer, $plan)
-    {	
+    {
 		$t = ORM::for_table('tbl_user_recharges')->where('username', $customer['username'])->where('status', 'on')->findOne();
         $date_exp = $t['expiration'];
         $time = $t['time'];

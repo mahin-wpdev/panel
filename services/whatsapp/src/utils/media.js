@@ -1,4 +1,5 @@
-/**
+/*
+ * Arivo maintainer: Mustafizur Rahman Mahin*
  * Developed by Mohammad Rameez Imdad (Rameez Scripts)
  * WhatsApp: https://wa.me/923224083545 (For Custom Projects)
  * YouTube: https://www.youtube.com/@rameezimdad (Subscribe for more!)
@@ -96,7 +97,7 @@ const fetchRemote = async (value, cfg) => {
     const response = await fetch(url, {
       redirect: 'manual',
       signal: AbortSignal.timeout(cfg.remoteMediaTimeoutMs),
-      headers: { 'user-agent': 'Rameez-Baileys-API/1.0' }
+      headers: { 'user-agent': 'Arivo-ISP-Billing-WhatsApp/1.0' }
     })
 
     if ([301, 302, 303, 307, 308].includes(response.status)) {

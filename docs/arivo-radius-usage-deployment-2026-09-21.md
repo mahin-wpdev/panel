@@ -4,8 +4,8 @@
 - Existing FreeRADIUS on 10.10.10.7 writes session accounting into the live Panel `pnux_main.radacct`.
 - Authenticated Android Customer Home: monthly Download, Upload, Total and explicit partial-month note. Existing installed v1.0.4 app consumes the API; no reinstall needed.
 - Android Admin and Reseller > Customers: per-customer monthly Download, Upload, Total and accuracy note; existing ownership scope is unchanged.
-- phpNuxBill Admin > Customers > View: monthly RADIUS usage card per individual customer.
-- phpNuxBill Customer > My Account > Profile: same customer's monthly RADIUS usage card.
+- Arivo ISP Billing Admin > Customers > View: monthly RADIUS usage card per individual customer.
+- Arivo ISP Billing Customer > My Account > Profile: same customer's monthly RADIUS usage card.
 - The backend reads RADIUS session counters; it does not reset, edit, or invent counters. New RADIUS deployment cannot reconstruct activity from before accounting began.
 
 ## Verified
@@ -15,7 +15,7 @@
 - Read-only Admin customer function test: 38 records, zero missing usage fields, about 44 ms.
 - Read-only Reseller scoped function test: seven records, zero out-of-scope records.
 - All five changed PHP sources parsed successfully; production PHP 8.3 lint passed for all deployed PHP files.
-- These CLI smoke tests do not replace an interactive phpNuxBill administrator/reseller browser acceptance test.
+- These CLI smoke tests do not replace an interactive Arivo ISP Billing administrator/reseller browser acceptance test.
 
 ## Production rollback
 - Backup on VM: `/home/mahin/arivo-usage-views-predeploy-20260921.tar.gz` (all six modified production files; private).

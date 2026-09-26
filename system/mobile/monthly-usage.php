@@ -21,7 +21,7 @@ function jm_mobile_monthly_integer($value): ?int {
 function jm_mobile_radius_db(PDO $panel): PDO {
     global $config, $radius_user;
     if (!empty($radius_user) && !empty($config['radius_enable'])) {
-        // phpNuxBill configures its separate Radius PDO connection in init.php.
+        // Arivo ISP Billing configures its separate Radius PDO connection in init.php.
         // Do not silently read an unrelated radacct table from the Panel DB.
         $radius = ORM::get_db('radius');
         $radius->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -100,7 +100,7 @@ function jm_mobile_monthly_usage(PDO $db, string $pppoe): array {
     }
 }
 
-/** Same authenticated RADIUS totals, formatted only for phpNuxBill Smarty views. */
+/** Same authenticated RADIUS totals, formatted only for Arivo ISP Billing Smarty views. */
 function jm_mobile_monthly_view(PDO $db, string $pppoe): array {
     $usage = jm_mobile_monthly_usage($db, $pppoe);
     foreach (['download', 'upload', 'total'] as $direction) {

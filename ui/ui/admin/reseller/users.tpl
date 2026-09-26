@@ -7,7 +7,7 @@
             <div class="panel panel-primary panel-hovered panel-stacked mb30">
                 <div class="panel-heading"><i class="fa fa-user"></i> Reseller Administrator Account</div>
                 <div class="panel-body">
-                    <p class="text-muted">A reseller always uses a native PHPNuxBill <b>Agent</b> account. Create a new Agent, or attach an existing one.</p>
+                    <p class="text-muted">A reseller always uses a native Arivo ISP Billing <b>Agent</b> account. Create a new Agent, or attach an existing one.</p>
                     <div class="form-group">
                         <label class="col-md-4 control-label">Account source</label>
                         <div class="col-md-8">
@@ -32,7 +32,7 @@
                     <div id="new-agent"{if $selected_agent} style="display:none"{/if}>
                         <div class="form-group"><label class="col-md-4 control-label">Full Name</label><div class="col-md-8"><input type="text" class="form-control" name="fullname" value="{if $selected_agent}{$selected_agent['fullname']|escape}{/if}"></div></div>
                         <div class="form-group"><label class="col-md-4 control-label">Username</label><div class="col-md-8"><input type="text" class="form-control" name="username" value="{if $selected_agent}{$selected_agent['username']|escape}{/if}" autocomplete="off"></div></div>
-                        <div class="form-group"><label class="col-md-4 control-label">Password</label><div class="col-md-8"><input type="password" class="form-control" name="password" autocomplete="new-password"><p class="help-block">Minimum 6 characters. Password is stored using PHPNuxBill's secure password hashing.</p></div></div>
+                        <div class="form-group"><label class="col-md-4 control-label">Password</label><div class="col-md-8"><input type="password" class="form-control" name="password" autocomplete="new-password"><p class="help-block">Minimum 6 characters. Password is stored using Arivo ISP Billing's secure password hashing.</p></div></div>
                         <div class="form-group"><label class="col-md-4 control-label">Phone</label><div class="col-md-8"><input type="text" class="form-control" name="phone" value="{if $selected_agent}{$selected_agent['phone']|escape}{/if}"></div></div>
                         <div class="form-group"><label class="col-md-4 control-label">Email</label><div class="col-md-8"><input type="email" class="form-control" name="email" value="{if $selected_agent}{$selected_agent['email']|escape}{/if}"></div></div>
                         <div class="form-group"><div class="col-md-4"><input class="form-control" name="city" placeholder="City"></div><div class="col-md-4"><input class="form-control" name="subdistrict" placeholder="Sub District"></div><div class="col-md-4"><input class="form-control" name="ward" placeholder="Ward"></div></div>

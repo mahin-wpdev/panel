@@ -11,8 +11,7 @@
     </footer>
 {else}
     <footer class="main-footer">
-        PHPNuxBill by <a href="https://github.com/hotspotbilling/phpnuxbill" rel="nofollow noreferrer noopener"
-            target="_blank">iBNuX</a>, Theme by <a href="https://adminlte.io/" rel="nofollow noreferrer noopener"
+        Arivo ISP Billing by <a href="https://github.com/mahin-wpdev" rel="nofollow noreferrer noopener" target="_blank">Mustafizur Rahman Mahin</a>, Theme by <a href="https://adminlte.io/" rel="nofollow noreferrer noopener"
             target="_blank">AdminLTE</a>
         <div class="pull-right">
             <a href="javascript:showPrivacy()">Privacy</a>
@@ -98,7 +97,7 @@
             body.classList.add('dark-mode');
             toggleIcon.textContent = '🌞';
         }
-    
+
         function setMode(mode) {
             if (mode === 'dark') {
                 body.classList.add('dark-mode');
@@ -108,7 +107,7 @@
                 toggleIcon.textContent = '🌜';
             }
         }
-    
+
         toggleIcon.addEventListener('click', () => {
             if (body.classList.contains('dark-mode')) {
                 setMode('light');

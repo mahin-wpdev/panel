@@ -14,7 +14,7 @@
             {Lang::T('Plugin Installer')}
             <div class="btn-group pull-right">
                 <a class="btn btn-warning btn-xs" title="info"
-                    href="https://github.com/hotspotbilling/phpnuxbill/wiki/Installing-Plugin-or-Payment-Gateway"
+                    href="https://github.com/mahin-wpdev/panel"
                     target="_blank"><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> info</a>
                 <a class="btn btn-success btn-xs" title="refresh cache"
                     href="{Text::url('')}pluginmanager/refresh"><span class="glyphicon glyphicon-refresh"

@@ -2,9 +2,9 @@ name: Next release validation
 
 on:
   push:
-    branches: [next-release]
+    branches: [next-release, arivo-rebrand]
   pull_request:
-    branches: [next-release]
+    branches: [next-release, arivo-rebrand]
   workflow_dispatch:
 
 permissions:
@@ -106,7 +106,7 @@ jobs:
           for path in \
             /config.php \
             /.env \
-            /install/phpnuxbill.sql \
+            /install/arivo_isp_billing.sql \
             /installer/install.sh \
             /database/migrations/manifest.txt \
             /infrastructure/caddy/Caddyfile \
@@ -231,7 +231,7 @@ jobs:
           _PANEL_TEST_ALLOW_NON_ROOT=1 \
           _PANEL_TEST_FORCE_UPDATE_FAILURE=1 \
           PANEL_DIR="$PWD" \
-          PANEL_BRANCH=next-release \
+          PANEL_BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}" \
           PANEL_ROLLBACK_HEALTH_ATTEMPTS=20 \
           bash installer/update.sh > /tmp/update-rollback.log 2>&1
           update_status=$?
@@ -259,7 +259,7 @@ jobs:
           sudo env \
             PANEL_SKIP_SYSTEM_SETUP=1 \
             PANEL_DIR="$RUNNER_TEMP/jm-panel-fresh" \
-            PANEL_BRANCH=next-release \
+            PANEL_BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}" \
             PANEL_HOST=127.0.0.1 \
             PANEL_SITE_ADDRESS=:80 \
             PANEL_COMPANY_NAME="JM Broadband Installer CI" \

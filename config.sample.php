@@ -1,6 +1,6 @@
 <?php
 
-$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || 
+$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ||
              (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443)) ? "https://" : "http://";
 
 // Check if HTTP_HOST is set, otherwise use a default value or SERVER_NAME
@@ -16,7 +16,7 @@ $db_host    = "localhost"; # Database Host
 $db_port    = "";   # Database Port. Keep it blank if you are un sure.
 $db_user    = "root"; # Database Username
 $db_pass    = ""; # Database Password
-$db_name    = "phpnuxbill"; # Database Name
+$db_name    = "arivo_isp_billing"; # Database Name
 
 
 

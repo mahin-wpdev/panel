@@ -1,7 +1,8 @@
 <?php
 /**
- *  PHP Mikrotik Billing (https://github.com/hotspotbilling/phpnuxbill/)
- *  by https://t.me/ibnux
+ *  Arivo ISP Billing
+ *  Maintainer: Mustafizur Rahman Mahin
+ *  Upstream: https://github.com/hotspotbilling/phpnuxbill
  **/
 
 _admin();
@@ -14,8 +15,8 @@ $ui->assign('_admin', $admin);
 switch ($action) {
     case 'rollback':
         $ui->assign('_title', 'Rollback Update');
-        $masters = json_decode(Http::getData("https://api.github.com/repos/hotspotbilling/phpnuxbill/commits?per_page=100",['User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:125.0) Gecko/20100101 Firefox/125.0']), true);
-        $devs = json_decode(Http::getData("https://api.github.com/repos/hotspotbilling/phpnuxbill/commits?sha=Development&per_page=100",['User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:125.0) Gecko/20100101 Firefox/125.0']), true);
+        $masters = json_decode(Http::getData("https://api.github.com/repos/mahin-wpdev/panel/commits?sha=next-release&per_page=100",['User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:125.0) Gecko/20100101 Firefox/125.0']), true);
+        $devs = json_decode(Http::getData("https://api.github.com/repos/mahin-wpdev/panel/commits?sha=next-release&per_page=100",['User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:125.0) Gecko/20100101 Firefox/125.0']), true);
 
         $ui->assign('masters', $masters);
         $ui->assign('devs', $devs);
