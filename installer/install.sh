@@ -79,7 +79,9 @@ compose up -d
 
 healthy=0
 for _ in $(seq 1 60); do
-  if compose ps --status running | grep -q panel && curl -fsS --max-time 5 "$public_origin/" >/dev/null 2>&1; then
+  expected_services="$(compose config --services | wc -l)"
+  running_services="$(compose ps --services --status running | wc -l)"
+  if [ "$running_services" -eq "$expected_services" ] && curl -fsS --max-time 5 "$public_origin/" >/dev/null 2>&1; then
     healthy=1
     break
   fi

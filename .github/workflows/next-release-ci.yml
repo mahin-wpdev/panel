@@ -72,7 +72,13 @@ jobs:
       - name: Verify services
         run: |
           for attempt in $(seq 1 60); do
-            if curl -fsS http://127.0.0.1/ >/dev/null && curl -fsS http://127.0.0.1/whatsapp/healthz >/dev/null; then
+            expected_services="$(docker compose config --services | wc -l)"
+            running_services="$(docker compose ps --services --status running | wc -l)"
+            if [ "$running_services" -eq "$expected_services" ] && curl -fsS http://127.0.0.1/ >/dev/null && curl -fsS http://127.0.0.1/whatsapp/healthz >/dev/null; then
+              admin_hash="$(docker compose exec -T database mariadb -N -ujm_panel -pci_database_password_32_chars jm_panel -e "SELECT password FROM tbl_users WHERE id=1 AND username='admin'")"
+              company="$(docker compose exec -T database mariadb -N -ujm_panel -pci_database_password_32_chars jm_panel -e "SELECT value FROM tbl_appconfig WHERE setting='CompanyName'")"
+              test "$admin_hash" = "d033e22ae348aeb5660fc2140aec35850c4da997"
+              test "$company" = "JM Broadband CI"
               docker compose ps
               exit 0
             fi

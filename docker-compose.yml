@@ -91,6 +91,12 @@ services:
       - "1812:1812/udp"
       - "1813:1813/udp"
       - "3799:3799/udp"
+    healthcheck:
+      test: ["CMD", "freeradius", "-XC"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   gateway:
     image: caddy:2.8-alpine
