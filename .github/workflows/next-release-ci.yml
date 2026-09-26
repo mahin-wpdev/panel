@@ -166,9 +166,15 @@ jobs:
           DB_PASSWORD="$(sed -n 's/^DB_PASSWORD=//p' .env)"
           docker compose exec -T panel sh -lc "printf 'panel-before' > /var/www/html/system/uploads/ci-backup-marker"
           docker compose exec -T whatsapp sh -lc "printf 'wa-before' > /data/ci-backup-marker"
-          archive="$(docker compose exec -T backup /usr/local/bin/jm-backup once | tail -n 1 | tr -d '\r')"
+          docker compose stop backup
+          archive="$(docker compose run --rm --no-deps backup once | tail -n 1 | tr -d '\r')"
           test -n "$archive"
-          test -s ".${archive}"
+          host_archive="backups/${archive#/backups/}"
+          echo "Backup archive: $host_archive"
+          if [ ! -s "$host_archive" ]; then
+            find backups -maxdepth 3 -type f -ls || true
+            exit 1
+          fi
           docker compose exec -T database mariadb -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" -e "UPDATE tbl_appconfig SET value='MUTATED' WHERE setting='CompanyName';"
           docker compose exec -T panel sh -lc "printf 'panel-mutated' > /var/www/html/system/uploads/ci-backup-marker"
           docker compose exec -T whatsapp sh -lc "printf 'wa-mutated' > /data/ci-backup-marker"
@@ -177,14 +183,21 @@ jobs:
           docker compose run --rm --no-deps backup restore "$archive"
           rm -f .env.restored
           docker compose up -d
+          healthy=0
           for attempt in $(seq 1 60); do
             expected="$(docker compose config --services | wc -l)"
             running="$(docker compose ps --services --status running | wc -l)"
             if [ "$running" -eq "$expected" ] && docker compose exec -T panel curl -fsS http://127.0.0.1/ >/dev/null 2>&1 && docker compose exec -T whatsapp node -e "fetch('http://127.0.0.1:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" && docker compose exec -T radius freeradius -XC >/dev/null 2>&1; then
+              healthy=1
               break
             fi
             sleep 5
           done
+          if [ "$healthy" -ne 1 ]; then
+            docker compose ps --all
+            docker compose logs --tail=200
+            exit 1
+          fi
           company="$(docker compose exec -T database mariadb -N -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" -e "SELECT value FROM tbl_appconfig WHERE setting='CompanyName'")"
           test "$company" = "JM Broadband CI"
           test "$(docker compose exec -T panel cat /var/www/html/system/uploads/ci-backup-marker | tr -d '\r')" = "panel-before"

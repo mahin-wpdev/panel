@@ -1,0 +1,12 @@
+.git
+.github
+.env
+backups
+backup-before-update-*.sql.gz
+install-credentials.txt
+services/whatsapp/node_modules
+services/whatsapp/data
+services/whatsapp/logs
+services/whatsapp/auth
+*.log
+*.log.*

@@ -122,6 +122,10 @@ class Message
                     3,
                     15
                 );
+                $decoded = json_decode((string) $response, true);
+                if (!is_array($decoded) || empty($decoded['success'])) {
+                    throw new RuntimeException((string) ($decoded['error'] ?? 'Bundled WhatsApp API rejected the message'));
+                }
                 self::logMessage('Bundled WhatsApp API', $phone, $txt, 'Success', (string) $response);
                 return $response;
             } catch (Throwable $e) {

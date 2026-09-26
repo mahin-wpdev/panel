@@ -28,6 +28,8 @@ prune() {
 
 backup_once() {
   wait_db
+  exec 9>"$BACKUP_DIR/.backup.lock"
+  flock -w 120 9 || { echo "Timed out waiting for backup lock" >&2; exec 9>&-; return 1; }
   local ts tmp archive day dow
   ts="$(date +%Y%m%d-%H%M%S)"
   day="$(date +%d)"
@@ -59,6 +61,8 @@ backup_once() {
   prune "$BACKUP_DIR/weekly" "$WEEKLY_RETENTION"
   prune "$BACKUP_DIR/monthly" "$MONTHLY_RETENTION"
   rm -rf "$tmp"
+  flock -u 9
+  exec 9>&-
   echo "$archive"
 }
 
