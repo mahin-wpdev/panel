@@ -13,14 +13,21 @@ case "${ID:-}" in
 esac
 
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
-apt-get install -y -qq ca-certificates curl git openssl docker.io
-systemctl enable --now docker
+if [ "${PANEL_SKIP_SYSTEM_SETUP:-0}" != "1" ]; then
+  apt-get update -qq
+  apt-get install -y -qq ca-certificates curl git openssl docker.io
+  systemctl enable --now docker
 
-if ! docker compose version >/dev/null 2>&1 && ! command -v docker-compose >/dev/null 2>&1; then
-  apt-get install -y -qq docker-compose-v2 2>/dev/null \
-    || apt-get install -y -qq docker-compose-plugin 2>/dev/null \
-    || apt-get install -y -qq docker-compose
+  if ! docker compose version >/dev/null 2>&1 && ! command -v docker-compose >/dev/null 2>&1; then
+    apt-get install -y -qq docker-compose-v2 2>/dev/null \
+      || apt-get install -y -qq docker-compose-plugin 2>/dev/null \
+      || apt-get install -y -qq docker-compose
+  fi
+else
+  command -v git >/dev/null && command -v openssl >/dev/null && command -v curl >/dev/null \
+    || { echo "git, openssl and curl are required when PANEL_SKIP_SYSTEM_SETUP=1" >&2; exit 1; }
+  (docker compose version >/dev/null 2>&1 || command -v docker-compose >/dev/null 2>&1) \
+    || { echo "Docker Compose is required when PANEL_SKIP_SYSTEM_SETUP=1" >&2; exit 1; }
 fi
 
 compose() {
@@ -81,7 +88,10 @@ healthy=0
 for _ in $(seq 1 60); do
   expected_services="$(compose config --services | wc -l)"
   running_services="$(compose ps --services --status running | wc -l)"
-  if [ "$running_services" -eq "$expected_services" ] && curl -fsS --max-time 5 "$public_origin/" >/dev/null 2>&1; then
+  if [ "$running_services" -eq "$expected_services" ] \
+    && curl -fsS --max-time 5 "$public_origin/" >/dev/null 2>&1 \
+    && compose exec -T whatsapp node -e "fetch('http://127.0.0.1:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" \
+    && compose exec -T radius freeradius -XC >/dev/null 2>&1; then
     healthy=1
     break
   fi

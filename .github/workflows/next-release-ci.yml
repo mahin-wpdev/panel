@@ -167,3 +167,45 @@ jobs:
       - name: Stop stack
         if: always()
         run: docker compose down -v --remove-orphans
+
+  installer-smoke:
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run one-command installer on clean path
+        run: |
+          sudo env \
+            PANEL_SKIP_SYSTEM_SETUP=1 \
+            PANEL_DIR="$RUNNER_TEMP/jm-panel-fresh" \
+            PANEL_BRANCH=next-release \
+            PANEL_HOST=127.0.0.1 \
+            PANEL_SITE_ADDRESS=:80 \
+            PANEL_COMPANY_NAME="JM Broadband Installer CI" \
+            PANEL_ADMIN_USER=installer-ci \
+            PANEL_ADMIN_PASSWORD=installer-ci-password \
+            RADIUS_CLIENT_NETWORK=0.0.0.0/0 \
+            bash installer/install.sh
+
+      - name: Verify installer output
+        run: |
+          app="$RUNNER_TEMP/jm-panel-fresh"
+          sudo test -f "$app/.env"
+          sudo test -f "$app/install-credentials.txt"
+          sudo grep -F "Panel URL: http://127.0.0.1" "$app/install-credentials.txt"
+          sudo grep -F "Admin username: installer-ci" "$app/install-credentials.txt"
+          test "$(sudo stat -c '%a' "$app/.env")" = "600"
+          test "$(sudo stat -c '%a' "$app/install-credentials.txt")" = "600"
+          expected="$(sudo docker compose --project-directory "$app" config --services | wc -l)"
+          running="$(sudo docker compose --project-directory "$app" ps --services --status running | wc -l)"
+          test "$running" -eq "$expected"
+
+      - name: Stop installer stack
+        if: always()
+        run: |
+          app="$RUNNER_TEMP/jm-panel-fresh"
+          if [ -f "$app/docker-compose.yml" ]; then
+            sudo docker compose --project-directory "$app" down -v --remove-orphans
+          fi
