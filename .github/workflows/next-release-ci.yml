@@ -1,0 +1,82 @@
+name: Next release validation
+
+on:
+  push:
+    branches: [next-release]
+  pull_request:
+    branches: [next-release]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate shell scripts
+        run: bash -n installer/install.sh installer/update.sh infrastructure/panel/entrypoint.sh infrastructure/freeradius/entrypoint.sh
+
+      - name: Test bundled WhatsApp service
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: services/whatsapp/package-lock.json
+
+      - run: npm ci --no-audit --no-fund
+        working-directory: services/whatsapp
+
+      - run: npm test
+        working-directory: services/whatsapp
+
+      - name: Create CI environment
+        run: |
+          cat > .env <<'EOF'
+          COMPOSE_PROJECT_NAME=jm-panel-ci
+          TZ=Asia/Dhaka
+          SITE_ADDRESS=:80
+          PUBLIC_HOST=127.0.0.1
+          PUBLIC_ORIGIN=http://127.0.0.1
+          COMPANY_NAME=JM Broadband CI
+          ADMIN_USERNAME=admin
+          ADMIN_FULLNAME=Administrator
+          ADMIN_PASSWORD_HASH=d033e22ae348aeb5660fc2140aec35850c4da997
+          DB_NAME=jm_panel
+          DB_USER=jm_panel
+          DB_PASSWORD=ci_database_password_32_chars
+          DB_ROOT_PASSWORD=ci_root_password_32_characters
+          RADIUS_SHARED_SECRET=ci_radius_secret_32_characters
+          RADIUS_CLIENT_NETWORK=0.0.0.0/0
+          WHATSAPP_ADMIN_API_KEY=ci_whatsapp_admin_key_32_characters
+          WHATSAPP_API_KEY_PEPPER=ci_whatsapp_pepper_key_32_chars
+          WHATSAPP_DELAY_MIN_MS=0
+          WHATSAPP_DELAY_MAX_MS=0
+          WHATSAPP_DAILY_LIMIT=10
+          EOF
+
+      - name: Validate Compose model
+        run: docker compose config --quiet
+
+      - name: Build and start clean stack
+        run: docker compose up -d --build
+
+      - name: Verify services
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1/ >/dev/null && curl -fsS http://127.0.0.1/whatsapp/healthz >/dev/null; then
+              docker compose ps
+              exit 0
+            fi
+            sleep 5
+          done
+          docker compose ps
+          docker compose logs --tail=200
+          exit 1
+
+      - name: Stop stack
+        if: always()
+        run: docker compose down -v --remove-orphans

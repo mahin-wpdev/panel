@@ -71,3 +71,4 @@ system/uploads/invoices/**
 .env
 install-credentials.txt
 backup-before-update-*.sql.gz
+services/whatsapp/node_modules/
