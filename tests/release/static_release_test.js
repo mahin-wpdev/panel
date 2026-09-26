@@ -54,4 +54,14 @@ assert.match(read('system/mobile/live-traffic.php'), /flock\(\$file, LOCK_EX \| 
 assert.match(read('system/mobile/customer-dashboard.php'), /'traffic_peak'\s*=>/);
 assert.match(read('system/mobile/panel-app.php'), /'traffic_peak'\s*=>/);
 assert.match(read('system/mobile/traffic-peaks-migration.sql'), /CREATE TABLE IF NOT EXISTS tbl_mobile_radius_speed_peaks/);
-console.log('PASS: installer, webhook auth, receipt idempotency, logs, Nginx, ONU, and server-owned peak invariants');
+for (const entrypoint of ['index.php', 'update.php']) {
+  const source = read(entrypoint);
+  const start = source.indexOf('session_start();');
+  const cookie = source.indexOf('session_set_cookie_params([');
+  assert(cookie >= 0 && cookie < start, entrypoint + ' must harden PHP session cookies before session_start');
+  assert.match(source, /'httponly'\s*=>\s*true/);
+  assert.match(source, /'samesite'\s*=>\s*'Lax'/);
+  assert.match(source, /ini_set\('session\.use_strict_mode',\s*'1'\)/);
+  assert.match(source, /ini_set\('session\.use_only_cookies',\s*'1'\)/);
+}
+console.log('PASS: installer, webhook auth, receipt idempotency, logs, Nginx, ONU, session cookies, and server-owned peak invariants');
