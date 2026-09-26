@@ -1,12 +1,15 @@
 # JM Broadband: GitHub-managed Android updates
 
-GitHub is the single release manager. phpNuxBill only reads the latest public GitHub
-Release and offers same-origin manifest and stable download endpoints. No panel
-APK upload, release settings, database writes, or payment changes are involved.
+GitHub is the single release manager. phpNuxBill reads a validated public GitHub
+release snapshot and offers same-origin manifest and stable download endpoints.
+The panel does not host APK files or signing keys. The first-run wizard stores
+the selected repository, release channel and default update policy in the
+persistent secure volume; payment behavior is unchanged.
 
 ## Release requirements
 
-Repository: https://github.com/mahin-wpdev/jm-broadband-android (PUBLIC).
+Default repository: https://github.com/mahin-wpdev/jm-broadband-android (PUBLIC).
+A different public `owner/repository` may be selected during first-run setup.
 The **next-release** branch contains tested production Flutter code.
 The workflow `.github/workflows/publish-android-release.yml` must also exist
 on the GitHub default branch for its Run workflow button to appear.
@@ -39,20 +42,21 @@ certificate fingerprint, and refuses a changed key.
 
 The signed release workflow publishes a public `mobile-release.json` snapshot
 on the Android repository's `main` branch after the APK Release is live.
-The panel reads this snapshot from `raw.githubusercontent.com` instead of
-using the shared-IP GitHub REST API quota. It still validates tag, update
-policy, asset name, size, SHA-256 digest and GitHub download URL. Validated
-metadata is cached for ten minutes; on temporary CDN failure, a previously
-validated snapshot may be used for up to 24 hours. Malformed data fails
-closed. GitHub retains the APK; phpNuxBill never hosts or copies it.
+For a beta channel, publish `mobile-release-beta.json`. The panel reads the
+selected snapshot from `raw.githubusercontent.com` instead of using shared-IP
+GitHub REST API quota. It validates tag, update policy, asset name, size,
+SHA-256 digest and a download URL belonging to the configured repository.
+Validated metadata is cached for 15 minutes; on temporary CDN failure, a
+previously validated snapshot may be used for up to 24 hours. Malformed data
+fails closed. GitHub retains the APK; phpNuxBill never hosts or copies it.
 
 ## Panel deployment
 
-Copy just these changed tracked files from the panel branch:
-`system/mobile/github-release.php`, `mobile-app-version.php`,
-`mobile-app-download.php`, `system/autoload/Message.php`, and remove the
-old `system/plugin/mobileApp.php` and `system/plugin/ui/mobileApp.tpl`.
-No new tables, admin menu or settings are required.
+The self-hosted installer deploys the mobile connector together with the rest
+of the panel. First-run setup writes `system/secure/mobile-release.json` in the
+persistent secure volume. Stable and beta channels are read-only from the
+panel side; publishing, signing and release creation remain GitHub Actions
+responsibilities.
 
 Existing endpoint: `https://YOUR-PANEL/panel/mobile-api.php`
 Update manifest: `https://YOUR-PANEL/panel/mobile-app-version.php`
@@ -71,7 +75,7 @@ it expands to the stable panel download link, which redirects to GitHub.
 PHP requires cURL, outbound HTTPS to `raw.githubusercontent.com` and
 `github.com`, and a working TLS certificate. Release metadata caching uses
 the PHP temporary directory. Newly published metadata becomes visible after
-up to ten minutes of local caching, plus GitHub's raw-content cache.
+up to 15 minutes of local caching, plus GitHub's raw-content cache.
 
 Existing 1.0.7 app lacks updater code and must receive the updater-bearing
 1.0.8 APK once through the conventional install/update path. Later releases

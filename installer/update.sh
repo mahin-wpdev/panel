@@ -52,7 +52,10 @@ compose exec -T database mariadb-dump -uroot -p"$root_password" --all-databases 
 [ -s "$backup" ] || { echo "Database backup failed" >&2; exit 1; }
 gzip -t "$backup"
 mkdir -p backups
-chmod 700 backups
+if ! chmod 700 backups 2>/dev/null && [ "${_PANEL_TEST_ALLOW_NON_ROOT:-0}" != "1" ]; then
+  echo "Unable to secure backup directory permissions" >&2
+  exit 1
+fi
 compose up -d backup >/dev/null
 full_backup="$(compose exec -T backup /usr/local/bin/jm-backup once | tail -n 1 | tr -d '\r')"
 [ -n "$full_backup" ] || { echo "Full-state backup failed" >&2; exit 1; }

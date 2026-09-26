@@ -23,8 +23,9 @@ jobs:
         run: |
           set -euo pipefail
           for file in install/*.php system/mobile/*.php \
-            system/controllers/{accounts,customers,olts,onus,reseller}.php \
-            system/autoload/{OltManager,OltOnuRemoval}.php \
+            mobile-app-version.php mobile-app-download.php whatsapp-gateway.php \
+            system/controllers/{accounts,customers,olts,onus,reseller,setup,whatsapp,mikrotik-onboarding,message}.php \
+            system/autoload/{OltManager,OltOnuRemoval,Message,MikrotikProvisioner}.php \
             autorecharge/{autorecharge,bkash,bkash_merchant,nogod}.php; do
             test -f "$file" || { echo "Missing: $file"; exit 1; }
             php -l "$file" >/dev/null
