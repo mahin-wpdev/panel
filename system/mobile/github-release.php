@@ -114,12 +114,6 @@ function jmapp_latest_release(): array {
     $data = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
     if (!is_array($data)) throw new UnexpectedValueException('GitHub JSON invalid.');
     $release = jmapp_parse_github_release($data);
-    // A branch CDN can briefly serve an older committed snapshot after a new
-    // release. Never let that stale response downgrade a newer verified cache.
-    if ($saved !== null &&
-        (int) ($saved['build_number'] ?? 0) > (int) ($release['build_number'] ?? 0)) {
-        return jmapp_contextualize_release($saved);
-    }
     @file_put_contents($cache . '.tmp', json_encode($release), LOCK_EX);
     @rename($cache . '.tmp', $cache);
     return jmapp_contextualize_release($release);

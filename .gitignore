@@ -1,7 +1,11 @@
 config.php
-.env
-install-credentials.txt
-backup-before-update-*.sql.gz
+# Runtime payment/identity data must never be committed.
+autorecharge/*.log
+autorecharge/**/*.log
+*.log
+*.log.*
+*.sql.gz
+*.sql.zip
 .DS_Store
 .vscode/
 ui/ui/compiled
@@ -61,3 +65,9 @@ docs/**
 !docs/insomnia.rest.json
 !system/uploads/paid.png
 system/uploads/invoices/**
+
+*.bak*
+
+.env
+install-credentials.txt
+backup-before-update-*.sql.gz

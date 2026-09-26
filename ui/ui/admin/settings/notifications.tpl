@@ -26,6 +26,7 @@
                             <b>[[package]]</b> - {Lang::T('will be replaced with Package name')}.<br>
                             <b>[[price]]</b> - {Lang::T('will be replaced with Package price')}.<br>
                             <b>[[bills]]</b> - {Lang::T('additional bills for customers')}.<br>
+                            <b>[[app_download_link]]</b> - Latest JM Broadband APK link.<br>
                             <b>[[payment_link]]</b> - <a href="{$app_url}/docs/#Reminder%20with%20payment%20link"
                                 target="_blank">{Lang::T("read documentation")}</a>.
                         </p>
@@ -45,6 +46,7 @@
                             <b>[[price]]</b> - {Lang::T('will be replaced with Package price')}.<br>
                             <b>[[expired_date]]</b> - {Lang::T('will be replaced with Expiration date')}.<br>
                             <b>[[bills]]</b> - {Lang::T('additional bills for customers')}.<br>
+                            <b>[[app_download_link]]</b> - Latest JM Broadband APK link.<br>
                             <b>[[payment_link]]</b> - <a href="{$app_url}/docs/#Reminder%20with%20payment%20link"
                                 target="_blank">{Lang::T("read documentation")}</a>.
                         </p>
@@ -64,6 +66,7 @@
                             <b>[[price]]</b> - {Lang::T('will be replaced with Package price')}.<br>
                             <b>[[expired_date]]</b> - {Lang::T('will be replaced with Expiration date')}.<br>
                             <b>[[bills]]</b> - {Lang::T('additional bills for customers')}.<br>
+                            <b>[[app_download_link]]</b> - Latest JM Broadband APK link.<br>
                             <b>[[payment_link]]</b> - <a href="{$app_url}/docs/#Reminder%20with%20payment%20link"
                                 target="_blank">{Lang::T("read documentation")}</a>.
                         </p>
@@ -83,6 +86,7 @@
                             <b>[[price]]</b> - {Lang::T('will be replaced with Package price')}.<br>
                             <b>[[expired_date]]</b> - {Lang::T('will be replaced with Expiration date')}.<br>
                             <b>[[bills]]</b> - {Lang::T('additional bills for customers')}.<br>
+                            <b>[[app_download_link]]</b> - Latest JM Broadband APK link.<br>
                             <b>[[payment_link]]</b> - <a href="{$app_url}/docs/#Reminder%20with%20payment%20link"
                                 target="_blank">{Lang::T("read documentation")}</a>.
                         </p>
@@ -113,6 +117,7 @@
                             <b>[[expired_date]]</b> - {Lang::T('Expired datetime')}.<br>
                             <b>[[footer]]</b> - {Lang::T('Invoice Footer')}.<br>
                             <b>[[note]]</b> - {Lang::T('For Notes by admin')}.<br>
+                            <b>[[app_download_link]]</b> - Latest JM Broadband APK link.<br>
                             <b>[[invoice_link]]</b> - <a href="{$app_url}/docs/#Reminder%20with%20payment%20link"
                             target="_blank">{Lang::T("read documentation")}</a>.
                         </p>
@@ -159,6 +164,7 @@
                             <b>[[username]]</b> - {Lang::T('will be replaced with Customer username')}.<br>
                             <b>[[password]]</b> - {Lang::T('will be replaced with Customer password')}.<br>
                             <b>[[url]]</b> - {Lang::T('will be replaced with Customer Portal URL')}.<br>
+                            <b>[[app_download_link]]</b> - Latest JM Broadband APK link.<br>
                             <b>[[company]]</b> - {Lang::T('will be replaced with Company Name')}.<br>
                         </p>
                     </div>
@@ -225,6 +231,7 @@
                             <b>[[expired_date]]</b> - {Lang::T('Expired datetime')}.<br>
                             <b>[[logo]]</b> - {Lang::T('Your company logo at Settings')}.<br>
                             <b>[[due_date]]</b> - {Lang::T('Invoice Due date, 7 Days after invoice created')}.<br>
+                            <b>[[app_download_link]]</b> - Latest JM Broadband APK link.<br>
                             <b>[[payment_link]]</b> - <a href="{$app_url}/docs/#Reminder%20with%20payment%20link"
                                 target="_blank">{Lang::T("read documentation")}</a>.
                         </p>

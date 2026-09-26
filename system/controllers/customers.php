@@ -409,6 +409,9 @@ switch ($action) {
             $ui->assign('unassignedOnus', ORM::for_table('tbl_onus')->table_alias('o')->select_many('o.*','olt.name')->left_outer_join('tbl_olts',['o.olt_id','=','olt.id'],'olt')->where_null('o.customer_id')->order_by_desc('o.updated_at')->find_many());
             $ui->assign('v', $v);
             $ui->assign('d', $customer);
+            require_once __DIR__ . '/../mobile/monthly-usage.php';
+            $arivoPppoe = (string)($customer['pppoe_username'] ?: $customer['username']);
+            $ui->assign('arivoUsage', jm_mobile_monthly_view(ORM::get_db(), $arivoPppoe));
             $ui->assign('customFields', $customFields);
             $ui->assign('xheader', $leafletpickerHeader);
             $ui->assign('csrf_token',  Csrf::generateAndStoreToken());

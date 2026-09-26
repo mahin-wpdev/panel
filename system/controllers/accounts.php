@@ -76,6 +76,9 @@ switch ($action) {
         $csrf_token = Csrf::generateAndStoreToken();
         $ui->assign('csrf_token', $csrf_token);
         $ui->assign('customFields', User::getFormCustomField($ui, false, $user['id']));
+        require_once __DIR__ . '/../mobile/monthly-usage.php';
+        $arivoPppoe = (string)($user['pppoe_username'] ?: $user['username']);
+        $ui->assign('arivoUsage', jm_mobile_monthly_view(ORM::get_db(), $arivoPppoe));
         $ui->display('customer/profile.tpl');
         break;
     case 'edit-profile-post':

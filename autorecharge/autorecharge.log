@@ -1,2 +1,0 @@
-2026-09-19 01:10:35 SCHEMA_WARNING transaction_id is numeric; stored legacy numeric suffix=117 original=INV-117 | Run migration.sql to change transaction_id to VARCHAR(100).
-2026-09-19 01:10:35 SUCCESS gateway=bKash Merchant customer=22 amount=500 trxid=DIJ3MXAHAJ transaction=INV-117

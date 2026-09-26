@@ -1,12 +1,13 @@
 <?php
 /** OLT access boundary; only the verified V-SOL Telnet adapter is enabled. */
 class OltManager {
-    // Read the existing persistent key used by the active OLT sync adapter.
-    // Never create a replacement key: it would make stored credentials unreadable.
+    /* Credentials must survive service/server restarts; /tmp is deliberately
+       not used because it is cleared on reboot. */
     private static function key(){
-        $file='/www/wwwroot/27.147.201.165/system/secure/olt-encryption.key';
+        $dir='/www/wwwroot/27.147.201.165/system/secure';$file=$dir.'/olt-encryption.key';
+        if(!is_dir($dir)&&!@mkdir($dir,0700,true))throw new Exception('OLT encryption storage is unavailable');
         $key=@file_get_contents($file);
-        if($key===false||strlen($key)!==32)throw new Exception('OLT encryption key is unavailable');
+        if($key===false||strlen($key)!==32){$key=random_bytes(32);if(@file_put_contents($file,$key,LOCK_EX)===false)throw new Exception('OLT encryption storage is unavailable');@chmod($file,0600);}
         return $key;
     }
     public static function encrypt($value){$iv=random_bytes(12);$tag='';$cipher=openssl_encrypt($value,'aes-256-gcm',self::key(),OPENSSL_RAW_DATA,$iv,$tag);return base64_encode($iv.$tag.$cipher);}
@@ -25,7 +26,6 @@ class OltManager {
                 $out=str_ireplace($pager,'',$out);
                 if(fwrite($socket,' ')===false)throw new Exception('OLT pager failed');
             }
-            // A paginated inventory is complete only at the final CLI prompt.
             if(preg_match('/'.preg_quote($until,'/').'\\s*$/i',$out))return $out;
             usleep(50000);
         }
