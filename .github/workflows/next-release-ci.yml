@@ -140,6 +140,30 @@ jobs:
           docker compose logs panel --tail=200
           exit 1
 
+      - name: Verify updater failed-update rollback
+        run: |
+          git config user.name "JM Panel CI"
+          git config user.email "ci@localhost"
+          printf 'rollback-proof\n' > .ci-update-rollback-marker
+          git add -f .ci-update-rollback-marker
+          git commit -m "CI rollback source marker"
+          previous_commit="$(git rev-parse HEAD)"
+          set +e
+          _PANEL_TEST_ALLOW_NON_ROOT=1 \
+          _PANEL_TEST_FORCE_UPDATE_FAILURE=1 \
+          PANEL_DIR="$PWD" \
+          PANEL_BRANCH=next-release \
+          PANEL_ROLLBACK_HEALTH_ATTEMPTS=20 \
+          bash installer/update.sh > /tmp/update-rollback.log 2>&1
+          update_status=$?
+          set -e
+          cat /tmp/update-rollback.log
+          test "$update_status" -ne 0
+          test "$(git rev-parse HEAD)" = "$previous_commit"
+          test -f .ci-update-rollback-marker
+          grep -q "Rollback completed successfully" /tmp/update-rollback.log
+          ls backup-before-update-*.sql.gz >/dev/null
+
       - name: Stop stack
         if: always()
         run: docker compose down -v --remove-orphans
