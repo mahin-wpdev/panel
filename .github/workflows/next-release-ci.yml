@@ -169,12 +169,8 @@ jobs:
           docker compose stop backup
           archive="$(docker compose run --rm --no-deps backup once | tail -n 1 | tr -d '\r')"
           test -n "$archive"
-          host_archive="backups/${archive#/backups/}"
-          echo "Backup archive: $host_archive"
-          if [ ! -s "$host_archive" ]; then
-            find backups -maxdepth 3 -type f -ls || true
-            exit 1
-          fi
+          echo "Backup archive: $archive"
+          docker compose run --rm --no-deps --entrypoint sh backup -lc 'test -s "$1" && tar -tzf "$1" >/dev/null' sh "$archive"
           docker compose exec -T database mariadb -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" -e "UPDATE tbl_appconfig SET value='MUTATED' WHERE setting='CompanyName';"
           docker compose exec -T panel sh -lc "printf 'panel-mutated' > /var/www/html/system/uploads/ci-backup-marker"
           docker compose exec -T whatsapp sh -lc "printf 'wa-mutated' > /data/ci-backup-marker"

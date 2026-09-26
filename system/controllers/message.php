@@ -6,6 +6,7 @@
  **/
 
 _admin();
+require_once $root_path . 'system/mobile/github-release.php';
 $ui->assign('_title', Lang::T('Send Message'));
 $ui->assign('_system_menu', 'message');
 
@@ -300,7 +301,7 @@ EOT;
             $plan = $recharge ? ORM::for_table('tbl_plans')->find_one($recharge['plan_id']) : false;
             $paymentLink = '';
             if (strpos($message, '[[payment_link]]') !== false && $recharge) { $token = User::generateToken($customer['id'], 1); if (!empty($token['token'])) { $paymentLink = APP_URL . '/?_route=home&recharge=' . $recharge['id'] . '&uid=' . urlencode($token['token']); } }
-            $appDownloadLink = 'https://github.com/mahin-wpdev/jm-broadband-android/releases/latest/download/jm-broadband.apk';
+            $appDownloadLink = jmapp_link();
             $currentMessage = str_replace(
                 ['[[name]]','[[username]]','[[user_name]]','[[phone]]','[[email]]','[[address]]','[[city]]','[[district]]','[[state]]','[[zip]]','[[account_type]]','[[service_type]]','[[pppoe_username]]','[[pppoe_ip]]','[[balance]]','[[status]]','[[created_at]]','[[last_login]]','[[company_name]]','[[package]]','[[package_price]]','[[expiration]]','[[payment_link]]','[[login_link]]','[[url]]','[[app_link]]','[[app_download_link]]'],
                 [$customer['fullname'] ?? '',$customer['username'] ?? '',$customer['username'] ?? '',$customer['phonenumber'] ?? '',$customer['email'] ?? '',$customer['address'] ?? '',$customer['city'] ?? '',$customer['district'] ?? '',$customer['state'] ?? '',$customer['zip'] ?? '',$customer['account_type'] ?? '',$customer['service_type'] ?? '',$customer['pppoe_username'] ?? '',$customer['pppoe_ip'] ?? '',Lang::moneyFormat($customer['balance'] ?? 0),$customer['status'] ?? '',$customer['created_at'] ?? '',$customer['last_login'] ?? '',$config['CompanyName'] ?? '',$recharge ? ($recharge['namebp'] ?? '') : '',$plan ? Lang::moneyFormat($plan['price'] ?? 0) : '',$recharge ? Lang::dateAndTimeFormat($recharge['expiration'],$recharge['time']) : '',$paymentLink,APP_URL . '/?_route=login',APP_URL . '/?_route=login',$appDownloadLink,$appDownloadLink],
@@ -429,8 +430,8 @@ EOT;
                             $plan ? Lang::moneyFormat($plan['price']) : '',
                             $recharge ? Lang::dateAndTimeFormat($recharge['expiration'], $recharge['time']) : '',
                             $paymentLink, APP_URL . '/?_route=login', APP_URL . '/?_route=login',
-                            'https://github.com/mahin-wpdev/jm-broadband-android/releases/latest/download/jm-broadband.apk',
-                            'https://github.com/mahin-wpdev/jm-broadband-android/releases/latest/download/jm-broadband.apk'
+                            jmapp_link(),
+                            jmapp_link()
                         ],
                         $message
                     );

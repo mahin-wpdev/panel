@@ -1,22 +1,33 @@
 # JM Broadband one-command installer
 
-Fresh Ubuntu installation command:
+Fresh Ubuntu/Debian installation:
 
     curl -fsSL https://raw.githubusercontent.com/mahin-wpdev/panel/next-release/installer/install.sh | sudo bash
 
-Optional values can be supplied with PANEL_HOST, PANEL_SITE_ADDRESS,
-PANEL_COMPANY_NAME, PANEL_ADMIN_USER, PANEL_ADMIN_PASSWORD and
-RADIUS_CLIENT_NETWORK.
+Supported hosts: Ubuntu 22.04/24.04 or Debian 12 with root access, outbound HTTPS,
+at least 1 CPU, 1 GB RAM and 5 GB free disk. Ports 80/tcp, 443/tcp,
+1812/udp, 1813/udp and 3799/udp must be available.
 
-The installer generates database, RADIUS and WhatsApp secrets, installs an
-empty customer database, and starts the panel, FreeRADIUS and bundled WhatsApp
-service. Initial login is saved once at
-/opt/jm-panel/install-credentials.txt with mode 600.
+Optional environment values: PANEL_HOST, PANEL_SITE_ADDRESS, PANEL_COMPANY_NAME,
+PANEL_ADMIN_USER, PANEL_ADMIN_PASSWORD and RADIUS_CLIENT_NETWORK. For automatic
+HTTPS, point a domain to the server and set PANEL_SITE_ADDRESS to that domain.
 
-Requirements: a fresh Ubuntu 22.04/24.04 or Debian 12 server, root access, and
-ports 80, 443, 1812/udp, 1813/udp and 3799/udp available. For automatic HTTPS,
-point a domain to the server and run with PANEL_SITE_ADDRESS set to that domain.
+The installer creates MariaDB, FreeRADIUS, bundled WhatsApp, cron, backup and
+Caddy services. Generated credentials are saved once to
+/opt/jm-panel/install-credentials.txt with mode 600. On the first admin login,
+the setup wizard collects company, public access, billing, network, WhatsApp
+and mobile-release settings and then locks itself.
 
-Update an installed server with:
+Operational commands:
 
     sudo /opt/jm-panel/installer/update.sh
+    sudo /opt/jm-panel/installer/repair.sh
+    sudo /opt/jm-panel/installer/backup.sh
+    sudo /opt/jm-panel/installer/restore.sh backups/daily/<backup>.tar.gz
+    sudo /opt/jm-panel/installer/uninstall.sh
+
+Use uninstall.sh --purge-data only for intentional permanent removal of Docker
+volumes and the application directory. Normal uninstall keeps data and backups.
+The bundled WhatsApp service is managed inside the panel; it is not exposed as
+a separate public dashboard. MikroTik changes should be reviewed in
+Network -> MikroTik Onboarding before applying.
