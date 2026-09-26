@@ -338,6 +338,19 @@ export class WhatsAppService {
     return this.getStatus()
   }
 
+  async restart() {
+    clearTimeout(this.reconnectTimer)
+    this.reconnectTimer = null
+    const socket = this.socket
+    ++this.generation
+    this.socket = null
+    this.status = 'reconnecting'
+    if (socket) socket.end(new Error('API reconnect'))
+    this.reconnectAttempts = 0
+    await this.start()
+    return this.getStatus()
+  }
+
   async stop() {
     this.stopped = true
     ++this.generation

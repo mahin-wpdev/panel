@@ -252,6 +252,9 @@
                             <li {if $_routes[1] eq 'send_bulk' }class="active" {/if}><a
                                     href="{Text::url('message/send_bulk')}">{Lang::T('Bulk Customers')}</a></li>
                             {if in_array($_admin['user_type'],['SuperAdmin','Admin'])}
+                                <li {if $_routes[0] eq 'whatsapp'}class="active"{/if}>
+                                    <a href="{Text::url('whatsapp')}"><i class="fa fa-whatsapp"></i> WhatsApp Service</a>
+                                </li>
                                 <li {if $_routes[0] eq 'appnotifications'}class="active"{/if}>
                                     <a href="{Text::url('appnotifications/send')}">
                                         <i class="fa fa-bell"></i> App Push Notifications
@@ -273,6 +276,8 @@
                             <ul class="treeview-menu">
                                 <li {if $_routes[0] eq 'routers' and $_routes[1] eq '' }class="active" {/if}><a
                                         href="{Text::url('routers')}">Routers</a></li>
+                                <li {if $_routes[0] eq 'mikrotik-onboarding'}class="active"{/if}><a
+                                        href="{Text::url('mikrotik-onboarding')}"><i class="fa fa-microchip"></i> MikroTik Onboarding</a></li>
                                 <li {if $_routes[0] eq 'pool' and $_routes[1] eq 'list' }class="active" {/if}><a
                                         href="{Text::url('pool/list')}">IP Pool</a></li>
                                 <li {if $_routes[0] eq 'pool' and $_routes[1] eq 'port' }class="active" {/if}><a

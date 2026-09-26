@@ -103,11 +103,31 @@ class Message
     {
         global $config;
         if (empty($txt)) {
-            return "kosong";
+            return "";
         }
 
         if (function_exists('jmapp_replace_placeholder')) $txt = jmapp_replace_placeholder($txt);
         run_hook('send_whatsapp', [$phone, $txt]); // HOOK
+
+        $internalUrl = rtrim((string) getenv('WHATSAPP_INTERNAL_URL'), '/');
+        $keyFile = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'secure' . DIRECTORY_SEPARATOR . 'whatsapp-api-key';
+        $apiKey = is_readable($keyFile) ? trim((string) file_get_contents($keyFile)) : '';
+        if ($internalUrl !== '' && $apiKey !== '') {
+            try {
+                $response = Http::postJsonData(
+                    $internalUrl . '/api/send-message',
+                    ['to' => Lang::phoneFormat($phone), 'message' => $txt],
+                    ['X-API-Key: ' . $apiKey],
+                    null,
+                    3,
+                    15
+                );
+                self::logMessage('Bundled WhatsApp API', $phone, $txt, 'Success', (string) $response);
+                return $response;
+            } catch (Throwable $e) {
+                self::logMessage('Bundled WhatsApp API', $phone, $txt, 'Error', $e->getMessage());
+            }
+        }
 
         if (!empty($config['wa_url'])) {
             $waurl = str_replace('[number]', urlencode(Lang::phoneFormat($phone)), $config['wa_url']);
@@ -121,6 +141,7 @@ class Message
                 self::logMessage('WhatsApp HTTP Request', $phone, $txt, 'Error', $e->getMessage());
             }
         }
+        return false;
     }
 
     public static function sendEmail($to, $subject, $body, $attachmentPath = null)

@@ -51,13 +51,19 @@ echo "Creating database backup: $APP_DIR/$backup"
 compose exec -T database mariadb-dump -uroot -p"$root_password" --all-databases | gzip > "$backup"
 [ -s "$backup" ] || { echo "Database backup failed" >&2; exit 1; }
 gzip -t "$backup"
+mkdir -p backups
+chmod 700 backups
+compose up -d backup >/dev/null
+full_backup="$(compose exec -T backup /usr/local/bin/jm-backup once | tail -n 1 | tr -d '\r')"
+[ -n "$full_backup" ] || { echo "Full-state backup failed" >&2; exit 1; }
+echo "Full-state backup: $full_backup"
 
 rollback() {
   local reason="${1:-update failure}" restore_status=0
   trap - ERR
   set +e
   echo "Update failed ($reason). Rolling back to $previous_commit..." >&2
-  compose stop gateway radius whatsapp panel >/dev/null 2>&1
+  compose stop gateway radius whatsapp panel cron backup >/dev/null 2>&1
   git reset --hard "$previous_commit"
   compose up -d database
   gunzip -c "$backup" | compose exec -T database mariadb -uroot -p"$root_password"

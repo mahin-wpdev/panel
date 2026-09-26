@@ -33,6 +33,9 @@ export const createWhatsAppRouter = service => {
   router.post('/logout', requireAdmin, asyncHandler(async (req, res) => {
     ok(res, await service.logout())
   }))
+  router.post('/reconnect', requireAdmin, asyncHandler(async (req, res) => {
+    ok(res, await service.restart())
+  }))
 
   return router
 }

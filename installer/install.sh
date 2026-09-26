@@ -4,18 +4,46 @@ set -Eeuo pipefail
 REPO="${PANEL_REPO:-mahin-wpdev/panel}"
 BRANCH="${PANEL_BRANCH:-next-release}"
 APP_DIR="${PANEL_DIR:-/opt/jm-panel}"
+MODE="${1:-install}"
 
 [ "${EUID}" -eq 0 ] || { echo "Run as root" >&2; exit 1; }
 . /etc/os-release
-case "${ID:-}" in
-  ubuntu|debian) ;;
+case "${ID:-}:${VERSION_ID:-}" in
+  ubuntu:22.04|ubuntu:24.04|debian:12) ;;
   *) echo "Ubuntu 22.04/24.04 or Debian 12 is required" >&2; exit 1 ;;
 esac
+
+if [ "$MODE" = "--repair" ]; then
+  [ -x "$APP_DIR/installer/repair.sh" ] || { echo "No repairable installation at $APP_DIR" >&2; exit 1; }
+  exec env PANEL_DIR="$APP_DIR" PANEL_BRANCH="$BRANCH" bash "$APP_DIR/installer/repair.sh"
+elif [ "$MODE" = "--update" ]; then
+  [ -x "$APP_DIR/installer/update.sh" ] || { echo "No updateable installation at $APP_DIR" >&2; exit 1; }
+  exec env PANEL_DIR="$APP_DIR" PANEL_BRANCH="$BRANCH" bash "$APP_DIR/installer/update.sh"
+elif [ "$MODE" != "install" ]; then
+  echo "Usage: install.sh [--repair|--update]" >&2
+  exit 2
+fi
+
+cpu_count="$(nproc 2>/dev/null || echo 1)"
+ram_kb="$(awk '/MemTotal/ {print $2}' /proc/meminfo)"
+disk_path="$(dirname "$APP_DIR")"
+[ -d "$disk_path" ] || disk_path="/"
+disk_mb="$(df -Pm "$disk_path" 2>/dev/null | awk 'NR==2 {print $4}' || echo 0)"
+[ "$cpu_count" -ge 1 ] || { echo "At least 1 CPU is required" >&2; exit 1; }
+[ "${ram_kb:-0}" -ge 900000 ] || { echo "At least 1 GB RAM is required" >&2; exit 1; }
+[ "${disk_mb:-0}" -ge 5120 ] || { echo "At least 5 GB free disk space is required" >&2; exit 1; }
+
+if [ -f "$APP_DIR/docker-compose.yml" ] && [ -f "$APP_DIR/.env" ]; then
+  echo "Existing installation detected at $APP_DIR." >&2
+  echo "Use: sudo bash installer/install.sh --update  or  --repair" >&2
+  exit 1
+fi
 
 export DEBIAN_FRONTEND=noninteractive
 if [ "${PANEL_SKIP_SYSTEM_SETUP:-0}" != "1" ]; then
   apt-get update -qq
-  apt-get install -y -qq ca-certificates curl git openssl docker.io
+  apt-get install -y -qq ca-certificates curl git openssl docker.io ufw
+  timedatectl set-timezone "${TZ:-Asia/Dhaka}" 2>/dev/null || true
   systemctl enable --now docker
 
   if ! docker compose version >/dev/null 2>&1 && ! command -v docker-compose >/dev/null 2>&1; then
@@ -30,6 +58,17 @@ else
     || { echo "Docker Compose is required when PANEL_SKIP_SYSTEM_SETUP=1" >&2; exit 1; }
 fi
 
+if [ "${PANEL_SKIP_NETWORK_CHECK:-0}" != "1" ]; then
+  curl -fsSI --max-time 10 https://github.com/ >/dev/null || { echo "Outbound HTTPS/network check failed" >&2; exit 1; }
+fi
+if command -v ufw >/dev/null 2>&1; then
+  ufw allow 80/tcp >/dev/null 2>&1 || true
+  ufw allow 443/tcp >/dev/null 2>&1 || true
+  ufw allow 1812/udp >/dev/null 2>&1 || true
+  ufw allow 1813/udp >/dev/null 2>&1 || true
+  ufw allow 3799/udp >/dev/null 2>&1 || true
+fi
+
 compose() {
   if docker compose version >/dev/null 2>&1; then docker compose "$@"; else docker-compose "$@"; fi
 }
@@ -41,6 +80,8 @@ if [ ! -f "$APP_DIR/docker-compose.yml" ]; then
   git clone --depth 1 --branch "$BRANCH" "https://github.com/$REPO.git" "$APP_DIR"
 fi
 cd "$APP_DIR"
+mkdir -p backups
+chmod 700 backups
 
 rand() { openssl rand -hex "$1"; }
 public_host="${PANEL_HOST:-$(curl -fsS --max-time 8 https://api.ipify.org || hostname -I | awk '{print $1}')}"
@@ -78,6 +119,14 @@ WHATSAPP_API_KEY_PEPPER=$(rand 32)
 WHATSAPP_DELAY_MIN_MS=5000
 WHATSAPP_DELAY_MAX_MS=9000
 WHATSAPP_DAILY_LIMIT=500
+CRON_INTERVAL_SECONDS=60
+REMINDER_INTERVAL_SECONDS=3600
+USAGE_INTERVAL_SECONDS=300
+OLT_INTERVAL_SECONDS=300
+BACKUP_DAILY_RETENTION=7
+BACKUP_WEEKLY_RETENTION=4
+BACKUP_MONTHLY_RETENTION=6
+BACKUP_INTERVAL_SECONDS=86400
 EOF
 
 compose config >/dev/null
@@ -108,7 +157,7 @@ cat > install-credentials.txt <<EOF
 Panel URL: $public_origin
 Admin username: $admin_user
 Admin password: $admin_password
-WhatsApp dashboard: $public_origin/whatsapp/
+WhatsApp setup: $public_origin/?_route=whatsapp
 EOF
 chmod 600 install-credentials.txt
 echo "Installation complete."

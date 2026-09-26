@@ -1,0 +1,8 @@
+2026092601|autorecharge/migration.sql
+2026092602|system/reseller/migration.sql
+2026092603|system/mobile/migration.sql
+2026092604|system/mobile/admin-recharge-migration.sql
+2026092605|system/mobile/push-migration.sql
+2026092606|system/mobile/support-tickets-migration.sql
+2026092607|system/mobile/traffic-peaks-migration.sql
+2026092608|system/mobile/session-revocation.sql

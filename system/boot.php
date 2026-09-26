@@ -89,6 +89,11 @@ try {
         $_COOKIE['uid'] = $_GET['uid'];
     }
     $admin = Admin::_info();
+    if ($admin && in_array($admin['user_type'], ['SuperAdmin', 'Admin'], true)
+        && empty($config['setup_complete'])
+        && !in_array($handler, ['setup', 'logout', 'login'], true)) {
+        r2(getUrl('setup'));
+    }
     // An Agent is a reseller-only account.  Keep the restriction on the
     // server, not merely in the sidebar, so a typed URL cannot expose an
     // administrative controller or another customer's data.
