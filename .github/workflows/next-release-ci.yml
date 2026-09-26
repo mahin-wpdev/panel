@@ -52,7 +52,7 @@ jobs:
           RADIUS_SHARED_SECRET=ci_radius_secret_32_characters
           RADIUS_CLIENT_NETWORK=0.0.0.0/0
           WHATSAPP_ADMIN_API_KEY=ci_whatsapp_admin_key_32_characters
-          WHATSAPP_API_KEY_PEPPER=ci_whatsapp_pepper_key_32_chars
+          WHATSAPP_API_KEY_PEPPER=ci_whatsapp_pepper_key_at_least_32_chars
           WHATSAPP_DELAY_MIN_MS=0
           WHATSAPP_DELAY_MAX_MS=0
           WHATSAPP_DAILY_LIMIT=10
@@ -62,7 +62,12 @@ jobs:
         run: docker compose config --quiet
 
       - name: Build and start clean stack
-        run: docker compose up -d --build
+        run: |
+          if ! docker compose up -d --build; then
+            docker compose ps --all
+            docker compose logs --tail=200
+            exit 1
+          fi
 
       - name: Verify services
         run: |
