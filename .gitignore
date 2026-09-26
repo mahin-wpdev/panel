@@ -1,4 +1,7 @@
 config.php
+.env
+install-credentials.txt
+backup-before-update-*.sql.gz
 .DS_Store
 .vscode/
 ui/ui/compiled

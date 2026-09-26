@@ -1,26 +1,24 @@
-# Use the official PHP image with Apache
-FROM php:7.4-apache
-EXPOSE 80
-# Install necessary PHP extensions
-RUN apt-get update && apt-get install -y \
-    libfreetype6-dev \
-    libjpeg62-turbo-dev \
-    libpng-dev \
-    zlib1g-dev \
-    libzip-dev \
-    zip \
-    unzip \
+FROM php:8.3-apache
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        default-mysql-client curl cron libfreetype6-dev libjpeg62-turbo-dev \
+        libpng-dev libzip-dev unzip \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) gd \
-    && docker-php-ext-install pdo pdo_mysql \
-    && docker-php-ext-install zip
+    && docker-php-ext-install -j"$(nproc)" gd pdo pdo_mysql mysqli zip \
+    && a2enmod rewrite headers expires \
+    && rm -rf /var/lib/apt/lists/*
 
-# copy contents into directory
 COPY . /var/www/html
+COPY infrastructure/panel/entrypoint.sh /usr/local/bin/jm-panel-entrypoint
+COPY infrastructure/panel/apache.conf /etc/apache2/conf-available/jm-panel.conf
 
-# Set appropriate permissions
-RUN chown -R www-data:www-data /var/www/html
-RUN chmod -R 755 /var/www/html
+RUN chmod +x /usr/local/bin/jm-panel-entrypoint \
+    && a2enconf jm-panel \
+    && mkdir -p /var/www/html/system/uploads /var/www/html/system/cache \
+       /var/www/html/ui/compiled /var/www/html/system/secure \
+    && chown -R www-data:www-data /var/www/html
 
-# Set working directory
 WORKDIR /var/www/html
+EXPOSE 80
+ENTRYPOINT ["jm-panel-entrypoint"]
+CMD ["apache2-foreground"]

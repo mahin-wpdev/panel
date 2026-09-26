@@ -1,0 +1,11 @@
+{$SITE_ADDRESS} {
+    encode zstd gzip
+    @whatsapp path /whatsapp /whatsapp/*
+    handle @whatsapp {
+        uri strip_prefix /whatsapp
+        reverse_proxy whatsapp:3000
+    }
+    handle {
+        reverse_proxy panel:80
+    }
+}
