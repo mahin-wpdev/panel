@@ -100,6 +100,26 @@ jobs:
           docker compose logs --tail=200
           exit 1
 
+      - name: Verify public surface hardening
+        run: |
+          set -euo pipefail
+          for path in \
+            /config.php \
+            /.env \
+            /install/phpnuxbill.sql \
+            /installer/install.sh \
+            /database/migrations/manifest.txt \
+            /infrastructure/caddy/Caddyfile \
+            /tests/release/static_release_test.js \
+            /system/secure/; do
+            code="$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1${path}")"
+            test "$code" = "404"
+          done
+          headers="$(curl -sSI http://127.0.0.1/)"
+          grep -qi '^X-Content-Type-Options: nosniff' <<<"$headers"
+          grep -qi '^X-Frame-Options: SAMEORIGIN' <<<"$headers"
+          grep -qi '^Referrer-Policy: strict-origin-when-cross-origin' <<<"$headers"
+
       - name: Verify reseller schema
         run: |
           DB_NAME="$(sed -n 's/^DB_NAME=//p' .env)"
