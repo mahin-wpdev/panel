@@ -2,22 +2,118 @@
 
 # CHANGELOG
 
-## 2026.09.27 — Arivo/JM next-release release candidate
+## 2026.09.27 — Arivo ISP Billing next-release
 
-- Added one-command Docker deployment with MariaDB, FreeRADIUS, bundled WhatsApp, cron, backup and Caddy services.
-- Added deterministic schema migrations, fresh-install seeding, first-run setup wizard and safe update/repair/restore/uninstall lifecycle scripts.
-- Added failed-update automatic rollback and full-state backup/restore verification.
-- Added real FreeRADIUS CI authentication/accounting tests and repeatable migration checks.
-- Added reseller schema foundation, mobile API/session revocation, admin operations, support/push and server-owned traffic peak support.
-- Added MikroTik onboarding with preview, tagged managed objects, pre-change backup/export and generated rollback script.
-- Added bundled WhatsApp admin status, QR, test-send, reconnect and logout flows; standalone WhatsApp UI is not publicly exposed.
-- Added GitHub-backed mobile release validation, same-origin APK download redirect, SHA-256 validation and stable/beta channel support.
-- Hardened PHP sessions with strict cookies-only mode, HttpOnly, SameSite=Lax and HTTPS Secure cookies.
-- Hardened Caddy/Apache/Nginx deployment surfaces so configuration, installer, database, test, backup and secure paths are not web-readable.
-- Hardened first-run public endpoint/billing inputs and atomic secure mobile-release configuration writes.
-- Hardened WhatsApp admin actions to require both successful HTTP status and JSON `success: true`.
-- Expanded CI to cover public-surface restrictions, clean installer smoke, service health, schema, RADIUS, backup/restore and rollback.
-- Updated GitHub Actions runtime dependencies to `actions/checkout@v7` and `actions/setup-node@v7` to use the current Node 24 action runtime and remove the Node 20 deprecation warning.
+This release turns the PHPNuxBill base into a broader ISP operations platform. The list below is source-audited against current upstream PHPNuxBill master rather than relying only on the inherited README/CHANGELOG.
+
+### Platform, deployment and lifecycle
+
+- Added full Docker Compose stack: MariaDB 11.4, panel, cron worker, bundled WhatsApp, FreeRADIUS, backup service and Caddy gateway.
+- Added one-command installer for Ubuntu 22.04/24.04 and Debian 12 with host/resource/network preflight.
+- Added first-run setup wizard for company, public endpoint, admin, billing, network, WhatsApp and mobile-release settings.
+- Added ordered checksum-tracked migration runner and fresh-install database/RADIUS seeding.
+- Added dedicated cron worker for core cron, reminders, ISP usage and OLT synchronization.
+- Added full-state backup service for database, uploads, secure data, WhatsApp state and Caddy data/config with daily/weekly/monthly retention.
+- Added restore, repair, safe update and uninstall workflows.
+- Added pre-update database + full-state backups and health-gated automatic rollback to the previous Git commit/database on failed updates.
+- Added normal uninstall that retains data and explicit `--purge-data` destructive removal.
+
+### Mobile app backend and release management
+
+- Added dedicated `mobile-api.php` with server-info, login, refresh, logout, authenticated profile and role-aware access.
+- Added customer/admin/reseller mobile sessions, auth-attempt tracking and database-triggered session revocation.
+- Added customer dashboard, live traffic, monthly usage and persistent server-owned RADIUS download/upload peak tracking.
+- Added admin customer profile, expiry, recharge preview/recharge and ONU operations.
+- Added support-ticket workflow with events, replies, status changes and unread notifications.
+- Added FCM push-token registration, invalid-token disabling and panel-to-app notification storage.
+- Added GitHub-backed stable/beta mobile release flow with tag, APK size, SHA-256, download URL and required-update policy validation.
+- Added same-origin APK download endpoint and `[[app_download_link]]` notification placeholder support.
+
+### Reseller system
+
+- Added reseller profiles backed by native Agent users.
+- Added reseller-scoped customer ownership, approval workflow and customer username prefixing.
+- Added reseller-specific package access and tenant-isolated customer search/list/report views.
+- Restricted resellers from changing router/package/ownership/ONU administration outside the intended policy.
+- Added immutable recharge-linked earnings with base cost, gross profit, reseller profit and admin profit snapshots.
+- Added fixed/percentage reseller profit rules, settlement tracking, reports and invoice access.
+- Added reseller dashboard metrics for customers, ONU state, sales and profit.
+
+### OLT / ONU operations
+
+- Added V-SOL Telnet OLT management, encrypted stored credentials and connection testing.
+- Added scheduled OLT synchronization and pagination-aware full inventory reads.
+- Added ONU status, distance, optical-power, last-seen and movement tracking.
+- Added customer ONU assignment/unassignment in panel and mobile admin flows.
+- Added guarded single-ONU removal that fails closed unless the ONU is unassigned and live-verified offline.
+- Added status/power history and sync logging code paths.
+
+### MikroTik and RADIUS
+
+- Added guided MikroTik onboarding for PPPoE, Hotspot and hybrid modes.
+- Added read-only router probe and generated configuration preview before apply.
+- Added RouterOS binary backup/export before managed changes.
+- Added dedicated restricted panel API user, source-IP-restricted API/API-SSL and managed firewall rules.
+- Added RADIUS authentication/accounting, CoA/Disconnect, PPP AAA and interim-update provisioning.
+- Added generated rollback script using tagged managed objects.
+- Added bundled SQL FreeRADIUS service on 1812/1813/3799.
+- Added RADIUS Disconnect-Request/CoA handling in the Radius device adapter.
+- Added real CI Access-Accept and accounting persistence tests.
+
+### Automated payment and messaging
+
+- Added bKash Personal SMS-forwarder auto-recharge.
+- Added bKash Merchant SMS-forwarder auto-recharge.
+- Added Nagad SMS-forwarder auto-recharge.
+- Added webhook shared-secret validation, gateway/TrxID replay protection and per-transaction processing locks.
+- Added idempotent autorecharge receipt ledger and safe post-recharge error handling.
+- Added bundled self-hosted Node.js/Baileys WhatsApp service with internal API-key authentication.
+- Added panel WhatsApp status, QR, test-send, reconnect and logout controls plus persistent auth/data/log volumes.
+- Kept legacy external WhatsApp URL fallback in the PHP message layer.
+
+### Security and release engineering
+
+- Hardened PHP sessions with strict mode, cookies-only mode, HttpOnly, SameSite=Lax and HTTPS Secure cookies.
+- Added Caddy/Apache/Nginx sensitive-path restrictions for config, installer, database, tests, backups and secure files.
+- Added installer re-run guard on configured installations.
+- Added role/tenant checks for mobile, reseller and ONU operations.
+- Added public mobile release digest/size/tag validation.
+- Added CI release safety invariants, first-party PHP syntax checks, role authorization tests and ONU fail-closed tests.
+- Added clean Docker stack validation, service health checks, public-surface regression tests and repeatable migration tests.
+- Added full-state backup -> mutation -> restore verification.
+- Added forced failed-update -> automatic rollback verification.
+- Added fresh one-command installer smoke test.
+- Updated GitHub Actions dependencies to `actions/checkout@v7` and `actions/setup-node@v7` for the Node 24 action runtime.
+
+### New schema objects
+
+- Added `tbl_autorecharge_receipts`.
+- Added reseller tables: `tbl_resellers`, `tbl_reseller_packages`, `tbl_reseller_earnings`, `tbl_reseller_settlements`, `tbl_reseller_activity_logs`.
+- Added mobile auth/session tables: `tbl_mobile_auth_sessions`, `tbl_mobile_auth_attempts`.
+- Added admin recharge requests table.
+- Added mobile push tokens and app notifications tables.
+- Added support ticket, event and notification tables.
+- Added RADIUS peak state and peak history tables.
+- Added customer/staff/reseller mobile-session revocation triggers.
+
+### Upstream compatibility retained
+
+- Current upstream ODP management is present.
+- Newer upstream custom login-page branding is present.
+- Newer upstream PDF invoice and email-attachment support is present.
+- Newer upstream parameterized customer/search-query hardening is present, including Arivo-customized customer/reseller query paths.
+- Upstream account-expiration rejection is retained in Arivo's custom `rad.php` RADIUS REST flow.
+
+### Audit notes / known follow-up
+
+- Upstream's 2026 forgot-password CSPRNG + verification-attempt lockout patch is not yet ported; Arivo still uses the older `mt_rand()` recovery-code flow.
+- Upstream `system/devices/MikrotikVpn.php` is absent while VPN UI templates remain; restore/test the adapter or explicitly retire VPN service support.
+- The upstream Arabic language pack is absent.
+- OLT/ONU code references custom OLT tables, but this audit did not find their `CREATE TABLE` definitions in the tracked migration manifest or `system/updates.json`; add/verify a clean-install OLT schema migration.
+- `radius.php` is currently a debug stub; custom REST RADIUS logic is in `rad.php` while Docker uses SQL FreeRADIUS. Clarify/block the legacy debug endpoint for public releases.
+- Custom `rad.php` still contains raw request-derived SQL expressions and should receive a dedicated parameterization/input-safety review.
+- Legacy SHA-1 admin/staff password hashing remains inherited technical debt.
+- `version.json` still reports the upstream-style `2025.3.20`; define an independent Arivo panel version when formal panel releases begin.
 
 ## 2024.10.23
 
