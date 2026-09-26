@@ -1,0 +1,119 @@
+name: jm-broadband-panel
+
+services:
+  database:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${DB_NAME:-jm_panel}
+      MARIADB_USER: ${DB_USER:-jm_panel}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      TZ: ${TZ:-Asia/Dhaka}
+    volumes:
+      - database_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  panel:
+    build: { context: . }
+    restart: unless-stopped
+    depends_on:
+      database: { condition: service_healthy }
+    environment:
+      DB_HOST: database
+      DB_NAME: ${DB_NAME:-jm_panel}
+      DB_USER: ${DB_USER:-jm_panel}
+      DB_PASSWORD: ${DB_PASSWORD}
+      RADIUS_DB_HOST: database
+      RADIUS_DB_NAME: ${DB_NAME:-jm_panel}
+      RADIUS_DB_USER: ${DB_USER:-jm_panel}
+      RADIUS_DB_PASSWORD: ${DB_PASSWORD}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
+      ADMIN_FULLNAME: ${ADMIN_FULLNAME:-Administrator}
+      COMPANY_NAME: ${COMPANY_NAME:-JM Broadband}
+      WHATSAPP_INTERNAL_URL: http://whatsapp:3000
+      WHATSAPP_API_KEY: ${WHATSAPP_ADMIN_API_KEY}
+      TZ: ${TZ:-Asia/Dhaka}
+    volumes:
+      - panel_uploads:/var/www/html/system/uploads
+      - panel_secure:/var/www/html/system/secure
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1/"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+
+  whatsapp:
+    build: { context: services/whatsapp }
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      TRUST_PROXY: 1
+      ADMIN_API_KEY: ${WHATSAPP_ADMIN_API_KEY}
+      API_KEY_PEPPER: ${WHATSAPP_API_KEY_PEPPER}
+      DATABASE_PATH: /data/baileys.sqlite
+      LOG_FILE: /logs/app.log
+      CORS_ORIGINS: ${PUBLIC_ORIGIN}
+      PUBLIC_DOMAIN: ${PUBLIC_HOST}
+      MESSAGE_DELAY_MIN_MS: ${WHATSAPP_DELAY_MIN_MS:-5000}
+      MESSAGE_DELAY_MAX_MS: ${WHATSAPP_DELAY_MAX_MS:-9000}
+      DAILY_SEND_LIMIT: ${WHATSAPP_DAILY_LIMIT:-500}
+    volumes:
+      - whatsapp_data:/data
+      - whatsapp_auth:/app/auth
+      - whatsapp_logs:/logs
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+
+  radius:
+    build: { context: infrastructure/freeradius }
+    restart: unless-stopped
+    depends_on:
+      database: { condition: service_healthy }
+    environment:
+      DB_HOST: database
+      DB_NAME: ${DB_NAME:-jm_panel}
+      DB_USER: ${DB_USER:-jm_panel}
+      DB_PASSWORD: ${DB_PASSWORD}
+      RADIUS_SHARED_SECRET: ${RADIUS_SHARED_SECRET}
+      RADIUS_CLIENT_NETWORK: ${RADIUS_CLIENT_NETWORK:-0.0.0.0/0}
+    ports:
+      - "1812:1812/udp"
+      - "1813:1813/udp"
+      - "3799:3799/udp"
+
+  gateway:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    depends_on:
+      panel: { condition: service_healthy }
+      whatsapp: { condition: service_healthy }
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infrastructure/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  database_data:
+  panel_uploads:
+  panel_secure:
+  whatsapp_data:
+  whatsapp_auth:
+  whatsapp_logs:
+  caddy_data:
+  caddy_config:
