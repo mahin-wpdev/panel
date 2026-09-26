@@ -64,4 +64,12 @@ for (const entrypoint of ['index.php', 'update.php']) {
   assert.match(source, /ini_set\('session\.use_strict_mode',\s*'1'\)/);
   assert.match(source, /ini_set\('session\.use_only_cookies',\s*'1'\)/);
 }
-console.log('PASS: installer, webhook auth, receipt idempotency, logs, Nginx, ONU, session cookies, and server-owned peak invariants');
+const setup = read('system/controllers/setup.php');
+assert.match(setup, /in_array\(\$publicScheme, \['http', 'https'\], true\)/);
+assert.match(setup, /ctype_digit\(\$publicPort\)/);
+assert.match(setup, /FILTER_VALIDATE_IP/);
+assert.match(setup, /JSON_THROW_ON_ERROR/);
+assert.match(setup, /\.tmp\.['"]?\s*\.\s*bin2hex\(random_bytes\(4\)\)/);
+const whatsappController = read('system/controllers/whatsapp.php');
+assert.match(whatsappController, /\(\(\$result\['json'\]\['success'\] \?\? false\) === true\)/);
+console.log('PASS: installer, webhook auth, receipt idempotency, logs, Nginx, ONU, setup, WhatsApp, session cookies, and server-owned peak invariants');

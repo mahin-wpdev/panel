@@ -64,12 +64,12 @@ if (in_array($action, ['test', 'logout', 'reconnect'], true)) {
             r2(getUrl('whatsapp'), 'e', 'Phone and message are required');
         }
         $result = jmBundledWhatsappRequest('POST', '/api/send-message', ['to' => Lang::phoneFormat($phone), 'message' => $message]);
-        $ok = $result['status'] >= 200 && $result['status'] < 300;
+        $ok = $result['status'] >= 200 && $result['status'] < 300 && (($result['json']['success'] ?? false) === true);
         r2(getUrl('whatsapp'), $ok ? 's' : 'e', $ok ? 'Test message accepted by WhatsApp service' : ($result['json']['error'] ?? 'WhatsApp test failed'));
     }
     $endpoint = $action === 'logout' ? '/api/logout' : '/api/reconnect';
     $result = jmBundledWhatsappRequest('POST', $endpoint, []);
-    $ok = $result['status'] >= 200 && $result['status'] < 300;
+    $ok = $result['status'] >= 200 && $result['status'] < 300 && (($result['json']['success'] ?? false) === true);
     r2(getUrl('whatsapp'), $ok ? 's' : 'e', $ok ? ucfirst($action) . ' requested successfully' : ($result['json']['error'] ?? 'WhatsApp action failed'));
 }
 

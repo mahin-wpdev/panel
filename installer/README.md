@@ -13,7 +13,9 @@ PANEL_ADMIN_USER, PANEL_ADMIN_PASSWORD and RADIUS_CLIENT_NETWORK. For automatic
 HTTPS, point a domain to the server and set PANEL_SITE_ADDRESS to that domain.
 
 The installer creates MariaDB, FreeRADIUS, bundled WhatsApp, cron, backup and
-Caddy services. Generated credentials are saved once to
+Caddy services. Caddy and Apache deny direct web access to configuration,
+installer, database, test, backup and `system/secure` paths while keeping the
+normal panel/mobile endpoints available. Generated credentials are saved once to
 /opt/jm-panel/install-credentials.txt with mode 600. On the first admin login,
 the setup wizard collects company, public access, billing, network, WhatsApp
 and mobile-release settings and then locks itself.

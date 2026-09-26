@@ -2,6 +2,22 @@
 
 # CHANGELOG
 
+## 2026.09.27 — Arivo/JM next-release release candidate
+
+- Added one-command Docker deployment with MariaDB, FreeRADIUS, bundled WhatsApp, cron, backup and Caddy services.
+- Added deterministic schema migrations, fresh-install seeding, first-run setup wizard and safe update/repair/restore/uninstall lifecycle scripts.
+- Added failed-update automatic rollback and full-state backup/restore verification.
+- Added real FreeRADIUS CI authentication/accounting tests and repeatable migration checks.
+- Added reseller schema foundation, mobile API/session revocation, admin operations, support/push and server-owned traffic peak support.
+- Added MikroTik onboarding with preview, tagged managed objects, pre-change backup/export and generated rollback script.
+- Added bundled WhatsApp admin status, QR, test-send, reconnect and logout flows; standalone WhatsApp UI is not publicly exposed.
+- Added GitHub-backed mobile release validation, same-origin APK download redirect, SHA-256 validation and stable/beta channel support.
+- Hardened PHP sessions with strict cookies-only mode, HttpOnly, SameSite=Lax and HTTPS Secure cookies.
+- Hardened Caddy/Apache/Nginx deployment surfaces so configuration, installer, database, test, backup and secure paths are not web-readable.
+- Hardened first-run public endpoint/billing inputs and atomic secure mobile-release configuration writes.
+- Hardened WhatsApp admin actions to require both successful HTTP status and JSON `success: true`.
+- Expanded CI to cover public-surface restrictions, clean installer smoke, service health, schema, RADIUS, backup/restore and rollback.
+
 ## 2024.10.23
 
 - Custom Balance admin refill Requested by Javi Tech

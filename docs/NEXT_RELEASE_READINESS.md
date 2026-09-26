@@ -1,4 +1,4 @@
-# Next-release readiness — Panel + Arivo (2026-09-22)
+# Next-release readiness — Panel + Arivo (2026-09-27)
 
 ## Scope / isolation
 This branch is a **release candidate**, not an authorization to alter the running
@@ -7,12 +7,26 @@ server. The Flutter companion lives in a separate repository, also on branch
 Production rollout and rollback must use the site-specific audit notes below;
 never run the installer SQL against an existing server.
 
+## Automated release acceptance — 2026-09-27
+- `Next release checks` passed on the current `next-release` head after PHP/session and deployment-surface hardening.
+- Clean Docker stack build/start and all service health checks passed.
+- Public-surface regression verifies config, environment, installer, database, test, backup and secure paths return 404 through the bundled gateway; security headers are asserted.
+- FreeRADIUS `Access-Accept` and accounting-start persistence passed against the CI MariaDB schema.
+- Schema migrations are repeatable and mobile/reseller/session triggers remain present after restart.
+- Full-state backup was created, DB/uploads/WhatsApp state was deliberately mutated, restored, and verified back to the pre-mutation state.
+- Forced update failure rolled source/database/services back to the prior healthy state.
+- Fresh one-command installer smoke passed on a clean path, including generated credential permissions and expected running-service count.
+- Live read-only smoke verified the public panel, mobile server-info, unauthenticated 401 behavior, mobile release manifest, 443/8443 API reachability and APK redirect.
+- Arivo ISP Billing `1.1.1+22` download size, SHA-256 digest, package metadata and APK signature matched the published GitHub release.
+- No production customer, payment, router or OLT state was modified during this acceptance pass.
+
 ## Verified in the audit
 - OLT pager fix was confirmed on the running server by two new `synced 26`
   entries after installation; the older 22 was only the first CLI page.
 - Flutter tests: 12 passed (including Home server-peak widget); `flutter analyze --no-pub`: no issues.
-- Fresh signed Android 1.0.5+6 APK build succeeded locally and apksigner
-  verified APK Signature Scheme v2; release credentials were not committed.
+- Current public Arivo ISP Billing `1.1.1+22` APK was downloaded through the
+  live panel redirect; package/version metadata, published size, SHA-256 digest
+  and APK signature were independently verified against the GitHub release.
 - Local PHP 8.2 syntax checks accepted the touched first-party PHP, payment,
   mobile and installer files. CI separately validates the release set on PHP 8.3.
 - Added automatic release safety checks and branch-targeted CI definitions.
@@ -49,11 +63,13 @@ never run the installer SQL against an existing server.
    Perform authorized incident review, redaction/history strategy and rotate
    any exposed secrets. Do not force-push old branches without coordinating
    with collaborators.
-3. **Critical workflows require non-production integration tests:** personal
-   bKash, merchant bKash and Nagad success/failure/duplicate/incorrect-ref
-   handling; recharge receipt idempotency and PPPoE enable/expiry; reseller
-   price/profit snapshots, tenant isolation, customer visibility; RADIUS
-   auth/accounting across reconnection and month boundary.
+3. **Environment-specific acceptance remains for external/destructive workflows.**
+   CI now covers FreeRADIUS Access-Accept, accounting persistence, migration
+   repeatability, backup/restore and failed-update rollback. Still test personal
+   bKash, merchant bKash and Nagad success/failure/duplicate/incorrect-ref handling;
+   real recharge-to-PPPoE enable/expiry; reseller price/profit snapshots and tenant
+   isolation; and RouterOS reconnection/month-boundary accounting against an isolated
+   CHR or disposable router before production rollout.
 4. **OLT removal remains destructive and not tested end-to-end.** Test only a
    deliberately retired offline unassigned ONU with an independent recovery
    plan. OLT authentication mode DISABLED allows possible re-registration.
@@ -79,8 +95,9 @@ never run the installer SQL against an existing server.
 - `/etc/cron.d/arivo-radius-peaks` runs the collector as `www` every minute;
   stderr is `/var/log/arivo-radius-peaks.err` (logrotate configured).
   Live validation found 30 persisted customer peaks; direct dashboard/Home
-  data functions both returned `has_record=true`. This does not prove that
-  an older installed APK displays the field; update to Android 1.0.5+6.
+  data functions both returned `has_record=true`. The current public Android
+  release is Arivo ISP Billing `1.1.1+22`; installed clients should be upgraded
+  through the validated release manifest/download flow.
 - Protected backup directory `/root/arivo-release-backups/20260922-173904/`
   holds the prior Nginx/PHP CLI config, site archive (~32 MB), and read-only
   62-table Panel database SQL snapshot (~14 MB). Restore was NOT rehearsed.

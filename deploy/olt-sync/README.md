@@ -1,4 +1,4 @@
-# V-SOL OLT pagination fix (NOT YET DEPLOYED)
+# V-SOL OLT pagination fix (deployed and read-only verified 2026-09-22)
 
 The OLT prints `Press any key to continue (Q to quit)` after about 22 ONU rows.
 A reader that accepts a partial page can undercount the 26 ONUs already stored in the Panel.
@@ -12,7 +12,9 @@ treats incomplete responses as errors instead of deleting or misclassifying ONUs
 - `OltOnuRemoval.php` → `/www/wwwroot/27.147.201.165/panel/system/autoload/OltOnuRemoval.php`
 - `apply.sh` → run as root from the staged directory `/home/mahin/olt-sync`.
 
-## Installation on the authorized machine
+## Re-deployment / recovery procedure
+
+The production pager fix was subsequently installed and read-only sync returned the full 26-ONU inventory. Keep these commands only for an authorized re-deployment or recovery after taking a fresh backup.
 
 From the connected Windows PC, use the user's normal SSH/SFTP access:
 
@@ -51,4 +53,4 @@ A qualified operator can restore exactly those paths after reconciling any
 subsequent live changes. The earlier ONU action backup is separate:
 `/home/mahin/onu-actions-predeploy-20260922.tar.gz`.
 
-**This package being committed or pushed to GitHub does not deploy it.**
+**A future commit/push still does not deploy this package. Production changes require an explicit authorized deployment.**
