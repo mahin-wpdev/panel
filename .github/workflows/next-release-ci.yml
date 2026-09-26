@@ -108,9 +108,14 @@ jobs:
           DB_PASSWORD="$(sed -n 's/^DB_PASSWORD=//p' .env)"
           RADIUS_SHARED_SECRET="$(sed -n 's/^RADIUS_SHARED_SECRET=//p' .env)"
           docker compose exec -T database mariadb -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" -e "DELETE FROM radcheck WHERE username='ci-radius'; INSERT INTO radcheck (username,attribute,op,value) VALUES ('ci-radius','Cleartext-Password',':=','ci-pass');"
-          auth_output="$(docker compose exec -T radius radtest ci-radius ci-pass 127.0.0.1 0 "$RADIUS_SHARED_SECRET" 2>&1)"
+          auth_status=0
+          auth_output="$(docker compose exec -T radius radtest ci-radius ci-pass 127.0.0.1 0 "$RADIUS_SHARED_SECRET" 2>&1)" || auth_status=$?
           printf '%s\n' "$auth_output"
-          grep -q "Access-Accept" <<<"$auth_output"
+          if [ "$auth_status" -ne 0 ] || ! grep -q "Access-Accept" <<<"$auth_output"; then
+            docker compose ps radius
+            docker compose logs --tail=200 radius
+            exit 1
+          fi
           printf '%s\n' 'User-Name = "ci-radius"' 'Acct-Status-Type = Start' 'Acct-Session-Id = "ci-session-1"' 'NAS-IP-Address = 127.0.0.1' 'NAS-Port = 1' 'Service-Type = Framed-User' 'Framed-Protocol = PPP' 'Framed-IP-Address = 10.10.10.200' | docker compose exec -T radius radclient -x 127.0.0.1:1813 acct "$RADIUS_SHARED_SECRET"
           acct_count="$(docker compose exec -T database mariadb -N -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" -e "SELECT COUNT(*) FROM radacct WHERE username='ci-radius' AND acctsessionid='ci-session-1'")"
           test "$acct_count" -ge 1
