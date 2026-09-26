@@ -1,11 +1,9 @@
 {$SITE_ADDRESS} {
     encode zstd gzip
 
-    @sensitive path \
-        /config.php /config.sample.php /.env /.env.* /.github/* \
-        /install/* /installer/* /database/* /deploy/* /infrastructure/* \
-        /services/* /tests/* /system/secure/* /backups/* \
-        /docker-compose.yml /Dockerfile /.dockerignore
+    @sensitive {
+        path /config.php /config.sample.php /.env /.env.* /.github/* /install/* /installer/* /database/* /deploy/* /infrastructure/* /services/* /tests/* /system/secure/* /backups/* /docker-compose.yml /Dockerfile /.dockerignore
+    }
     respond @sensitive 404
 
     header {
