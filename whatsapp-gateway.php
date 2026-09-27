@@ -15,9 +15,22 @@ if (strlen($to) < 8 || $message === '') {
     exit('Invalid recipient or message');
 }
 
-$keyFile = __DIR__ . '/system/secure/whatsapp-api-key';
-$apiKey = is_readable($keyFile) ? trim((string) file_get_contents($keyFile)) : '';
+$keyFiles = [
+    __DIR__ . '/system/secure/whatsapp-api-key',
+    __DIR__ . '/.phpnuxbill-whatsapp-api-key',
+];
+$apiKey = '';
+foreach ($keyFiles as $keyFile) {
+    if (is_readable($keyFile)) {
+        $apiKey = trim((string) file_get_contents($keyFile));
+        if ($apiKey !== '') break;
+    }
+}
+$urlFile = __DIR__ . '/.phpnuxbill-whatsapp-url';
 $baseUrl = rtrim((string) getenv('WHATSAPP_INTERNAL_URL'), '/');
+if ($baseUrl === '' && is_readable($urlFile)) {
+    $baseUrl = rtrim(trim((string) file_get_contents($urlFile)), '/');
+}
 if ($apiKey === '' || $baseUrl === '' || !function_exists('curl_init')) {
     http_response_code(503);
     exit('Bundled WhatsApp service unavailable');

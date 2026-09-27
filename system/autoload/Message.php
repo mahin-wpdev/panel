@@ -139,8 +139,17 @@ class Message
 
             try {
                 $response = Http::getData($waurl);
-                self::logMessage('WhatsApp HTTP Response', $phone, $txt, 'Success', $response);
-                return $response;
+                $body = trim((string) $response);
+                $decoded = json_decode($body, true);
+                $lower = strtolower($body);
+                $failedJson = is_array($decoded) && array_key_exists('success', $decoded) && empty($decoded['success']);
+                $failedText = $body === '' || str_contains($lower, 'service unavailable') || str_contains($lower, 'request failed');
+                if ($failedJson || $failedText) {
+                    $reason = is_array($decoded) ? (string) ($decoded['error'] ?? $body) : $body;
+                    throw new RuntimeException($reason !== '' ? $reason : 'WhatsApp gateway rejected the message');
+                }
+                self::logMessage('WhatsApp HTTP Response', $phone, $txt, 'Success', $body);
+                return $body;
             } catch (Throwable $e) {
                 self::logMessage('WhatsApp HTTP Request', $phone, $txt, 'Error', $e->getMessage());
             }

@@ -6,9 +6,22 @@ if (!in_array($admin['user_type'], ['SuperAdmin', 'Admin'], true)) {
 
 function jmBundledWhatsappRequest(string $method, string $path, ?array $payload = null): array
 {
+    $panelRoot = dirname(__DIR__, 2);
     $base = rtrim((string) getenv('WHATSAPP_INTERNAL_URL'), '/');
-    $keyFile = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'secure' . DIRECTORY_SEPARATOR . 'whatsapp-api-key';
-    $key = is_readable($keyFile) ? trim((string) file_get_contents($keyFile)) : '';
+    $urlFile = $panelRoot . DIRECTORY_SEPARATOR . '.phpnuxbill-whatsapp-url';
+    if ($base === '' && is_readable($urlFile)) {
+        $base = rtrim(trim((string) file_get_contents($urlFile)), '/');
+    }
+    $key = '';
+    foreach ([
+        dirname(__DIR__) . DIRECTORY_SEPARATOR . 'secure' . DIRECTORY_SEPARATOR . 'whatsapp-api-key',
+        $panelRoot . DIRECTORY_SEPARATOR . '.phpnuxbill-whatsapp-api-key',
+    ] as $keyFile) {
+        if (is_readable($keyFile)) {
+            $key = trim((string) file_get_contents($keyFile));
+            if ($key !== '') break;
+        }
+    }
     if ($base === '' || $key === '') {
         return ['status' => 503, 'body' => '', 'json' => ['success' => false, 'error' => 'Bundled WhatsApp service is not configured']];
     }
