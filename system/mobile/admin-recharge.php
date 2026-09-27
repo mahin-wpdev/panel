@@ -43,13 +43,17 @@ function jm_mobile_recharge_search(PDO $db, array $session, string $query): arra
         'note'=>'Only active accounts with an existing internet plan can be renewed. Manual recharge is not bKash payment verification.'];
 }
 function jm_mobile_recharge_plan_eligible(array $current, array $plan): bool {
+    $device=(string)($current['device'] ?? '');
+    $radius=strcasecmp(trim($device),'Radius')===0;
+    $routerCompatible=$radius
+        || (string)($plan['routers'] ?? '') === (string)($current['routers'] ?? '');
     return ($current['status'] ?? '') === 'Active'
         && (int)($current['plan_id'] ?? 0) > 0
         && (int)($plan['enabled'] ?? 0) === 1
-        && (string)($plan['routers'] ?? '') === (string)($current['routers'] ?? '')
+        && $routerCompatible
         && in_array((string)($plan['type'] ?? ''), ['PPPOE','Hotspot'], true)
         && (string)$plan['type'] === (string)($current['type'] ?? '')
-        && (string)($plan['device'] ?? '') === (string)($current['device'] ?? '')
+        && (string)($plan['device'] ?? '') === $device
         && (string)($plan['prepaid'] ?? '') === (string)($current['prepaid'] ?? '');
 }
 function jm_mobile_recharge_options(PDO $db, array $session, int $customerId): array {
@@ -60,9 +64,9 @@ function jm_mobile_recharge_options(PDO $db, array $session, int $customerId): a
         respond(409,['error'=>'CUSTOMER_PLAN_UNAVAILABLE']);
     $rows=jm_mobile_query($db,
         "SELECT id,name_plan,price,type,routers,device,prepaid,validity,validity_unit,enabled
-         FROM tbl_plans WHERE enabled=1 AND routers=? AND type=? AND device=?
+         FROM tbl_plans WHERE enabled=1 AND type=? AND device=?
          AND prepaid=? ORDER BY price ASC,id ASC LIMIT 100",
-        [$current['routers'],$current['type'],$current['device'],$current['prepaid']])
+        [$current['type'],$current['device'],$current['prepaid']])
         ->fetchAll(PDO::FETCH_ASSOC);
     return ['available'=>true,'customer'=>$current,
         'items'=>array_values(array_filter($rows,
