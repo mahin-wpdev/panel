@@ -109,7 +109,7 @@ This release turns the PHPNuxBill base into a broader ISP operations platform. T
 - Upstream's 2026 forgot-password CSPRNG + verification-attempt lockout patch is not yet ported; Arivo still uses the older `mt_rand()` recovery-code flow.
 - Upstream `system/devices/MikrotikVpn.php` is absent while VPN UI templates remain; restore/test the adapter or explicitly retire VPN service support.
 - The upstream Arabic language pack is absent.
-- OLT/ONU code references custom OLT tables, but this audit did not find their `CREATE TABLE` definitions in the tracked migration manifest or `system/updates.json`; add/verify a clean-install OLT schema migration.
+- Added clean-install OLT/ONU schema migration, portable OLT paths and persistent encryption-key bootstrap; cron health now requires a real `cron_last_run.txt` update instead of process heartbeat alone.
 - `radius.php` is currently a debug stub; custom REST RADIUS logic is in `rad.php` while Docker uses SQL FreeRADIUS. Clarify/block the legacy debug endpoint for public releases.
 - Custom `rad.php` still contains raw request-derived SQL expressions and should receive a dedicated parameterization/input-safety review.
 - Legacy SHA-1 admin/staff password hashing remains inherited technical debt.

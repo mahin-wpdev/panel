@@ -119,7 +119,8 @@ function jm_mobile_onu_remove(PDO $db,array $session,array $input): array {
       [(int)$onu['olt_id']])->fetch(PDO::FETCH_ASSOC);
     if (!$olt || ($olt['status']??'')==='Disabled')
         respond(409,['error'=>'OLT_NOT_AVAILABLE']);
-    $lock=@fopen('/www/wwwroot/27.147.201.165/system/secure/olt-sync.lock','c');
+    $systemRoot=dirname(__DIR__);
+    $lock=@fopen($systemRoot.'/secure/olt-sync.lock','c');
     if (!$lock || !flock($lock,LOCK_EX|LOCK_NB)) {
         if ($lock) fclose($lock);
         respond(409,['error'=>'OLT_SYNC_RUNNING']);
@@ -133,8 +134,8 @@ function jm_mobile_onu_remove(PDO $db,array $session,array $input): array {
         respond(409,['error'=>'ONU_CHANGED_REFRESH_REQUIRED']);
     }
     try {
-        require_once '/www/wwwroot/27.147.201.165/system/autoload/OltManager.php';
-        require_once '/www/wwwroot/27.147.201.165/system/autoload/OltOnuRemoval.php';
+        require_once $systemRoot.'/autoload/OltManager.php';
+        require_once $systemRoot.'/autoload/OltOnuRemoval.php';
         OltOnuRemoval::removeOffline($olt,$fresh);
         jm_mobile_query($db,"UPDATE tbl_onus SET status='REMOVED',updated_at=NOW() WHERE id=?",
           [$onuId]);

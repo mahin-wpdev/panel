@@ -6,3 +6,5 @@
 2026092606|system/mobile/support-tickets-migration.sql
 2026092607|system/mobile/traffic-peaks-migration.sql
 2026092608|system/mobile/session-revocation.sql
+2026092701|database/migrations/2026092701_olt_onu.sql
+2026092702|database/migrations/2026092702_customer_approval_status.sql

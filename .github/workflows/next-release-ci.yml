@@ -133,7 +133,11 @@ jobs:
           trigger_count="$(db -e "SELECT COUNT(*) FROM information_schema.triggers WHERE trigger_schema='$DB_NAME' AND trigger_name IN ('trg_mobile_customer_revoke','trg_mobile_staff_revoke','trg_mobile_reseller_revoke')")"
           test "$trigger_count" -eq 3
           migration_count="$(db -e "SELECT COUNT(*) FROM tbl_schema_migrations")"
-          test "$migration_count" -eq 8
+          test "$migration_count" -eq 10
+          olt_table_count="$(db -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$DB_NAME' AND table_name IN ('tbl_olts','tbl_olt_pon_ports','tbl_onus','tbl_olt_sync_logs','tbl_onu_status_logs','tbl_onu_power_logs')")"
+          test "$olt_table_count" -eq 6
+          docker compose exec -T panel sh -c 'test "$(wc -c < /var/www/html/system/secure/olt-encryption.key)" -eq 32'
+          docker compose exec -T cron sh -c 'test -f /tmp/jm-cron-heartbeat && test -f /var/www/html/system/uploads/cron_last_run.txt'
 
       - name: Verify PHP integration contracts
         run: |

@@ -2,20 +2,31 @@
 declare(strict_types=1);
 
 // Background cache refresh only: no OLT configuration is changed here.
-$_SERVER['HTTP_HOST'] = '27.147.201.165';
-$_SERVER['SERVER_PORT'] = '80';
-$_SERVER['REQUEST_SCHEME'] = 'http';
-$_SERVER['SCRIPT_NAME'] = '/panel/index.php';
-$_SERVER['REQUEST_URI'] = '/panel/';
+// Resolve all paths from this checkout so fresh Docker installs, subdirectory
+// installs and traditional web roots use the same code and secure volume.
+$publicOrigin = rtrim((string) getenv('PUBLIC_ORIGIN'), '/');
+$origin = $publicOrigin !== '' ? parse_url($publicOrigin) : [];
+if (!is_array($origin)) {
+    $origin = [];
+}
+$scheme = (string) ($origin['scheme'] ?? 'http');
+$_SERVER['HTTP_HOST'] = $_SERVER['HTTP_HOST']
+    ?? (string) ($origin['host'] ?? (getenv('PUBLIC_HOST') ?: 'localhost'));
+$_SERVER['SERVER_PORT'] = $_SERVER['SERVER_PORT']
+    ?? ($scheme === 'https' ? '443' : '80');
+$_SERVER['REQUEST_SCHEME'] = $_SERVER['REQUEST_SCHEME'] ?? $scheme;
+$_SERVER['SCRIPT_NAME'] = $_SERVER['SCRIPT_NAME'] ?? '/index.php';
+$_SERVER['REQUEST_URI'] = $_SERVER['REQUEST_URI'] ?? '/';
 
-require '/www/wwwroot/27.147.201.165/panel/init.php';
-require_once '/www/wwwroot/27.147.201.165/system/autoload/OltManager.php';
-require_once '/www/wwwroot/27.147.201.165/panel/system/mobile/auth-core.php';
-require_once '/www/wwwroot/27.147.201.165/panel/system/mobile/panel-app.php';
-require_once '/www/wwwroot/27.147.201.165/panel/system/mobile/push.php';
+$panelRoot = dirname(__DIR__);
+require $panelRoot . '/init.php';
+require_once __DIR__ . '/autoload/OltManager.php';
+require_once __DIR__ . '/mobile/auth-core.php';
+require_once __DIR__ . '/mobile/panel-app.php';
+require_once __DIR__ . '/mobile/push.php';
 
 $db = ORM::get_db();
-$lockPath = '/www/wwwroot/27.147.201.165/system/secure/olt-sync.lock';
+$lockPath = __DIR__ . '/secure/olt-sync.lock';
 $lock = fopen($lockPath, 'c');
 if (!$lock || !flock($lock, LOCK_EX | LOCK_NB)) {
     exit(0);

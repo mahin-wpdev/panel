@@ -31,6 +31,42 @@ assert.match(nginx, /\/panel\/install\//);
 assert.match(nginx, /\blocation\b[\s\S]*log\|sql/);
 assert.match(read('system/autoload/OltManager.php'), /Press any key to continue/);
 assert.match(read('system/autoload/OltOnuRemoval.php'), /Press any key to continue/);
+for (const relative of [
+  'system/autoload/OltManager.php',
+  'system/controllers/onus.php',
+  'system/mobile/admin-onus.php',
+  'system/olt_sync_cron.php',
+]) {
+  assert.doesNotMatch(read(relative), /\/www\/wwwroot\/27\.147\.201\.165/,
+    relative + ' must resolve OLT paths from the active installation');
+}
+const oltMigration = read('database/migrations/2026092701_olt_onu.sql');
+for (const table of ['tbl_olts','tbl_olt_pon_ports','tbl_onus','tbl_olt_sync_logs',
+  'tbl_onu_status_logs','tbl_onu_power_logs']) {
+  assert.match(oltMigration, new RegExp('CREATE TABLE IF NOT EXISTS\\s+' + table, 'i'),
+    table + ' must be created on a clean install');
+}
+assert.match(read('database/migrations/manifest.txt'),
+  /2026092701\|database\/migrations\/2026092701_olt_onu\.sql/);
+assert.match(read('database/migrations/manifest.txt'),
+  /2026092702\|database\/migrations\/2026092702_customer_approval_status\.sql/);
+const approvalMigration = read('database/migrations/2026092702_customer_approval_status.sql');
+assert.match(approvalMigration, /LOWER\(TRIM\(approval_status\)\)/);
+assert.match(approvalMigration, /ENUM\('pending','approved','rejected'\)/);
+assert.match(read('system/controllers/onus.php'),
+  /TRIM\(c\.approval_status\).*approved/,
+  'ONU customer assignment must tolerate legacy approval-status whitespace');
+const cronWorker = read('infrastructure/cron/worker.sh');
+assert.match(cronWorker, /cd "\$dir"/,
+  'cron tasks must run from their own directory for relative includes');
+assert.match(cronWorker, /Critical cron task failed: system\/cron\.php/);
+assert.match(cronWorker, /rm -f \/tmp\/jm-cron-heartbeat/);
+assert.match(read('docker-compose.yml'), /cron_last_run\.txt/,
+  'cron health must require a real application cron marker');
+const panelEntrypoint = read('infrastructure/panel/entrypoint.sh');
+assert.match(panelEntrypoint, /olt-encryption\.key/);
+assert.match(panelEntrypoint, /head -c 32 \/dev\/urandom/);
+assert.match(panelEntrypoint, /refusing to replace an existing key/);
 const autorecharge = read('autorecharge/autorecharge.php');
 assert.match(autorecharge, /auto_payment_sms_secret/);
 assert.match(autorecharge, /hash_equals\(/);

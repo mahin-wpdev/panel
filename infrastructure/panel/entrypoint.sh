@@ -38,6 +38,19 @@ else
   "${MYSQL[@]}" --execute="INSERT INTO tbl_appconfig(setting,value) SELECT 'setup_complete','1' WHERE NOT EXISTS (SELECT 1 FROM tbl_appconfig WHERE setting='setup_complete');"
 fi
 "${MYSQL[@]}" --execute="INSERT INTO tbl_appconfig(setting,value) SELECT 'radius_enable','1' WHERE NOT EXISTS (SELECT 1 FROM tbl_appconfig WHERE setting='radius_enable');"
+
+olt_key=/var/www/html/system/secure/olt-encryption.key
+if [ ! -e "$olt_key" ]; then
+  umask 077
+  head -c 32 /dev/urandom > "$olt_key"
+fi
+olt_key_bytes="$(wc -c < "$olt_key")"
+[ "$olt_key_bytes" -eq 32 ] || {
+  echo "Invalid OLT encryption key length; refusing to replace an existing key" >&2
+  exit 1
+}
+chmod 600 "$olt_key"
+
 printf '%s' "${WHATSAPP_API_KEY:-}" > /var/www/html/system/secure/whatsapp-api-key
 chmod 600 /var/www/html/system/secure/whatsapp-api-key
 chown -R www-data:www-data /var/www/html/system/uploads /var/www/html/system/cache /var/www/html/ui/compiled /var/www/html/system/secure

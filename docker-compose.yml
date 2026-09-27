@@ -67,6 +67,8 @@ services:
       ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
       ADMIN_FULLNAME: ${ADMIN_FULLNAME:-Administrator}
       COMPANY_NAME: ${COMPANY_NAME:-JM Broadband}
+      PUBLIC_HOST: ${PUBLIC_HOST}
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN}
       WHATSAPP_INTERNAL_URL: http://whatsapp:3000
       WHATSAPP_API_KEY: ${WHATSAPP_ADMIN_API_KEY}
       TZ: ${TZ:-Asia/Dhaka}
@@ -79,7 +81,7 @@ services:
       - panel_secure:/var/www/html/system/secure
     command: ["/usr/local/bin/jm-cron-worker"]
     healthcheck:
-      test: ["CMD-SHELL", "test -f /tmp/jm-cron-heartbeat && test $$(($$(date +%s)-$$(date -r /tmp/jm-cron-heartbeat +%s))) -lt 180"]
+      test: ["CMD-SHELL", "test -f /tmp/jm-cron-heartbeat && test $$(($$(date +%s)-$$(date -r /tmp/jm-cron-heartbeat +%s))) -lt 180 && test -f /var/www/html/system/uploads/cron_last_run.txt && test $$(($$(date +%s)-$$(date -r /var/www/html/system/uploads/cron_last_run.txt +%s))) -lt 180"]
       interval: 30s
       timeout: 5s
       retries: 5

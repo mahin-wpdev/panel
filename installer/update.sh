@@ -25,6 +25,8 @@ wait_healthy() {
     running="$(compose ps --services --status running | wc -l)"
     if [ "$running" -eq "$expected" ] \
       && compose exec -T panel curl -fsS --max-time 5 http://127.0.0.1/ >/dev/null 2>&1 \
+      && compose exec -T panel sh -c 'test "$(wc -c < /var/www/html/system/secure/olt-encryption.key)" -eq 32' \
+      && compose exec -T cron sh -c 'test -f /tmp/jm-cron-heartbeat && test -f /var/www/html/system/uploads/cron_last_run.txt' \
       && compose exec -T whatsapp node -e "fetch('http://127.0.0.1:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" \
       && compose exec -T radius freeradius -XC >/dev/null 2>&1; then
       return 0

@@ -229,7 +229,7 @@ These are audit findings, not claims that the upstream project is generally bett
 1. Upstream's 2026 forgot-password patch uses `random_int()`, `hash_equals()` and a verification-attempt lockout. Arivo's current `system/controllers/forgot.php` still uses the older `mt_rand()` flow. Port this patch before calling password recovery fully hardened.
 2. Upstream `system/devices/MikrotikVpn.php` is not present in Arivo. The VPN UI templates remain, so either restore/test the adapter or explicitly retire that feature.
 3. The upstream Arabic language pack is not present in Arivo. Restore it if Arabic UI support is required.
-4. Arivo OLT/ONU code references `tbl_olts`, `tbl_onus`, PON/history/sync tables, but this audit did not find their `CREATE TABLE` definitions in the tracked migration set or `system/updates.json`. Existing production may already contain them; add/verify a clean-install migration before relying on OLT features on a fresh deployment.
+4. OLT/ONU clean-install schema, persistent encryption-key bootstrap and portable runtime paths are now included in the tracked installer/migration flow; CI verifies the six OLT/ONU tables, key presence and live cron marker on a fresh stack.
 5. The tracked `radius.php` is currently a small debug stub, while the custom REST-style RADIUS logic lives in `rad.php` and the Docker stack uses SQL FreeRADIUS. Clarify or block the legacy debug endpoint before public rollout.
 6. The custom `rad.php` contains several raw SQL expressions built from request-derived values. Perform a dedicated parameterization/input-safety review even though the newer upstream search-query hardening is already present elsewhere.
 7. Legacy SHA-1 staff/admin password storage is inherited from PHPNuxBill and remains technical debt.

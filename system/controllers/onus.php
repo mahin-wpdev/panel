@@ -22,7 +22,7 @@ if ($action === 'remove-from-olt') {
         r2(getUrl($base), 'e', 'OLT not available');
     }
     // Same lock as the active once-per-minute OLT sync. Never race a sync.
-    $lock = @fopen('/www/wwwroot/27.147.201.165/system/secure/olt-sync.lock', 'c');
+    $lock = @fopen($root_path . 'system/secure/olt-sync.lock', 'c');
     if (!$lock || !flock($lock, LOCK_EX | LOCK_NB)) {
         if ($lock) fclose($lock);
         r2(getUrl($base), 'e', 'OLT sync is running. Retry in a moment');
@@ -77,10 +77,20 @@ if($action==='assign'){
     if($_SERVER['REQUEST_METHOD']!=='POST'||!Csrf::check(_post('token')))r2(getUrl($base),'e','Invalid or expired request token');
     $onu=ORM::for_table('tbl_onus')->find_one((int)$routes[2]);$customer=ORM::for_table('tbl_customers')->find_one((int)_post('customer_id'));
     if(!$onu||!$customer)r2(getUrl($base),'e','ONU or customer not found');
+    if(strtolower(trim((string)$customer['approval_status']))!=='approved')r2(getUrl($base),'e','Only approved customers can be assigned');
     if($onu['status']==='REMOVED')r2(getUrl($base),'e','Removed ONU cannot be assigned until rediscovered by OLT sync');
     if($onu['customer_id']&&$onu['customer_id']!=$customer['id'])r2(getUrl($base),'e','ONU conflict: existing customer mapping was preserved');
+    $mapped=ORM::for_table('tbl_onus')->where('customer_id',$customer['id'])->find_one();
+    if($mapped&&(int)$mapped['id']!==(int)$onu['id'])r2(getUrl($base),'e','This customer is already assigned to another ONU');
     $onu->customer_id=$customer['id'];$onu->updated_at=date('Y-m-d H:i:s');$onu->save();_log('ONU assigned #'.$onu->id.' customer #'.$customer->id);r2(getUrl($base),'s','ONU assigned');
 }
 $q=ORM::for_table('tbl_onus')->table_alias('o')->select_many('o.*','c.fullname','c.username','olt.name')->left_outer_join('tbl_customers',['o.customer_id','=','c.id'],'c')->left_outer_join('tbl_olts',['o.olt_id','=','olt.id'],'olt');
 if(in_array($action,['online','offline','los','removed'],true))$q->where('o.status',strtoupper($action));if($action==='unassigned')$q->where_null('o.customer_id');
-$ui->assign('onus',$q->order_by_desc('o.updated_at')->find_many());$ui->assign('customers',ORM::for_table('tbl_customers')->order_by_asc('fullname')->find_many());$ui->assign('csrf_token',Csrf::generateAndStoreToken());$ui->display('admin/onus/list.tpl');
+$availableCustomers=ORM::for_table('tbl_customers')->table_alias('c')
+    ->select_many('c.id','c.fullname','c.username')
+    ->left_outer_join('tbl_onus',['c.id','=','mapped.customer_id'],'mapped')
+    ->where_null('mapped.id')
+    ->where_raw('TRIM(c.approval_status) = ?', ['approved'])
+    ->order_by_asc('c.fullname')
+    ->find_many();
+$ui->assign('onus',$q->order_by_desc('o.updated_at')->find_many());$ui->assign('customers',$availableCustomers);$ui->assign('csrf_token',Csrf::generateAndStoreToken());$ui->display('admin/onus/list.tpl');

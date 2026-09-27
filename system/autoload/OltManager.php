@@ -1,10 +1,12 @@
 <?php
 /** OLT access boundary; only the verified V-SOL Telnet adapter is enabled. */
 class OltManager {
-    // Read the existing persistent key used by the active OLT sync adapter.
-    // Never create a replacement key: it would make stored credentials unreadable.
+    // Resolve the key from this installation so Docker, subdirectory and
+    // traditional web-root deployments all use the same persistent secure path.
+    // The installer creates the key once; never replace an existing key because
+    // doing so would make already-stored OLT credentials unreadable.
     private static function key(){
-        $file='/www/wwwroot/27.147.201.165/system/secure/olt-encryption.key';
+        $file=dirname(__DIR__).'/secure/olt-encryption.key';
         $key=@file_get_contents($file);
         if($key===false||strlen($key)!==32)throw new Exception('OLT encryption key is unavailable');
         return $key;
