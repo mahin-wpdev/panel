@@ -297,4 +297,5 @@ $ui->assign('operation_key',bin2hex(random_bytes(16)));
 $ui->assign('reseller_form',$resellerForm);
 $ui->assign('is_reseller_view',false);$ui->assign('admin_section',$adminSection);$ui->assign('activity_logs',$activity);$ui->assign('resellers',$resellers);$ui->assign('agents',ORM::for_table('tbl_users')->where('user_type','Agent')->order_by_asc('fullname')->find_many());$ui->assign('plans',ORM::for_table('tbl_plans')->where('enabled',1)->order_by_asc('name_plan')->find_many());$ui->assign('customers',ORM::for_table('tbl_customers')->order_by_asc('fullname')->find_many());$ui->assign('selected_agent',$selectedAgent);$ui->assign('selected_profile',$selectedProfile);$ui->assign('csrf_token',Csrf::generateAndStoreToken());
 if($action==='resellers'){$ui->display('admin/reseller/users.tpl');return;}
+if($action==='settlements'){$ui->display('admin/reseller/settlements.tpl');return;}
 $ui->display('admin/reseller/dashboard.tpl');
