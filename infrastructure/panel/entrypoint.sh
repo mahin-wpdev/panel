@@ -23,7 +23,7 @@ notifications_default=/var/www/html/system/uploads/notifications.default.json
 if [ ! -s "$notifications_default" ]; then
   install -m 0644 -o www-data -g www-data     /usr/local/share/jm-panel/notifications.default.json "$notifications_default"
 fi
-python3 -m json.tool "$notifications_default" >/dev/null 2>&1 || {
+php -r 'json_decode(file_get_contents($argv[1]), true, 512, JSON_THROW_ON_ERROR);' "$notifications_default" >/dev/null 2>&1 || {
   echo "Invalid notifications.default.json" >&2
   exit 1
 }
