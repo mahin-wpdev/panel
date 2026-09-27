@@ -18,6 +18,16 @@ error_reporting(E_ERROR); ini_set("display_errors", "0");
 PHP
 chmod 640 /var/www/html/config.php
 chown www-data:www-data /var/www/html/config.php
+
+notifications_default=/var/www/html/system/uploads/notifications.default.json
+if [ ! -s "$notifications_default" ]; then
+  install -m 0644 -o www-data -g www-data     /usr/local/share/jm-panel/notifications.default.json "$notifications_default"
+fi
+python3 -m json.tool "$notifications_default" >/dev/null 2>&1 || {
+  echo "Invalid notifications.default.json" >&2
+  exit 1
+}
+
 until mysqladmin ping -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASSWORD" --silent; do echo "Waiting for MariaDB..."; sleep 2; done
 MYSQL=(mysql --protocol=tcp -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME")
 fresh_install=0

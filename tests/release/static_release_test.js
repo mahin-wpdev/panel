@@ -56,6 +56,16 @@ assert.match(approvalMigration, /ENUM\('pending','approved','rejected'\)/);
 assert.match(read('system/controllers/onus.php'),
   /TRIM\(c\.approval_status\).*approved/,
   'ONU customer assignment must tolerate legacy approval-status whitespace');
+const notificationsDefault = read('system/uploads/notifications.default.json');
+assert.doesNotThrow(() => JSON.parse(notificationsDefault),
+  'default notification template must be valid JSON');
+assert.match(read('Dockerfile'),
+  /COPY system\/uploads\/notifications\.default\.json \/usr\/local\/share\/jm-panel\/notifications\.default\.json/);
+assert.match(read('infrastructure/panel/entrypoint.sh'),
+  /notifications_default=\/var\/www\/html\/system\/uploads\/notifications\.default\.json/);
+assert.match(read('docker-compose.yml'), /notifications\.default\.json/);
+assert.match(read('init.php'), /http_response_code\(500\)[\s\S]*exit\(1\)/,
+  'missing notification defaults must fail health checks and CLI cron');
 const cronSource = read('system/cron.php');
 assert.match(cronSource, /No active routers found[\s\S]*cron_last_run\.txt/,
   'fresh installs without a router must still update the cron health marker');

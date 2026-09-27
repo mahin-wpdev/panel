@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . /var/www/html
+COPY system/uploads/notifications.default.json /usr/local/share/jm-panel/notifications.default.json
 COPY infrastructure/panel/entrypoint.sh /usr/local/bin/jm-panel-entrypoint
 COPY infrastructure/panel/run-migrations.sh /usr/local/bin/jm-panel-migrate
 COPY infrastructure/cron/worker.sh /usr/local/bin/jm-cron-worker

@@ -43,7 +43,7 @@ services:
       - panel_uploads:/var/www/html/system/uploads
       - panel_secure:/var/www/html/system/secure
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://127.0.0.1/"]
+      test: ["CMD-SHELL", "test -s /var/www/html/system/uploads/notifications.default.json && curl -fsS http://127.0.0.1/ >/dev/null"]
       interval: 15s
       timeout: 5s
       retries: 20
