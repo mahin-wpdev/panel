@@ -29,6 +29,8 @@ This release establishes Arivo ISP Billing as a broader ISP operations platform 
 - Added admin customer profile, expiry, recharge preview/recharge and ONU operations.
 - Fixed mobile admin recharge setup so the idempotency/audit table is created safely when an older live panel has not yet applied the dedicated migration.
 - Added admin/reseller customer monitoring dashboards with reseller ownership isolation, monthly RADIUS usage, ONU/transaction essentials and per-customer live PPPoE traffic monitoring; recharge remains admin-only.
+- Fixed Radius manual recharge package matching when active Radius plans intentionally have an empty router binding in `tbl_plans`.
+- Expanded mobile Admin/Reseller home payloads to mirror the web dashboards: service, reseller, profit/settlement, ONU/OLT, expiring-customer, allowed-package and recent earning/settlement metrics.
 - Added support-ticket workflow with events, replies, status changes and unread notifications.
 - Added FCM push-token registration, invalid-token disabling and panel-to-app notification storage.
 - Added GitHub-backed stable/beta mobile release flow with tag, APK size, SHA-256, download URL and required-update policy validation.
