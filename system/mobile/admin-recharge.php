@@ -5,6 +5,22 @@ declare(strict_types=1);
 function jm_mobile_recharge_is_admin(string $role): bool {
     return $role === 'admin';
 }
+function jm_mobile_recharge_ensure_schema(PDO $db): void {
+    if (jm_app_table($db,'tbl_mobile_admin_recharge_requests')) return;
+    jm_mobile_query($db, "CREATE TABLE IF NOT EXISTS tbl_mobile_admin_recharge_requests (
+        request_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+        actor_id INT NOT NULL,
+        customer_id INT NOT NULL,
+        plan_id INT NOT NULL,
+        router VARCHAR(191) NOT NULL,
+        status VARCHAR(20) NOT NULL,
+        invoice VARCHAR(80) DEFAULT NULL,
+        created_at DATETIME NOT NULL,
+        completed_at DATETIME DEFAULT NULL,
+        KEY idx_customer_created (customer_id, created_at),
+        KEY idx_admin (actor_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+}
 function jm_mobile_recharge_admin(PDO $db, array $session): array {
     $identity = jm_app_actor($db, $session);
     if (!jm_mobile_recharge_is_admin((string)$identity['role'])) respond(403, ['error'=>'FORBIDDEN']);
@@ -156,8 +172,12 @@ function jm_mobile_recharge_verify_password(PDO $db, array $admin, string $passw
 }
 function jm_mobile_recharge_submit(PDO $db, array $session, array $input): array {
     $admin=jm_mobile_recharge_admin($db,$session);
-    if (!jm_app_table($db,'tbl_mobile_admin_recharge_requests'))
+    try {
+        jm_mobile_recharge_ensure_schema($db);
+    } catch (Throwable $error) {
+        error_log('JM mobile recharge schema error: '.$error->getMessage());
         respond(503,['error'=>'RECHARGE_NOT_CONFIGURED']);
+    }
     $id=filter_var($input['customer_id']??null,FILTER_VALIDATE_INT,
         ['options'=>['min_range'=>1]]);
     $key=(string)($input['request_key']??'');

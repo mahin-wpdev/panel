@@ -3,8 +3,12 @@
 declare(strict_types=1);
 
 function jm_mobile_admin_profile(PDO $db, array $session, int $id): array {
-    jm_mobile_recharge_admin($db, $session);
+    $identity = jm_app_actor($db, $session);
+    if (!in_array($identity['role'], ['admin','reseller'], true)) respond(403, ['error'=>'FORBIDDEN']);
     if ($id < 1) respond(400, ['error'=>'INVALID_CUSTOMER']);
+    $scope = jm_app_customer_scope($db, $identity);
+    if (!$scope) respond(403, ['error'=>'CUSTOMER_SCOPE_UNAVAILABLE']);
+    [$scopeWhere,$scopeParams] = $scope;
     $customer = jm_mobile_query($db, "SELECT c.id,c.username,c.fullname,c.status,
         c.phonenumber,c.address,c.pppoe_username,c.balance,
         r.id AS recharge_id,r.plan_id,r.namebp,r.routers,
@@ -15,7 +19,7 @@ function jm_mobile_admin_profile(PDO $db, array $session, int $id): array {
             SELECT MAX(x.id) FROM tbl_user_recharges x
             WHERE x.customer_id=c.id AND x.routers NOT IN ('balance','Custom Balance'))
         LEFT JOIN tbl_plans p ON p.id=r.plan_id
-        WHERE c.id=? LIMIT 1", [$id])->fetch(PDO::FETCH_ASSOC);
+        WHERE c.id=? AND $scopeWhere LIMIT 1", array_merge([$id],$scopeParams))->fetch(PDO::FETCH_ASSOC);
     if (!$customer) respond(404,['error'=>'CUSTOMER_NOT_FOUND']);
     $history = jm_mobile_query($db, "SELECT invoice,plan_name,price,method,
         recharged_on,recharged_time,expiration,time,routers
@@ -46,13 +50,33 @@ function jm_mobile_admin_profile(PDO $db, array $session, int $id): array {
             [$id])->fetch(PDO::FETCH_ASSOC) ?: null;
     }
     require_once __DIR__.'/monthly-usage.php';
+    require_once __DIR__.'/radius-peak.php';
     $pppoe = (string)($customer['pppoe_username'] ?: $customer['username']);
     return ['available'=>true,'customer'=>$customer,
         'monthly_usage'=>jm_mobile_monthly_view($db,$pppoe),
+        'traffic_peak'=>jm_radius_peak_for_customer($db,$id),
         'onu'=>$onu,
         'transactions'=>$history,'admin_recharge_requests'=>$requests,
         'note'=>'Recorded invoices are not independent proof of payment. '
           .'No router credentials or customer passwords are returned.'];
+}
+
+function jm_mobile_staff_customer_traffic(PDO $db, array $session, int $id): array {
+    $identity = jm_app_actor($db, $session);
+    if (!in_array($identity['role'], ['admin','reseller'], true)) respond(403, ['error'=>'FORBIDDEN']);
+    if ($id < 1) respond(400, ['error'=>'INVALID_CUSTOMER']);
+    $scope = jm_app_customer_scope($db, $identity);
+    if (!$scope) respond(403, ['error'=>'CUSTOMER_SCOPE_UNAVAILABLE']);
+    [$where,$params] = $scope;
+    $allowed = jm_mobile_query($db, "SELECT c.id FROM tbl_customers c WHERE c.id=? AND $where LIMIT 1",
+        array_merge([$id],$params))->fetchColumn();
+    if (!$allowed) respond(404, ['error'=>'CUSTOMER_NOT_FOUND']);
+    require_once __DIR__.'/live-traffic.php';
+    require_once __DIR__.'/radius-peak.php';
+    $customerSession = ['actor_type'=>'customer','actor_id'=>$id];
+    $live = jm_live_snapshot_cached($db, $customerSession);
+    $live['server_peak'] = jm_radius_peak_for_customer($db,$id);
+    return $live;
 }
 
 function jm_mobile_admin_expiry(PDO $db, array $session, string $window): array {
