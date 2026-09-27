@@ -160,7 +160,14 @@ if ($config['router_check']) {
         flock($lock, LOCK_UN);
         fclose($lock);
         unlink($lockFile);
-        exit;
+        $timestampFile = "$UPLOAD_PATH/cron_last_run.txt";
+        if (file_put_contents($timestampFile, time()) === false) {
+            fwrite(STDERR, "Failed to update cron health marker.\n");
+            exit(1);
+        }
+        run_hook('cronjob_end'); #HOOK
+        echo "Cron job finished and completed successfully.\n";
+        exit(0);
     }
 
     $offlineRouters = [];
@@ -246,7 +253,10 @@ fclose($lock);
 unlink($lockFile);
 
 $timestampFile = "$UPLOAD_PATH/cron_last_run.txt";
-file_put_contents($timestampFile, time());
+if (file_put_contents($timestampFile, time()) === false) {
+    fwrite(STDERR, "Failed to update cron health marker.\n");
+    exit(1);
+}
 
 run_hook('cronjob_end'); #HOOK
 echo "Cron job finished and completed successfully.\n";

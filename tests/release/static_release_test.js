@@ -56,6 +56,11 @@ assert.match(approvalMigration, /ENUM\('pending','approved','rejected'\)/);
 assert.match(read('system/controllers/onus.php'),
   /TRIM\(c\.approval_status\).*approved/,
   'ONU customer assignment must tolerate legacy approval-status whitespace');
+const cronSource = read('system/cron.php');
+assert.match(cronSource, /No active routers found[\s\S]*cron_last_run\.txt/,
+  'fresh installs without a router must still update the cron health marker');
+assert.match(cronSource, /file_put_contents\(\$timestampFile, time\(\)\) === false/,
+  'cron marker writes must fail closed');
 const cronWorker = read('infrastructure/cron/worker.sh');
 assert.match(cronWorker, /cd "\$dir"/,
   'cron tasks must run from their own directory for relative includes');
