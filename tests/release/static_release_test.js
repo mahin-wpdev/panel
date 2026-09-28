@@ -25,6 +25,14 @@ assert(!files.some(f => /(?:^|\/)autorecharge\/.*\.log$/i.test(f)),
   'payment/SMS logs must not be tracked');
 assert(!files.includes('radius_backup.php'),
   'unprotected legacy RADIUS endpoint must not ship');
+assert(!files.includes('system/plugin/jm_cache_status.php'),
+  'deprecated JM Cache Status plugin must not ship');
+assert(!files.includes('system/plugin/ui/jm_cache_status.tpl'),
+  'deprecated JM Cache Status template must not ship');
+assert(!files.some(f => /(?:lancache|jm-cache-status)/i.test(f)),
+  'deprecated LanCache/JM cache infrastructure files must not ship');
+assert.doesNotMatch(read('docker-compose.yml'), /lancache|jm-cache-status/i,
+  'release compose stack must not reintroduce the removed cache service');
 assert.match(read('.gitignore'), /autorecharge\/\*\.log/);
 const nginx = read('deploy/security/nginx-panel-deny.conf');
 assert.match(nginx, /\/panel\/install\//);

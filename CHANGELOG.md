@@ -2,6 +2,14 @@
 
 # CHANGELOG
 
+## 2026.09.28 — Cache integration removal
+
+- Removed the deprecated live-only `JM Cache Status` panel integration from the supported Arivo release surface.
+- Removed support for shipping LanCache/JM cache collector artifacts in release builds.
+- Added release invariants that fail CI if the retired cache plugin, template, collector, or LanCache deployment files are reintroduced.
+- The normal ISP billing, PPPoE/RADIUS, OLT/ONU, reseller, mobile, WhatsApp, and ISP-usage features remain unchanged.
+
+
 ## 2026.09.27 — Arivo ISP Billing next-release
 
 This release turns the PHPNuxBill base into a broader ISP operations platform. The list below is source-audited against current upstream PHPNuxBill master rather than relying only on the inherited README/CHANGELOG.
