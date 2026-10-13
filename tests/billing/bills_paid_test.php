@@ -70,7 +70,7 @@ ORM::$lastId = 4;
 User::billsPaid(['Setup Bill'=>250,'Router Bill'=>300,'ONU Bill'=>400], 7);
 
 if (isset(ORM::$fields[1]) || isset(ORM::$fields[3]) || ORM::$fields[2]['field_value'] !== '300:1') {
-    throw new RuntimeException('Paid one-off/final installment bills must be removed and remaining installments decremented.');
+    throw new RuntimeException('Paid one-off/final installment bills must be removed and remaining installments decremented: '.json_encode(ORM::$fields));
 }
 if (!isset(ORM::$fields[4])) throw new RuntimeException('Bill settlement must not mutate another customer.');
 echo "PASS: one-off bills clear; installments decrement and clear when complete\n";
