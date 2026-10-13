@@ -32,3 +32,14 @@ or:
     'gateway' => 'Upay'
 
 Existing bKash, bKash Merchant and Nagad integrations continue to work.
+
+AUTO RECHARGE RELIABILITY - 2026-10-13
+--------------------------------------
+- Match payment Ref case-insensitively against both account and PPPoE usernames.
+- When a reference is not an account username, use the sender phone only if it
+  resolves to exactly one customer; ambiguous matches are rejected safely.
+- Same-TrxID retries are allowed for known preflight failures, but not after
+  the actual recharge call begins, preventing a second charge after uncertainty.
+- Keep the production bKash claim shared with the separate JTEX payment flow.
+- Treat a missing PHPNuxBill transaction ID as a failed recharge, not success.
+- Webhook secret and unique receipt-ledger protections are required in production.
