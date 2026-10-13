@@ -1,0 +1,23 @@
+name: Reseller profit checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  profit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - name: PHP syntax
+        run: php -l system/autoload/ResellerProfit.php && php -l tests/profit/reseller_profit_config_test.php
+      - name: Reseller profit configuration
+        run: php tests/profit/reseller_profit_config_test.php
+      - name: Admin attribution and profit summary
+        run: php tests/profit/profit_summary_test.php
+      - name: Reseller earnings and sales
+        run: php tests/profit/reseller_accounting_test.php
