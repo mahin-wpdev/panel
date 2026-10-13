@@ -13,6 +13,8 @@ class ResellerBalanceHistory
             $entry['history_id'] = '#'.$entry['id'];
             $entry['balance_change'] = round(0 - (float)$entry['amount'], 2);
             $entry['balance_change_abs'] = abs($entry['balance_change']);
+            $entry['admin_profit_change'] = null;
+            $entry['reseller_profit_change'] = null;
             $entry['history_admin'] = !empty($entry['processed_by'])
                 ? '#'.$entry['processed_by']
                 : 'System';
@@ -20,7 +22,8 @@ class ResellerBalanceHistory
         unset($entry);
 
         $queries = [
-            "SELECT pe.recharge_id,pe.owner_reseller_id reseller_id,pe.reseller_income profit_amount,
+            "SELECT pe.recharge_id,pe.owner_reseller_id reseller_id,pe.admin_share admin_profit,
+                    pe.reseller_income profit_amount,
                     pe.profit_type,pe.profit_value,pe.recharge_amount,pe.effective_on,pe.created_at,
                     t.recharged_on,t.recharged_time,c.username,t.plan_name
              FROM tbl_profit_events pe
@@ -28,7 +31,7 @@ class ResellerBalanceHistory
              LEFT JOIN tbl_customers c ON c.id=pe.customer_id
              WHERE pe.status='earned' AND pe.reseller_income>0
              ORDER BY pe.effective_on DESC,pe.id DESC LIMIT $limit",
-            "SELECT e.recharge_id,e.reseller_id,e.profit_amount,e.profit_type,e.profit_value,
+            "SELECT e.recharge_id,e.reseller_id,e.admin_profit,e.profit_amount,e.profit_type,e.profit_value,
                     e.recharge_amount,e.created_at,t.recharged_on,t.recharged_time,c.username,t.plan_name
              FROM tbl_reseller_earnings e
              LEFT JOIN tbl_transactions t ON t.id=e.recharge_id
@@ -53,14 +56,17 @@ class ResellerBalanceHistory
                     ? 'fixed Tk '.number_format((float)$profit['profit_value'], 2)
                     : number_format((float)$profit['profit_value'], 2).'% share';
                 $amount = round((float)$profit['profit_amount'], 2);
+                $adminProfit = round((float)($profit['admin_profit'] ?? 0), 2);
                 $history[] = [
                     'id' => 'recharge-'.$profit['recharge_id'],
                     'history_id' => 'Recharge #'.$profit['recharge_id'],
                     'created_at' => $date.' '.$time,
                     'reseller_id' => (int)$profit['reseller_id'],
                     'entry_type' => 'profit_earned',
-                    'balance_change' => $amount,
-                    'balance_change_abs' => abs($amount),
+                    'balance_change' => null,
+                    'balance_change_abs' => null,
+                    'admin_profit_change' => $adminProfit,
+                    'reseller_profit_change' => $amount,
                     'note' => 'Reseller profit share earned ('.$rate.')'.(!empty($profit['username']) ? ' for '.$profit['username'] : ''),
                     'reference' => 'Recharge #'.$profit['recharge_id'].(!empty($profit['plan_name']) ? ' — '.$profit['plan_name'] : ''),
                     'processed_by' => null,

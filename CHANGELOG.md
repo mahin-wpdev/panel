@@ -2,6 +2,12 @@
 
 # CHANGELOG
 
+## 2026.10.14 — Reseller profit split history
+
+- Show admin profit and reseller profit in separate columns for each recharge earning.
+- Show wallet balance changes with an explicit plus or minus sign; debt recovery and payouts are visibly negative.
+- Keep settlement rows separate from recharge profit shares and cover both event and legacy earnings in regression tests.
+
 ## 2026.10.13 — Reseller profit balance history
 
 - Include automatic and legacy reseller recharge earnings in the admin profit history, with positive wallet changes and duplicate protection for event-mirrored earnings.
