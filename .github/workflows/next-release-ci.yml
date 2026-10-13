@@ -1,10 +1,10 @@
-name: Next release validation
+name: Full system validation
 
 on:
   push:
-    branches: [next-release]
+    branches: [main, next-release]
   pull_request:
-    branches: [next-release]
+    branches: [main, next-release]
   workflow_dispatch:
 
 permissions:
@@ -14,6 +14,8 @@ jobs:
   validate:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
+    env:
+      PANEL_TEST_BRANCH: ${{ github.base_ref || github.ref_name }}
     steps:
       - uses: actions/checkout@v7
 
@@ -28,6 +30,9 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: services/whatsapp/package-lock.json
+
+      - name: Release safety invariants
+        run: node tests/release/static_release_test.js
 
       - run: npm ci --no-audit --no-fund
         working-directory: services/whatsapp
@@ -141,7 +146,9 @@ jobs:
           trigger_count="$(db -e "SELECT COUNT(*) FROM information_schema.triggers WHERE trigger_schema='$DB_NAME' AND trigger_name IN ('trg_mobile_customer_revoke','trg_mobile_staff_revoke','trg_mobile_reseller_revoke')")"
           test "$trigger_count" -eq 3
           migration_count="$(db -e "SELECT COUNT(*) FROM tbl_schema_migrations")"
-          test "$migration_count" -eq 11
+          test "$migration_count" -eq 12
+          portal_hash_column_count="$(db -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='$DB_NAME' AND table_name='tbl_customers' AND column_name='portal_password_hash'")"
+          test "$portal_hash_column_count" -eq 1
           olt_table_count="$(db -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$DB_NAME' AND table_name IN ('tbl_olts','tbl_olt_pon_ports','tbl_onus','tbl_olt_sync_logs','tbl_onu_status_logs','tbl_onu_power_logs')")"
           test "$olt_table_count" -eq 6
           docker compose exec -T panel sh -c 'test "$(wc -c < /var/www/html/system/secure/olt-encryption.key)" -eq 32'
@@ -149,8 +156,19 @@ jobs:
 
       - name: Verify PHP integration contracts
         run: |
+          docker compose exec -T panel php -l system/autoload/Password.php
+          docker compose exec -T panel php -l system/autoload/Package.php
+          docker compose exec -T panel php -l autorecharge/autorecharge.php
+          docker compose exec -T panel php -l autorecharge/bkash.php
+          docker compose exec -T panel php -l autorecharge/bkash_merchant.php
+          docker compose exec -T panel php -l autorecharge/nogod.php
+          docker compose exec -T panel php -l system/mobile/auth-core.php
+          docker compose exec -T panel php -l system/mobile/admin-recharge.php
           docker compose exec -T panel php tests/mobile/mobile_app_update_test.php
           docker compose exec -T panel php tests/mikrotik/provisioner_test.php
+          docker compose exec -T panel php tests/auth/password_hash_test.php
+          docker compose exec -T panel php tests/autorecharge/response_code_test.php
+          docker compose exec -T panel php tests/profit/reseller_accounting_test.php
 
       - name: Verify RADIUS authentication and accounting
         run: |
@@ -243,7 +261,7 @@ jobs:
           _PANEL_TEST_ALLOW_NON_ROOT=1 \
           _PANEL_TEST_FORCE_UPDATE_FAILURE=1 \
           PANEL_DIR="$PWD" \
-          PANEL_BRANCH=next-release \
+          PANEL_BRANCH="$PANEL_TEST_BRANCH" \
           PANEL_ROLLBACK_HEALTH_ATTEMPTS=20 \
           bash installer/update.sh > /tmp/update-rollback.log 2>&1
           update_status=$?
@@ -263,6 +281,8 @@ jobs:
     needs: validate
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    env:
+      PANEL_INSTALL_BRANCH: ${{ github.head_ref || github.ref_name }}
     steps:
       - uses: actions/checkout@v7
 
@@ -271,7 +291,7 @@ jobs:
           sudo env \
             PANEL_SKIP_SYSTEM_SETUP=1 \
             PANEL_DIR="$RUNNER_TEMP/jm-panel-fresh" \
-            PANEL_BRANCH=next-release \
+            PANEL_BRANCH="$PANEL_INSTALL_BRANCH" \
             PANEL_HOST=127.0.0.1 \
             PANEL_SITE_ADDRESS=:80 \
             PANEL_COMPANY_NAME="JM Broadband Installer CI" \

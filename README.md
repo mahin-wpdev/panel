@@ -8,8 +8,8 @@ It keeps the PHPNuxBill billing, voucher, customer, Hotspot, PPPoE, FreeRADIUS, 
 
 ## Release status
 
-- Main development/release-candidate branch: `next-release`
-- Source audit date: 2026-09-27
+- Main development/release branch: `main`
+- Source audit date: 2026-10-14
 - Upstream comparison baseline: `hotspotbilling/phpnuxbill` `master` at `fdbd7b84` (2026-08-06)
 - The project is still a release candidate until environment-specific financial and destructive network workflows are accepted on staging or an intentionally disposable device.
 

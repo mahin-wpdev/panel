@@ -149,6 +149,7 @@ function jm_mobile_recharge_recover(PDO $db, array $request): ?string {
     return (string)$invoice;
 }
 function jm_mobile_recharge_verify_password(PDO $db, array $admin, string $password): void {
+    require_once __DIR__.'/../autoload/Password.php';
     $ip=(string)($_SERVER['REMOTE_ADDR']??'unknown');
     $attemptKey=hash('sha256','mobile-recharge|'.$admin['id'].'|'.$ip);
     $attempt=jm_mobile_query($db,
@@ -160,7 +161,7 @@ function jm_mobile_recharge_verify_password(PDO $db, array $admin, string $passw
     $hash=jm_mobile_query($db,
         'SELECT password FROM tbl_users WHERE id=? LIMIT 1',
         [$admin['id']])->fetchColumn();
-    if (!$hash || !hash_equals((string)$hash,sha1($password))) {
+    if (!$hash || !Password::_verify($password,(string)$hash)) {
         $count=$attempt && strtotime($attempt['window_start'])>time()-900 ?
             (int)$attempt['attempts']+1 : 1;
         jm_mobile_query($db,
@@ -171,6 +172,9 @@ function jm_mobile_recharge_verify_password(PDO $db, array $admin, string $passw
              blocked_until=VALUES(blocked_until)',
             [$attemptKey,$count,$count>=5?date('Y-m-d H:i:s',time()+900):null]);
         respond(403,['error'=>'ADMIN_PASSWORD_INCORRECT']);
+    }
+    if (Password::_needsRehash($hash)) {
+        jm_mobile_query($db,'UPDATE tbl_users SET password=? WHERE id=?',[Password::_crypt($password),(int)$admin['id']]);
     }
     jm_mobile_query($db,'DELETE FROM tbl_mobile_auth_attempts WHERE attempt_key=?',[$attemptKey]);
 }

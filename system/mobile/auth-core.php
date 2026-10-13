@@ -57,14 +57,21 @@ function jm_mobile_session_allowed(PDO $db, array $session): bool {
 }
 
 function jm_mobile_resolve(PDO $db,string $username,string $password): ?array {
-    $customer=jm_mobile_query($db,'SELECT id,username,fullname,password,status FROM tbl_customers WHERE username=? LIMIT 1',[$username])->fetch(PDO::FETCH_ASSOC);
+    require_once __DIR__.'/../autoload/Password.php';
+    $customer=jm_mobile_query($db,'SELECT id,username,fullname,password,portal_password_hash,status FROM tbl_customers WHERE username=? LIMIT 1',[$username])->fetch(PDO::FETCH_ASSOC);
     $staff=jm_mobile_query($db,'SELECT id,username,fullname,password,user_type,status FROM tbl_users WHERE username=? LIMIT 1',[$username])->fetch(PDO::FETCH_ASSOC);
     $matches=[];
-    if ($customer && hash_equals((string)$customer['password'],$password)) {
+    if ($customer && Password::customerVerify($password,$customer['portal_password_hash']??'',$customer['password'])) {
+        if (empty($customer['portal_password_hash'])) {
+            jm_mobile_query($db,'UPDATE tbl_customers SET portal_password_hash=? WHERE id=?',[Password::customerHash($password),(int)$customer['id']]);
+        }
         $role=jm_mobile_role($customer,'customer',null);
         if ($role) $matches[]=['type'=>'customer','actor'=>$customer,'role'=>$role,'reseller_id'=>null];
     }
-    if ($staff && hash_equals((string)$staff['password'],sha1($password))) {
+    if ($staff && Password::_verify($password,$staff['password'])) {
+        if (Password::_needsRehash($staff['password'])) {
+            jm_mobile_query($db,'UPDATE tbl_users SET password=? WHERE id=?',[Password::_crypt($password),(int)$staff['id']]);
+        }
         $reseller=$staff['user_type']==='Agent' ? jm_mobile_reseller($db,(int)$staff['id']) : null;
         $role=jm_mobile_role($staff,'staff',$reseller);
         if ($role) $matches[]=['type'=>'staff','actor'=>$staff,'role'=>$role,'reseller_id'=>($role==='reseller'?(int)$reseller['id']:null)];

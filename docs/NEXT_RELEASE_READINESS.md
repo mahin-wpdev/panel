@@ -45,9 +45,10 @@ never run the installer SQL against an existing server.
 - Keep read-only ONU paging checks, separate OLT/Panel adapters, and
   single-offline-ONU removal protections.
 - bKash Personal, bKash Merchant and Nagad SMS webhooks now fail closed unless
-  `auto_payment_sms_secret` matches `X-Webhook-Secret`, `X-API-Key`, JSON
-  `secret`, or the legacy query-string `secret`. The configured secret is
-  never written to webhook logs.
+  `auto_payment_sms_secret` matches the `X-Webhook-Secret` or `X-API-Key`
+  header. Do not send the secret in a URL or request body. Webhook errors now
+  distinguish safe retries, permanent payload failures and manual review;
+  logs redact customer references and sender numbers and rotate at a fixed size.
 - `autorecharge/migration.sql` now creates the receipt ledger when missing and
   enforces unique `(gateway,trxid)` replay protection before widening legacy
   `transaction_id` values to `VARCHAR(100)`.
@@ -107,10 +108,10 @@ never run the installer SQL against an existing server.
 - Production cache was copied back into next-release `live-traffic.php` and
   `mobile-api.php` invokes its per-customer, single-flight wrapper. Static CI
   prevents accidental cache removal. See `docs/NON_PAYMENT_RELEASE_GATE.md`.
-- Production payment webhook authentication is NOT deployed until the SMS
-  forwarder's existing secret transmission has been verified; its appconfig
-  secret and receipt-ledger unique index do exist. Never disable a live sender
-  through an untested auth change.
+- Auto-recharge webhook secrets must be sent in `X-Webhook-Secret` or
+  `X-API-Key` headers. Update each SMS forwarder before deploying this behavior;
+  do not place the secret in its URL or JSON payload. Confirm delivery and retry
+  behavior with a staging sender before enabling production webhooks.
 - `system/mobile/traffic-peaks-migration.sql` creates additive state/peak tables.
 - `system/mobile/collect-radius-peaks.php` is CLI-only; run it as a dedicated
   once-per-minute scheduled job after migration and backup on the backend VM.

@@ -79,7 +79,7 @@ if($isReseller){
         if(!Validator::Length($password,36,2))$msg.='Password should be between 3 and 35 characters.<br>';
         if(ORM::for_table('tbl_customers')->where('username',$username)->find_one()||ORM::for_table('tbl_customers')->where('pppoe_username',$username)->find_one())$msg.='This reseller username already exists.<br>';
         if($msg!=='')r2(getUrl('reseller/customer-add'),'e',$msg);
-        $customer=ORM::for_table('tbl_customers')->create();$customer->username=$username;$customer->pppoe_username=$username;$customer->password=$password;$customer->pppoe_password=$password;
+        $customer=ORM::for_table('tbl_customers')->create();$customer->username=$username;$customer->pppoe_username=$username;$customer->password=$password;$customer->portal_password_hash=Password::customerHash($password);$customer->pppoe_password=$password;
         $customer->fullname=$fullname;$customer->email=trim(_post('email'));$customer->phonenumber=Lang::phoneFormat(_post('phonenumber'));$customer->address=trim(_post('address'));
         $customer->service_type=in_array(_post('service_type'),['PPPOE','Hotspot','Others'],true)?_post('service_type'):'PPPOE';$customer->account_type='Personal';$customer->status='Inactive';$customer->approval_status=!empty($profile['auto_approve_customers'])?'approved':'pending';$customer->created_by=$admin['id'];$customer->reseller_id=$profile['id'];$customer->save();
         /* Follow the core customer-create welcome SMS flow.  It is enabled by
@@ -219,12 +219,16 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             if(!$user||$user['user_type']!=='Agent')r2(getUrl('reseller/resellers'),'e','Select a valid Agent account for this reseller.');
         }
         $record=ORM::for_table('tbl_resellers')->where('user_id',$user['id'])->find_one();
+        $isNewProfile=!$record;
         if(!$record){$record=ORM::for_table('tbl_resellers')->create();$record->user_id=$user['id'];$record->created_at=date('Y-m-d H:i:s');}
         $record->reseller_code=trim(_post('reseller_code'))?:strtolower($user['username']);$record->customer_prefix=preg_replace('/[^a-z0-9_-]/i','',trim(_post('customer_prefix'))?:$record->reseller_code);$record->name=trim(_post('name'))?:$user['fullname'];
         if($record->customer_prefix==='')r2(getUrl('reseller/resellers'),'e','Customer username suffix may contain only letters, numbers, underscore or hyphen.');
         $record->mobile=trim(_post('mobile'))?:$user['phone'];$record->email=trim(_post('email'))?:$user['email'];$record->profit_percentage=max(0,min(100,(float)_post('profit_percentage')));
         $record->status=in_array(_post('status'),['active','suspended','disabled'],true)?_post('status'):'active';$record->auto_approve_customers=isset($_POST['auto_approve_customers'])?1:0;$record->allow_sms=isset($_POST['allow_sms'])?1:0;$record->allow_whatsapp=isset($_POST['allow_whatsapp'])?1:0;$record->allow_email=isset($_POST['allow_email'])?1:0;$record->notes=trim(_post('notes'));$record->updated_at=date('Y-m-d H:i:s');$record->save();
-        if(isset($_POST['package_ids'])){ORM::for_table('tbl_reseller_packages')->where('reseller_id',$record['id'])->delete_many();foreach((array)($_POST['package_ids']??[]) as $packageId){$package=ORM::for_table('tbl_plans')->where('id',(int)$packageId)->where('enabled',1)->find_one();if($package){$allow=ORM::for_table('tbl_reseller_packages')->create();$allow->reseller_id=$record->id;$allow->plan_id=$package->id;$allow->customer_price=(float)$package['price'];$allow->profit_type='percentage';$allow->profit_value=(float)$record['profit_percentage'];$allow->created_at=date('Y-m-d H:i:s');$allow->updated_at=date('Y-m-d H:i:s');$allow->save();}}}
+        // Package permissions and prices are maintained in the Packages screen.
+        // The profile form can seed initial package access, but must never reset
+        // existing per-package pricing or commission rules during a profile edit.
+        if($isNewProfile){foreach(array_unique(array_map('intval',(array)($_POST['package_ids']??[]))) as $packageId){$package=ORM::for_table('tbl_plans')->where('id',$packageId)->where('enabled',1)->find_one();if($package){$allow=ORM::for_table('tbl_reseller_packages')->create();$allow->reseller_id=$record->id;$allow->plan_id=$package->id;$allow->customer_price=(float)$package['price'];$allow->base_cost=0;$allow->profit_type='percentage';$allow->profit_value=(float)$record['profit_percentage'];$allow->status=1;$allow->created_at=date('Y-m-d H:i:s');$allow->updated_at=date('Y-m-d H:i:s');$allow->save();}}}
         _log('Reseller saved #'.$record->id);r2(getUrl('reseller/resellers/').$user['id'],'s','Reseller profile saved.');
     }
     if($action==='assign'||$action==='unassign'){

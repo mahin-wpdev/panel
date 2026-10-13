@@ -21,12 +21,15 @@ INSERT INTO tbl_customers VALUES (1,9);
 INSERT INTO tbl_transactions VALUES
  (101,1,500,'Recharge - Cash','2026-10-13',1),
  (102,1,500,'Recharge - Cash','2026-10-13',2),
- (103,1,100,'Admin Manual - admin','2026-10-13',1);
+ (103,1,100,'Admin Manual - admin','2026-10-13',1),
+ (104,1,200,'Admin Manual - admin','2026-10-13',1);
 INSERT INTO tbl_reseller_earnings VALUES
  (101,9,'earned','2026-10-13 10:00:00',400),
  (102,9,'earned','2026-10-13 10:00:00',100),
  (103,9,'earned','2026-10-13 10:00:00',50);
-INSERT INTO tbl_profit_events VALUES (102,9,50,500,'earned','2026-10-13');
+INSERT INTO tbl_profit_events VALUES
+ (102,9,50,500,'earned','2026-10-13'),
+ (104,9,0,200,'earned','2026-10-13');
 INSERT INTO tbl_reseller_settlements VALUES (1,9,20,'debt_repayment');
 INSERT INTO tbl_reseller_debts VALUES (1,9,200,'debt',NULL),(2,9,-20,'recovery',103);");
 
@@ -35,8 +38,8 @@ $sales = ResellerAccounting::sales($db, 9, '2026-10-01', '2026-10-31');
 if ($earned !== 500.0) {
     throw new RuntimeException('Admin, Admin Manual, and reseller-originated commissions should all count once.');
 }
-if ($sales !== 1100.0) {
-    throw new RuntimeException('Reseller sales should count every recharge once, regardless of actor.');
+if ($sales !== 1300.0) {
+    throw new RuntimeException('Reseller sales should count every recharge once, including zero-commission recharges.');
 }
 $settled = ResellerAccounting::settled($db, 9);
 $debt = ResellerDebt::summary($db, 9);

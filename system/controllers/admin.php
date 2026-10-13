@@ -34,6 +34,9 @@ switch ($do) {
             if ($d) {
                 $d_pass = $d['password'];
                 if (Password::_verify($password, $d_pass) == true) {
+                    if (Password::_needsRehash($d_pass)) {
+                        $d->password = Password::_crypt($password);
+                    }
                     $_SESSION['aid'] = $d['id'];
                     $token = Admin::setCookie($d['id']);
                     $d->last_login = date('Y-m-d H:i:s');

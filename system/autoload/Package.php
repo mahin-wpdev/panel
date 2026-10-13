@@ -241,35 +241,7 @@ class Package
             }
 
             //if ($b['status'] == 'on') {
-            $dvc = Package::getDevice($p);
-            if ($_app_stage != 'Demo') {
-                try {
-                    if (file_exists($dvc)) {
-                        require_once $dvc;
-                        (new $p['device'])->add_customer($c, $p);
-                    } else {
-                        new Exception(Lang::T("Devices Not Found"));
-                    }
-                } catch (Throwable $e) {
-                    Message::sendTelegram(
-                        "System Error. When activate Package. You need to sync manually\n" .
-                            "Router: $router_name\n" .
-                            "Customer: u$c[username]\n" .
-                            "Plan: p$p[name_plan]\n" .
-                            $e->getMessage() . "\n" .
-                            $e->getTraceAsString()
-                    );
-                } catch (Exception $e) {
-                    Message::sendTelegram(
-                        "System Error. When activate Package. You need to sync manually\n" .
-                            "Router: $router_name\n" .
-                            "Customer: u$c[username]\n" .
-                            "Plan: p$p[name_plan]\n" .
-                            $e->getMessage() . "\n" .
-                            $e->getTraceAsString()
-                    );
-                }
-            }
+            self::provisionCustomer($c, $p, $router_name, $_app_stage);
             //}
 
             // if contains 'mikrotik', 'hotspot', 'pppoe', 'radius' then recharge it
@@ -357,35 +329,7 @@ class Package
                 "\nNote:\n" . $note);
         } else {
             // active plan not exists
-            $dvc = Package::getDevice($p);
-            if ($_app_stage != 'Demo') {
-                try {
-                    if (file_exists($dvc)) {
-                        require_once $dvc;
-                        (new $p['device'])->add_customer($c, $p);
-                    } else {
-                        new Exception(Lang::T("Devices Not Found"));
-                    }
-                } catch (Throwable $e) {
-                    Message::sendTelegram(
-                        "System Error. When activate Package. You need to sync manually\n" .
-                            "Router: $router_name\n" .
-                            "Customer: u$c[username]\n" .
-                            "Plan: p$p[name_plan]\n" .
-                            $e->getMessage() . "\n" .
-                            $e->getTraceAsString()
-                    );
-                } catch (Exception $e) {
-                    Message::sendTelegram(
-                        "System Error. When activate Package. You need to sync manually\n" .
-                            "Router: $router_name\n" .
-                            "Customer: u$c[username]\n" .
-                            "Plan: p$p[name_plan]\n" .
-                            $e->getMessage() . "\n" .
-                            $e->getTraceAsString()
-                    );
-                }
-            }
+            self::provisionCustomer($c, $p, $router_name, $_app_stage);
 
             // if contains 'mikrotik', 'hotspot', 'pppoe', 'radius' then recharge it
             if (Validator::containsKeyword($p['device'])) {
@@ -756,6 +700,34 @@ class Package
         $tax_rate_decimal = $tax_rate / 100;
         $tax = $price * $tax_rate_decimal;
         return $tax;
+    }
+
+    private static function provisionCustomer($customer, $plan, string $routerName, $stage): void
+    {
+        if (strtolower((string)$stage) === 'demo') return;
+        $deviceFile = self::getDevice($plan);
+        try {
+            if (!is_file($deviceFile)) {
+                throw new RuntimeException(Lang::T('Devices Not Found'));
+            }
+            require_once $deviceFile;
+            $deviceClass = (string)$plan['device'];
+            if (!class_exists($deviceClass)) {
+                throw new RuntimeException('Configured device driver is unavailable.');
+            }
+            (new $deviceClass())->add_customer($customer, $plan);
+        } catch (Throwable $error) {
+            try {
+                Message::sendTelegram(
+                    "System Error. Package recharge was not recorded; verify router state before retrying.\n" .
+                    "Router: {$routerName}\nCustomer: " . (string)($customer['username'] ?? '') .
+                    "\nPlan: " . (string)($plan['name_plan'] ?? '') . "\n" . $error->getMessage()
+                );
+            } catch (Throwable $notificationError) {
+                // A notification failure must not turn a failed provision into a paid recharge.
+            }
+            throw new RuntimeException('Package provisioning failed: ' . $error->getMessage(), 0, $error);
+        }
     }
 
     public static function getDevice($plan)

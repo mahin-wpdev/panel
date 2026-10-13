@@ -57,7 +57,7 @@
             </div>
         </div>
     </div>
-    <div class="row"><div class="col-md-12"><div class="panel panel-default panel-hovered panel-stacked"><div class="panel-heading">Allowed packages</div><div class="panel-body"><p class="text-muted">Select packages the reseller may use. Individual price and profit rules can be refined from the <a href="{Text::url('reseller/packages')}">Packages</a> section.</p><select class="form-control" name="package_ids[]" multiple size="6">{foreach $plans as $plan}<option value="{$plan['id']}">{$plan['name_plan']|escape} — {Lang::moneyFormat($plan['price'])}</option>{/foreach}</select></div></div></div></div>
+    {if !$selected_profile}<div class="row"><div class="col-md-12"><div class="panel panel-default panel-hovered panel-stacked"><div class="panel-heading">Initial package access</div><div class="panel-body"><p class="text-muted">Choose initial packages for this new reseller. After creation, manage package access and individual prices from the <a href="{Text::url('reseller/packages')}">Packages</a> section.</p><select class="form-control" name="package_ids[]" multiple size="6">{foreach $plans as $plan}<option value="{$plan['id']}">{$plan['name_plan']|escape} — {Lang::moneyFormat($plan['price'])}</option>{/foreach}</select></div></div></div></div>{/if}
     <div class="form-group text-center"><button class="btn btn-primary" type="submit"><i class="fa fa-save"></i> Save Reseller</button> &nbsp; <a href="{Text::url('reseller/dashboard')}">Cancel</a></div>
 </form>
 {else}
