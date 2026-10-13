@@ -8,6 +8,7 @@ final class AutoRechargeTestCustomer
     public $username;
     public $pppoe_username;
     public $phonenumber;
+    public $reseller_id;
 
     public function __construct($id, $username, $pppoeUsername, $phone)
     {
@@ -16,12 +17,44 @@ final class AutoRechargeTestCustomer
         $this->pppoe_username = $pppoeUsername;
         $this->phonenumber = $phone;
     }
+
+    public function id() { return $this->id; }
 }
 
 final class AutoRechargeTestQuery
 {
+    private $table;
     private $sql = '';
     private $params = [];
+    private $filters = [];
+    private $hasJoin = false;
+
+    public function __construct($table)
+    {
+        $this->table = $table;
+    }
+
+    public function table_alias($alias) { return $this; }
+    public function select($column, $alias = null) { return $this; }
+    public function join($table, $conditions, $alias = null) { $this->hasJoin = true; return $this; }
+
+    public function where($column, $value)
+    {
+        $this->filters[] = [$column, '=', $value];
+        return $this;
+    }
+
+    public function where_gte($column, $value)
+    {
+        $this->filters[] = [$column, '>=', $value];
+        return $this;
+    }
+
+    public function where_lte($column, $value)
+    {
+        $this->filters[] = [$column, '<=', $value];
+        return $this;
+    }
 
     public function where_raw($sql, $params)
     {
@@ -32,6 +65,39 @@ final class AutoRechargeTestQuery
 
     public function find_many()
     {
+        if ($this->table === 'tbl_plans' || $this->table === 'tbl_reseller_packages' || $this->table === 'tbl_user_recharges') {
+            $matches = [];
+            $rows = $this->table === 'tbl_plans' ? ORM::$plans
+                : ($this->table === 'tbl_reseller_packages' ? ORM::$resellerPackages : ORM::$currentRecharges);
+            foreach ($rows as $row) {
+                $plan = $row;
+                if ($this->table === 'tbl_user_recharges') {
+                    if (empty($row->plan_id) || !isset(ORM::$plans[$row->plan_id])) continue;
+                    $plan = clone ORM::$plans[$row->plan_id];
+                } elseif ($this->table === 'tbl_reseller_packages' && $this->hasJoin) {
+                    if (empty($row->plan_id) || !isset(ORM::$plans[$row->plan_id])) continue;
+                    $plan = clone ORM::$plans[$row->plan_id];
+                    $plan->customer_price = $row->customer_price;
+                    $plan->reseller_id = $row->reseller_id;
+                    $plan->status = $row->status;
+                } elseif ($this->table === 'tbl_reseller_packages') {
+                    $plan = $row;
+                }
+                $matched = true;
+                foreach ($this->filters as [$column, $operator, $value]) {
+                    $field = substr($column, strpos($column, '.') !== false ? strpos($column, '.') + 1 : 0);
+                    $actual = (str_starts_with($column, 'rp.') || str_starts_with($column, 'r.')
+                        || ($this->table === 'tbl_reseller_packages' && !$this->hasJoin))
+                        ? ($row->$field ?? null) : ($plan->$field ?? null);
+                    if ($operator === '=' && (string) $actual !== (string) $value) $matched = false;
+                    if ($operator === '>=' && (float) $actual < (float) $value) $matched = false;
+                    if ($operator === '<=' && (float) $actual > (float) $value) $matched = false;
+                }
+                if ($matched) $matches[] = $plan;
+            }
+            return $matches;
+        }
+
         $matches = [];
         foreach (ORM::$customers as $customer) {
             if (strpos($this->sql, 'LOWER(username)') !== false) {
@@ -55,13 +121,16 @@ final class AutoRechargeTestQuery
 final class ORM
 {
     public static $customers = [];
+    public static $plans = [];
+    public static $resellerPackages = [];
+    public static $currentRecharges = [];
 
     public static function for_table($table)
     {
-        if ($table !== 'tbl_customers') {
+        if (!in_array($table, ['tbl_customers', 'tbl_plans', 'tbl_reseller_packages', 'tbl_user_recharges'], true)) {
             throw new RuntimeException('Unexpected table: ' . $table);
         }
-        return new AutoRechargeTestQuery();
+        return new AutoRechargeTestQuery($table);
     }
 }
 
@@ -98,4 +167,37 @@ $receipt->error_message = 'SAFE_RETRY: plan missing';
 $receipt->transaction_id = 'INV-1';
 check(!autorecharge_receipt_can_retry($receipt), 'receipt with a transaction ID must never be retried');
 
-echo "PASS: reference/PPPoE/phone matching, ambiguity safety, and retry boundaries\n";
+$basicCustomer = new AutoRechargeTestCustomer(70, 'basic', 'basic.pppoe', '01812345678');
+$basicPlan = (object) ['id' => 10, 'price' => 300, 'type' => 'PPPOE', 'enabled' => 1];
+$higherPlan = (object) ['id' => 11, 'price' => 350, 'type' => 'PPPOE', 'enabled' => 1];
+ORM::$plans = [10 => $basicPlan, 11 => $higherPlan];
+$selected = autorecharge_find_plan(300, $basicCustomer);
+check($selected['plan']->id === 10 && $selected['overpayment'] === 0.0, 'exact package price must win');
+$selected = autorecharge_find_plan(349.99, $basicCustomer);
+check($selected['plan']->id === 10 && $selected['overpayment'] === 49.99, 'payment up to Tk 50 above a package must use closest lower price');
+$selected = autorecharge_find_plan(350, $basicCustomer);
+check($selected['plan']->id === 11 && $selected['overpayment'] === 0.0, 'higher exact package must not be misclassified as overpayment');
+check(autorecharge_find_plan(400.01, $basicCustomer)['error'] !== null, 'amount more than Tk 50 above every package must be rejected');
+ORM::$plans[12] = (object) ['id' => 12, 'price' => 300, 'type' => 'PPPOE', 'enabled' => 1];
+check(autorecharge_find_plan(320, $basicCustomer)['error'] !== null, 'ambiguous nearest package price must require review');
+
+ORM::$plans = [10 => $basicPlan, 11 => $higherPlan];
+ORM::$currentRecharges = [(object) ['customer_id' => 77, 'plan_id' => 10, 'status' => 'on']];
+$runningBasicPlan = new AutoRechargeTestCustomer(77, 'running', 'running.pppoe', '01712345678');
+$selected = autorecharge_find_plan(350, $runningBasicPlan);
+check($selected['plan']->id === 10 && $selected['overpayment'] === 50.0, 'current Tk 300 package must win through Tk 350 even when a Tk 350 package exists');
+$note = autorecharge_payment_note('bKash', '01712345678', 'TRX-50', 350, $selected['package_price'], $selected['overpayment']);
+check(strpos($note, 'Amount received: Tk 350.00') !== false, 'receipt note must retain the full amount received');
+check(strpos($note, 'Package price: Tk 300.00') !== false && strpos($note, 'Overpayment (receipt only): Tk 50.00') !== false, 'receipt note must show package amount and surplus without balance credit');
+ORM::$currentRecharges[] = (object) ['customer_id' => 77, 'plan_id' => 11, 'status' => 'on'];
+check(autorecharge_find_plan(320, $runningBasicPlan)['error'] !== null, 'multiple active PPPOE packages must require review');
+
+$resellerCustomer = new AutoRechargeTestCustomer(78, 'reseller', 'reseller.pppoe', '01812345678');
+$resellerCustomer->reseller_id = 9;
+ORM::$plans = [10 => $basicPlan, 11 => $higherPlan];
+ORM::$currentRecharges = [];
+ORM::$resellerPackages = [(object) ['reseller_id' => 9, 'plan_id' => 10, 'customer_price' => 280, 'status' => 1]];
+$selected = autorecharge_find_plan(320, $resellerCustomer);
+check($selected['plan']->id === 10 && $selected['package_price'] === 280.0, 'reseller customer price must be used for tolerance matching');
+
+echo "PASS: reference matching, retry boundaries, current-plan priority, exact and tolerant package selection, reseller pricing, and receipt-only overpayment\n";
