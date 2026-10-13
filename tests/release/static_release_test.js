@@ -64,6 +64,27 @@ assert.match(read('database/migrations/manifest.txt'),
   /2026101401\|database\/migrations\/2026101401_password_hashes\.sql/);
 assert.match(read('database/migrations/manifest.txt'),
   /2026101402\|database\/migrations\/2026101402_transaction_tax\.sql/);
+assert.match(read('database/migrations/manifest.txt'),
+  /2026101403\|database\/migrations\/2026101403_transaction_reseller_owner\.sql/);
+assert.match(read('database/migrations/2026101403_transaction_reseller_owner.sql'), /owner_snapshot_saved=1/,
+  'legacy ownership migration must be repeat-safe, including customers with no reseller snapshot');
+const installSql = read('install/phpnuxbill.sql');
+const transactionSchema = installSql.match(/CREATE TABLE `tbl_transactions` \(([\s\S]*?)\n\) ENGINE=/)?.[1] || '';
+const gatewaySchema = installSql.match(/CREATE TABLE `tbl_payment_gateway` \(([\s\S]*?)\n\) ENGINE=/)?.[1] || '';
+assert.match(transactionSchema, /`owner_reseller_id` int unsigned NOT NULL DEFAULT '0'/,
+  'fresh installs must include the transaction-time reseller owner');
+assert.match(transactionSchema, /`owner_snapshot_saved` tinyint\(1\) NOT NULL DEFAULT '0'/,
+  'fresh installs must include the ownership snapshot marker');
+assert.doesNotMatch(gatewaySchema, /owner_reseller_id|owner_snapshot_saved/,
+  'transaction ownership fields must not be added to payment-gateway rows');
+assert.match(read('system/autoload/ResellerAccounting.php'), /owner_reseller_id/,
+  'reseller sales history must use the transaction-time ownership snapshot');
+assert.match(read('system/autoload/ResellerAccounting.php'), /t\.type IN \('Hotspot','PPPOE'\)/,
+  'wallet balance loads must not count as package sales');
+assert.match(read('system/autoload/ProfitSummary.php'), /t\.owner_reseller_id=0/,
+  'legacy direct profit must use the transaction-time owner snapshot');
+assert.match(read('system/mobile/panel-app.php'), /t\.owner_reseller_id=\?/,
+  'mobile reseller sales must retain transaction-time customer ownership');
 assert.match(read('system/autoload/Balance.php'), /SELECT GET_LOCK\(\?, 0\)/,
   'wallet debits must serialize per customer');
 assert.match(read('system/autoload/Balance.php'), /balance>=\?/,

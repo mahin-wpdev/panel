@@ -2,18 +2,21 @@
 /** One definition of earned reseller profit for the Panel and mobile API. */
 class ResellerAccounting
 {
-    public static function sales(PDO $db, int $resellerId, string $from, string $through): float
+    public static function sales(PDO $db, ?int $resellerId, string $from, string $through): float
     {
-        $legacy = $db->prepare("SELECT COALESCE(SUM(t.price),0) FROM tbl_transactions t
-            JOIN tbl_customers c ON c.id=t.user_id
-            WHERE c.reseller_id=?
+        $ownerFilter = $resellerId === null ? 'owner_reseller_id>0' : 'owner_reseller_id=?';
+        $legacyParams = $resellerId === null ? [$from,$through] : [$resellerId,$from,$through];
+        $legacy = $db->prepare("SELECT COALESCE(SUM(CAST(t.price AS DECIMAL(15,2))),0) FROM tbl_transactions t
+            WHERE t.owner_snapshot_saved=1 AND $ownerFilter AND t.type IN ('Hotspot','PPPOE')
             AND NOT EXISTS(SELECT 1 FROM tbl_profit_events pe WHERE pe.recharge_id=t.id)
             AND t.recharged_on>=? AND t.recharged_on<=?");
-        $legacy->execute([$resellerId,$from,$through]);
+        $legacy->execute($legacyParams);
+        $eventOwnerFilter = $resellerId === null ? 'owner_reseller_id IS NOT NULL' : 'owner_reseller_id=?';
+        $eventParams = $resellerId === null ? [$from,$through] : [$resellerId,$from,$through];
         $events = $db->prepare("SELECT COALESCE(SUM(recharge_amount),0) FROM tbl_profit_events
-            WHERE owner_reseller_id=? AND status='earned'
+            WHERE $eventOwnerFilter AND status='earned'
             AND effective_on>=? AND effective_on<=?");
-        $events->execute([$resellerId,$from,$through]);
+        $events->execute($eventParams);
         return round((float)$legacy->fetchColumn()+(float)$events->fetchColumn(),2);
     }
 

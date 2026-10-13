@@ -152,6 +152,8 @@ CREATE TABLE `tbl_transactions` (
   `invoice` varchar(25) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `username` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `user_id` int(11) NOT NULL DEFAULT 0,
+  `owner_reseller_id` int unsigned NOT NULL DEFAULT '0',
+  `owner_snapshot_saved` tinyint(1) NOT NULL DEFAULT '0',
   `plan_name` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `price` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `recharged_on` date NOT NULL,

@@ -17,14 +17,14 @@ if (!in_array('sqlite', PDO::getAvailableDrivers(), true)) {
 $db = new PDO('sqlite::memory:');
 $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $db->exec("CREATE TABLE tbl_customers(id INTEGER PRIMARY KEY, reseller_id INTEGER NULL);
-CREATE TABLE tbl_transactions(id INTEGER PRIMARY KEY, user_id INTEGER, price NUMERIC, method TEXT, recharged_on TEXT, admin_id INTEGER DEFAULT 0);
+CREATE TABLE tbl_transactions(id INTEGER PRIMARY KEY, user_id INTEGER, owner_reseller_id INTEGER, owner_snapshot_saved INTEGER, price NUMERIC, method TEXT, recharged_on TEXT, type TEXT, admin_id INTEGER DEFAULT 0);
 CREATE TABLE tbl_users(id INTEGER PRIMARY KEY, user_type TEXT);
 CREATE TABLE tbl_reseller_earnings(recharge_id INTEGER, status TEXT, admin_profit NUMERIC, profit_amount NUMERIC);
 CREATE TABLE tbl_profit_events(recharge_id INTEGER, status TEXT, effective_on TEXT,
   direct_income NUMERIC, admin_share NUMERIC, reseller_income NUMERIC);
-INSERT INTO tbl_customers VALUES (1,NULL),(2,9);
+INSERT INTO tbl_customers VALUES (1,9),(2,10);
 INSERT INTO tbl_users VALUES (1,'Admin'),(2,'Agent');
-INSERT INTO tbl_transactions VALUES (1,1,500,'Cash - Admin','2026-10-13',1),(2,2,500,'Cash - Agent','2026-10-13',2);
+INSERT INTO tbl_transactions VALUES (1,1,0,1,500,'Cash - Admin','2026-10-13','PPPOE',1),(2,2,9,1,500,'Cash - Agent','2026-10-13','PPPOE',2);
 INSERT INTO tbl_reseller_earnings VALUES (2,'earned',200,300);");
 $db->exec("INSERT INTO tbl_profit_events VALUES (2,'earned','2026-10-13',0,200,300)");
 $own = ProfitSummary::period($db, '2026-10-01', '2026-10-31');
@@ -34,8 +34,8 @@ if ($own['admin'] !== 700.0 || $own['reseller'] !== 300.0) {
 
 // Admin-originated recharges of reseller-owned customers share profit under
 // the same package/profile rules as reseller-originated recharges.
-$db->exec("INSERT INTO tbl_transactions VALUES (3,2,500,'Recharge - Cash','2026-10-13',1);
-INSERT INTO tbl_transactions VALUES (4,2,500,'Admin Manual - admin','2026-10-13',1);
+$db->exec("INSERT INTO tbl_transactions VALUES (3,2,9,1,500,'Recharge - Cash','2026-10-13','PPPOE',1);
+INSERT INTO tbl_transactions VALUES (4,2,9,1,500,'Admin Manual - admin','2026-10-13','PPPOE',1);
 INSERT INTO tbl_reseller_earnings VALUES (3,'earned',200,300),(4,'earned',200,300);");
 $own = ProfitSummary::period($db, '2026-10-01', '2026-10-31');
 if ($own['admin'] !== 1100.0 || $own['reseller'] !== 900.0) {

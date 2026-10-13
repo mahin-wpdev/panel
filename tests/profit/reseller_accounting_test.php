@@ -9,7 +9,7 @@ if (!in_array('sqlite', PDO::getAvailableDrivers(), true)) {
 }
 $db = new PDO('sqlite::memory:');
 $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-$db->exec("CREATE TABLE tbl_transactions(id INTEGER PRIMARY KEY,user_id INTEGER,price NUMERIC,method TEXT,recharged_on TEXT,admin_id INTEGER DEFAULT 0);
+$db->exec("CREATE TABLE tbl_transactions(id INTEGER PRIMARY KEY,user_id INTEGER,owner_reseller_id INTEGER,owner_snapshot_saved INTEGER,price NUMERIC,method TEXT,recharged_on TEXT,type TEXT,admin_id INTEGER DEFAULT 0);
 CREATE TABLE tbl_users(id INTEGER PRIMARY KEY,user_type TEXT);
 CREATE TABLE tbl_customers(id INTEGER PRIMARY KEY,reseller_id INTEGER);
 CREATE TABLE tbl_reseller_earnings(recharge_id INTEGER,reseller_id INTEGER,status TEXT,created_at TEXT,profit_amount NUMERIC);
@@ -17,12 +17,13 @@ CREATE TABLE tbl_profit_events(recharge_id INTEGER,owner_reseller_id INTEGER,res
 CREATE TABLE tbl_reseller_settlements(id INTEGER PRIMARY KEY,reseller_id INTEGER,amount NUMERIC,entry_type TEXT);
 CREATE TABLE tbl_reseller_debts(id INTEGER PRIMARY KEY,reseller_id INTEGER,amount NUMERIC,entry_type TEXT,recharge_id INTEGER);
 INSERT INTO tbl_users VALUES (1,'Admin'),(2,'Agent');
-INSERT INTO tbl_customers VALUES (1,9);
+INSERT INTO tbl_customers VALUES (1,10);
 INSERT INTO tbl_transactions VALUES
- (101,1,500,'Recharge - Cash','2026-10-13',1),
- (102,1,500,'Recharge - Cash','2026-10-13',2),
- (103,1,100,'Admin Manual - admin','2026-10-13',1),
- (104,1,200,'Admin Manual - admin','2026-10-13',1);
+ (101,1,9,1,500,'Recharge - Cash','2026-10-13','PPPOE',1),
+ (102,1,9,1,500,'Recharge - Cash','2026-10-13','PPPOE',2),
+ (103,1,9,1,100,'Admin Manual - admin','2026-10-13','Hotspot',1),
+ (104,1,9,1,200,'Admin Manual - admin','2026-10-13','PPPOE',1),
+ (105,1,9,1,900,'Balance - Customer','2026-10-13','Balance',0);
 INSERT INTO tbl_reseller_earnings VALUES
  (101,9,'earned','2026-10-13 10:00:00',400),
  (102,9,'earned','2026-10-13 10:00:00',100),
@@ -39,8 +40,10 @@ if ($earned !== 500.0) {
     throw new RuntimeException('Admin, Admin Manual, and reseller-originated commissions should all count once.');
 }
 if ($sales !== 1300.0) {
-    throw new RuntimeException('Reseller sales should count every recharge once, including zero-commission recharges.');
+    throw new RuntimeException('Sales must use the transaction-time reseller snapshot, exclude wallet loads and count each package recharge once.');
 }
+$allSales = ResellerAccounting::sales($db, null, '2026-10-01', '2026-10-31');
+if ($allSales !== 1300.0) throw new RuntimeException('All-reseller sales summary must use the same transaction snapshots.');
 $settled = ResellerAccounting::settled($db, 9);
 $debt = ResellerDebt::summary($db, 9);
 if ($settled !== 20.0 || $debt['recovered'] !== 20.0 || $debt['outstanding'] !== 180.0) {

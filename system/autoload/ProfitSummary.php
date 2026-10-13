@@ -26,19 +26,19 @@ class ProfitSummary
         $events->execute($eventParams);
         $eventRow = $events->fetch(PDO::FETCH_ASSOC) ?: ['direct_income'=>0,'admin_share'=>0,'reseller_income'=>0];
 
-        // Until old direct sales are snapshotted, use the legacy report and exclude
-        // any event already captured by the immutable future ledger.
-        $legacyDirectWhere = "t.method NOT IN ('Customer - Balance','Recharge Balance - Administrator')
+        // Legacy direct income belongs to the reseller owner captured on the
+        // transaction, never to the customer's current assignment.
+        $legacyDirectWhere = "t.owner_snapshot_saved=1 AND t.owner_reseller_id=0
+            AND t.type IN ('Hotspot','PPPOE')
             AND NOT EXISTS (SELECT 1 FROM tbl_profit_events pe WHERE pe.recharge_id=t.id)
             AND NOT EXISTS (SELECT 1 FROM tbl_reseller_earnings re WHERE re.recharge_id=t.id)";
         $directParams = [];
         if ($from !== null) { $legacyDirectWhere .= ' AND t.recharged_on >= ?'; $directParams[] = $from; }
         if ($through !== null) { $legacyDirectWhere .= ' AND t.recharged_on <= ?'; $directParams[] = $through; }
         $legacyDirect = $db->prepare("SELECT COALESCE(SUM(CAST(t.price AS DECIMAL(15,2))),0)
-            FROM tbl_transactions t JOIN tbl_customers c ON c.id=t.user_id
+            FROM tbl_transactions t
             LEFT JOIN tbl_users au ON au.id=t.admin_id
-            WHERE (c.reseller_id IS NULL OR t.method LIKE 'Admin Manual - %'
-                OR au.user_type IN ('Admin','SuperAdmin')) AND ".$legacyDirectWhere);
+            WHERE ".$legacyDirectWhere);
         $legacyDirect->execute($directParams);
 
         $direct = round((float)$legacyDirect->fetchColumn() + (float)$eventRow['direct_income'], 2);
