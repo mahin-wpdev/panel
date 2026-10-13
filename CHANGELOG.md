@@ -2,6 +2,10 @@
 
 # CHANGELOG
 
+## 2026.10.14 — Settlement history readability
+
+- Put the profit and balance-change explanation on its own line under the history title so it cannot run into the heading.
+
 ## 2026.10.14 — Reseller profit split history
 
 - Show admin profit and reseller profit in separate columns for each recharge earning.
