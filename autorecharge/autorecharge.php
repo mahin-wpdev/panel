@@ -113,40 +113,155 @@ function autorecharge_find_customer($username, $sender)
 function autorecharge_find_plan($amount, $customer)
 {
     $amount = round((float) $amount, 2);
+    $minimumPrice = max(0, $amount - 50);
+
+    /* If the payer already has an active PPPOE plan, a small overpayment is
+     * treated as renewal of that same plan, even when another plan happens
+     * to have the exact received amount as its price. */
+    $current = autorecharge_find_current_plan_candidate($amount, $customer);
+    if (!empty($current['error'])) {
+        return ['plan' => null, 'error' => $current['error']];
+    }
+    if (!empty($current['candidate'])) {
+        return autorecharge_select_plan_candidate([$current['candidate']], $amount);
+    }
+
+    /* With no current-plan match, exact price wins before general tolerance. */
+    $exact = autorecharge_find_plan_candidates($amount, $customer, true);
+    if (count($exact) > 0) {
+        return autorecharge_select_plan_candidate($exact, $amount);
+    }
+
+    /* For a small overpayment, choose the closest eligible package below it. */
+    $tolerant = autorecharge_find_plan_candidates($minimumPrice, $customer, false, $amount);
+    if (count($tolerant) === 0) {
+        return [
+            'plan' => null,
+            'error' => 'No eligible PPPOE package matches this amount or the Tk 50 overpayment range',
+        ];
+    }
+
+    $highestPrice = max(array_column($tolerant, 'price'));
+    $nearest = array_values(array_filter($tolerant, function ($candidate) use ($highestPrice) {
+        return (float) $candidate['price'] === (float) $highestPrice;
+    }));
+
+    return autorecharge_select_plan_candidate($nearest, $amount);
+}
+
+function autorecharge_find_current_plan_candidate($amount, $customer)
+{
+    $activePlans = ORM::for_table('tbl_user_recharges')
+        ->table_alias('r')
+        ->select('p.*')
+        ->join('tbl_plans', ['p.id', '=', 'r.plan_id'], 'p')
+        ->where('r.customer_id', $customer->id())
+        ->where('r.status', 'on')
+        ->where('p.type', 'PPPOE')
+        ->where('p.enabled', 1)
+        ->find_many();
+
+    if (count($activePlans) > 1) {
+        return ['candidate' => null, 'error' => 'Multiple active PPPOE packages found for this customer'];
+    }
+    if (count($activePlans) === 0) {
+        return ['candidate' => null, 'error' => null];
+    }
+
+    $plan = $activePlans[0];
+    $price = (float) $plan->price;
+    if (!empty($customer->reseller_id)) {
+        $resellerPrices = ORM::for_table('tbl_reseller_packages')
+            ->where('reseller_id', $customer->reseller_id)
+            ->where('plan_id', $plan->id)
+            ->where('status', 1)
+            ->find_many();
+        if (count($resellerPrices) > 1) {
+            return ['candidate' => null, 'error' => 'Multiple reseller prices found for this customer package'];
+        }
+        if (count($resellerPrices) === 1) {
+            $price = (float) $resellerPrices[0]->customer_price;
+        }
+    }
+
+    if ($price > 0 && $amount >= $price && $amount <= $price + 50) {
+        return [
+            'candidate' => ['plan' => $plan, 'price' => $price],
+            'error' => null,
+        ];
+    }
+
+    return ['candidate' => null, 'error' => null];
+}
+
+function autorecharge_select_plan_candidate($candidates, $amount)
+{
+    if (count($candidates) !== 1) {
+        return [
+            'plan' => null,
+            'error' => 'Multiple eligible PPPOE packages match this amount',
+        ];
+    }
+
+    return [
+        'plan' => $candidates[0]['plan'],
+        'package_price' => (float) $candidates[0]['price'],
+        'amount_received' => round((float) $amount, 2),
+        'overpayment' => round((float) $amount - (float) $candidates[0]['price'], 2),
+        'error' => null,
+    ];
+}
+
+function autorecharge_find_plan_candidates($minimumPrice, $customer, $exact, $maximumPrice = null)
+{
     $plans = [];
 
-    /* A reseller-specific price is valid only for this customer's reseller. */
+    /* Reseller customer pricing takes precedence over global package pricing. */
     if (!empty($customer->reseller_id)) {
-        $plans = ORM::for_table('tbl_reseller_packages')
+        $query = ORM::for_table('tbl_reseller_packages')
             ->table_alias('rp')
             ->select('p.*')
+            ->select('rp.customer_price', 'customer_price')
             ->join('tbl_plans', ['p.id', '=', 'rp.plan_id'], 'p')
             ->where('rp.reseller_id', $customer->reseller_id)
             ->where('rp.status', 1)
             ->where('p.type', 'PPPOE')
-            ->where('p.enabled', 1)
-            ->where('rp.customer_price', $amount)
-            ->find_many();
+            ->where('p.enabled', 1);
+
+        if ($exact) {
+            $query->where('rp.customer_price', $minimumPrice);
+        } else {
+            $query->where_gte('rp.customer_price', $minimumPrice)
+                ->where_lte('rp.customer_price', $maximumPrice);
+        }
+
+        foreach ($query->find_many() as $plan) {
+            $plans[] = [
+                'plan' => $plan,
+                'price' => (float) $plan->customer_price,
+            ];
+        }
+        if (count($plans) > 0) {
+            return $plans;
+        }
     }
 
-    if (count($plans) === 0) {
-        $plans = ORM::for_table('tbl_plans')
-            ->where('price', $amount)
-            ->where('type', 'PPPOE')
-            ->where('enabled', 1)
-            ->find_many();
+    $query = ORM::for_table('tbl_plans')
+        ->where('type', 'PPPOE')
+        ->where('enabled', 1);
+
+    if ($exact) {
+        $query->where('price', $minimumPrice);
+    } else {
+        $query->where_gte('price', $minimumPrice)
+            ->where_lte('price', $maximumPrice);
     }
 
-    if (count($plans) !== 1) {
-        return [
-            'plan' => null,
-            'error' => count($plans)
-                ? 'Multiple eligible PPPOE packages match this amount'
-                : 'No eligible PPPOE package matches this amount',
-        ];
+    foreach ($query->find_many() as $plan) {
+        $plans[] = ['plan' => $plan, 'price' => (float) $plan->price];
     }
 
-    return ['plan' => $plans[0], 'error' => null];
+    return $plans;
 }
 
 function autorecharge_router()
