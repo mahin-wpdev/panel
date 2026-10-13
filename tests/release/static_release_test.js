@@ -62,6 +62,24 @@ assert.match(read('database/migrations/manifest.txt'),
   /2026101301\|database\/migrations\/2026101301_profit_events\.sql/);
 assert.match(read('database/migrations/manifest.txt'),
   /2026101401\|database\/migrations\/2026101401_password_hashes\.sql/);
+assert.match(read('database/migrations/manifest.txt'),
+  /2026101402\|database\/migrations\/2026101402_transaction_tax\.sql/);
+assert.match(read('system/autoload/Balance.php'), /SELECT GET_LOCK\(\?, 0\)/,
+  'wallet debits must serialize per customer');
+assert.match(read('system/autoload/Balance.php'), /balance>=\?/,
+  'wallet debits must be conditional on sufficient balance');
+assert.match(read('system/autoload/Package.php'), /existingExpiry > time\(\)/,
+  'an expired plan must not extend from an old expiry date');
+assert.match(read('system/autoload/Package.php'), /GET_LOCK\(\?, 0\)/,
+  'all recharge channels must share the same customer lock');
+assert.match(read('system/cron.php'), /\$u->status = 'off';[\s\S]{1,240}Message::sendPackageNotification/,
+  'expiration state must persist before optional notice delivery');
+assert.match(read('system/autoload/Package.php'), /tax_amount = round\(max\(0, \(float\)\$taxAmount\), 2\)/,
+  'tax must be stored separately from reseller revenue');
+assert.match(read('system/autoload/Package.php'), /Lang::moneyFormat\(\(float\)\$in\['price'\] \+ \$taxAmount\)/,
+  'printed recharge receipts must show tax in the billed total');
+assert.match(read('system/controllers/home.php'), /REQUEST_METHOD.*POST[\s\S]{0,120}Csrf::check/,
+  'auto-renewal preference changes must be POST-only and CSRF-protected');
 const approvalMigration = read('database/migrations/2026092702_customer_approval_status.sql');
 assert.match(approvalMigration, /LOWER\(TRIM\(approval_status\)\)/);
 assert.match(approvalMigration, /ENUM\('pending','approved','rejected'\)/);

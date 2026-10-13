@@ -161,10 +161,25 @@
                         <th>{Lang::pad(Lang::T('Package Name'), ' ', 2)}</th>
                         <td>{$in['plan_name']}</td>
                     </tr>
-                    <tr>
-                        <th>{Lang::pad(Lang::T('Package Price'), ' ', 2)}</th>
-                        <td>{Lang::moneyFormat($in['price'])}</td>
-                    </tr>
+                    {if $in['tax_amount'] > 0}
+                        <tr>
+                            <th>{Lang::pad(Lang::T('Subtotal'), ' ', 2)}</th>
+                            <td>{Lang::moneyFormat($in['price'])}</td>
+                        </tr>
+                        <tr>
+                            <th>{Lang::pad(Lang::T('Tax'), ' ', 2)}</th>
+                            <td>{Lang::moneyFormat($in['tax_amount'])}</td>
+                        </tr>
+                        <tr>
+                            <th>{Lang::pad(Lang::T('Total'), ' ', 2)}</th>
+                            <td>{Lang::moneyFormat($in['price'] + $in['tax_amount'])}</td>
+                        </tr>
+                    {else}
+                        <tr>
+                            <th>{Lang::pad(Lang::T('Package Price'), ' ', 2)}</th>
+                            <td>{Lang::moneyFormat($in['price'])}</td>
+                        </tr>
+                    {/if}
                     <tr>
                         <th>{Lang::pad(Lang::T('Username'), ' ', 2)}</th>
                         <td>{$in['username']}</td>

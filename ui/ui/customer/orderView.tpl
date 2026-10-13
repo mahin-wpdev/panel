@@ -87,13 +87,17 @@
                                     <td>{Lang::moneyFormat($add_cost)}</td>
                                 </tr>
                             {/if}
-                            <tr>
-                                <td>{Lang::T('Package Price')}{if $add_cost!=0}<small> +
-                                        {Lang::T('Additional Cost')}{/if}</small></td>
-                                <td
-                                    style="font-size: large; font-weight:bolder; font-family: 'Courier New', Courier, monospace; ">
-                                    {Lang::moneyFormat($trx['price'])}</td>
-                            </tr>
+                            {if $invoice['tax_amount'] > 0}
+                                <tr><td>{Lang::T('Subtotal')}</td><td>{Lang::moneyFormat($invoice['price'])}</td></tr>
+                                <tr><td>{Lang::T('Tax')}</td><td>{Lang::moneyFormat($invoice['tax_amount'])}</td></tr>
+                                <tr><td>{Lang::T('Total')}</td><td style="font-size:large;font-weight:bolder;font-family:'Courier New',Courier,monospace">{Lang::moneyFormat($invoice['price'] + $invoice['tax_amount'])}</td></tr>
+                            {else}
+                                <tr>
+                                    <td>{Lang::T('Package Price')}{if $add_cost!=0}<small> +
+                                            {Lang::T('Additional Cost')}{/if}</small></td>
+                                    <td style="font-size:large;font-weight:bolder;font-family:'Courier New',Courier,monospace">{Lang::moneyFormat($invoice['price'])}</td>
+                                </tr>
+                            {/if}
                             <tr>
                                 <td>{Lang::T('Type')}</td>
                                 <td>{$plan['type']}</td>
