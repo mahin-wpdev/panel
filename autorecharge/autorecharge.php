@@ -73,26 +73,41 @@ function autorecharge_find_customer($username, $sender)
     $username = autorecharge_username($username);
 
     if ($username !== '' && !in_array(strtoupper($username), ['N/A', 'NA'], true)) {
-        return ORM::for_table('tbl_customers')
+        $customers = ORM::for_table('tbl_customers')
             ->where_raw(
                 '(LOWER(username) = ? OR LOWER(pppoe_username) = ?)',
                 [$username, $username]
             )
-            ->find_one();
+            ->find_many();
+
+        if (count($customers) === 1) {
+            return $customers[0];
+        }
+
+        /* A matching reference is authoritative; never guess between users. */
+        if (count($customers) > 1) {
+            return null;
+        }
     }
 
-    /* Phone fallback only works when the SMS contains a usable phone number. */
+    /*
+     * Some payment references contain a display name or a typo instead of
+     * the account username. Use the payer phone only when it identifies one
+     * customer, and refuse ambiguous matches rather than charging at random.
+     */
     $last10 = autorecharge_phone($sender);
     if (strlen($last10) < 10) {
         return null;
     }
 
-    return ORM::for_table('tbl_customers')
+    $customers = ORM::for_table('tbl_customers')
         ->where_raw(
-            "RIGHT(REPLACE(REPLACE(REPLACE(phonenumber,'+',''),' ',''),'-',''),10)=?",
+            "RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phonenumber,'+',''),' ',''),'-',''),'(',''),')',''),'.',''),10)=?",
             [$last10]
         )
-        ->find_one();
+        ->find_many();
+
+    return count($customers) === 1 ? $customers[0] : null;
 }
 
 function autorecharge_find_plan($amount, $customer)
@@ -202,14 +217,11 @@ function autorecharge_receipt($gateway, $trxid, $amount)
             throw $insertError;
         }
 
-        /* Customer-not-found is safe to retry because recharge never started. */
-        if (
-            $row->status === 'error' &&
-            empty($row->customer_id) &&
-            empty($row->transaction_id) &&
-            $row->error_message === 'Customer not found'
-        ) {
+        /* Explicitly marked preflight errors are safe to retry: Package was
+         * never called, so no recharge transaction could have been created. */
+        if (autorecharge_receipt_can_retry($row)) {
             $row->amount = $amount;
+            $row->customer_id = null;
             $row->status = 'processing';
             $row->error_message = null;
             $row->received_at = date('Y-m-d H:i:s');
@@ -221,6 +233,42 @@ function autorecharge_receipt($gateway, $trxid, $amount)
 
         return ['new' => false, 'row' => $row];
     }
+}
+
+function autorecharge_receipt_can_retry($row)
+{
+    if (!$row || $row->status !== 'error' || !empty($row->transaction_id)) {
+        return false;
+    }
+
+    if (strpos((string) $row->error_message, 'SAFE_RETRY:') === 0) {
+        return true;
+    }
+
+    /* Legacy customer-not-found receipts predate SAFE_RETRY markers. */
+    return empty($row->customer_id) && $row->error_message === 'Customer not found';
+}
+
+/* Preserve the production bKash claim shared with the separate JTEX payment
+ * service. This file is installed only on the production host; local/staging
+ * environments without that integration continue to use the Panel ledger. */
+function autorecharge_reserve_external_payment($gateway, $trxid)
+{
+    if ($gateway !== 'bKash') {
+        return true;
+    }
+
+    $claimsFile = '/www/server/jtex-payments/shared-claims.php';
+    if (!is_file($claimsFile)) {
+        return true;
+    }
+
+    require_once $claimsFile;
+    if (!function_exists('jtex_payment_reserve')) {
+        throw new Exception('Shared payment claim service is unavailable');
+    }
+
+    return jtex_payment_reserve($trxid, 'panel');
 }
 
 /*
@@ -323,6 +371,7 @@ function autoRechargeUser(array $payment)
 
     $receipt = null;
     $rechargeCompleted = false;
+    $retrySafe = true;
     $transactionId = null;
 
     try {
@@ -365,6 +414,16 @@ function autoRechargeUser(array $payment)
             "Sender: {$sender}\n" .
             "TrxID: {$trxid}";
 
+        /* Do not let a bKash reference already claimed by the external JTEX
+         * payment flow reach Package::rechargeUser(). */
+        if ($gateway === 'bKash') {
+            $retrySafe = false;
+            if (!autorecharge_reserve_external_payment($gateway, $trxid)) {
+                throw new Exception('Transaction reserved for another payment system');
+            }
+        }
+
+        $retrySafe = false;
         $transactionId = Package::rechargeUser(
             $customer->id(),
             $router['name'],
@@ -427,7 +486,8 @@ function autoRechargeUser(array $payment)
         }
 
         if (is_array($receipt) && isset($receipt['row'])) {
-            autorecharge_mark_error($receipt['row'], $e->getMessage());
+            $message = $retrySafe ? 'SAFE_RETRY: ' . $e->getMessage() : $e->getMessage();
+            autorecharge_mark_error($receipt['row'], $message);
         }
 
         autorecharge_log(

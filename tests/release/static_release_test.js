@@ -95,6 +95,12 @@ assert.match(panelEntrypoint, /refusing to replace an existing key/);
 const autorecharge = read('autorecharge/autorecharge.php');
 assert.match(autorecharge, /auto_payment_sms_secret/);
 assert.match(autorecharge, /hash_equals\(/);
+assert.match(autorecharge, /LOWER\(pppoe_username\)/,
+  'auto-recharge references must match PPPoE usernames too');
+assert.match(autorecharge, /SAFE_RETRY:/,
+  'only marked preflight failures may be retried with the same TrxID');
+assert.match(autorecharge, /jtex_payment_reserve\(\$trxid, 'panel'\)/,
+  'Panel bKash recharge must preserve the shared JTEX payment claim');
 for (const webhook of ['bkash.php', 'bkash_merchant.php', 'nogod.php']) {
   assert.match(read('autorecharge/' + webhook), /autorecharge_require_webhook_secret\(/,
     webhook + ' must fail closed behind the configured webhook secret');
