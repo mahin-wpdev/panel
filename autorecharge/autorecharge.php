@@ -212,6 +212,17 @@ function autorecharge_select_plan_candidate($candidates, $amount)
     ];
 }
 
+function autorecharge_payment_note($gateway, $sender, $trxid, $amount, $packagePrice, $overpayment)
+{
+    return "Auto Payment\n" .
+        "Gateway: {$gateway}\n" .
+        "Sender: {$sender}\n" .
+        "TrxID: {$trxid}\n" .
+        "Amount received: Tk " . number_format((float) $amount, 2, '.', '') . "\n" .
+        "Package price: Tk " . number_format((float) $packagePrice, 2, '.', '') . "\n" .
+        "Overpayment (receipt only): Tk " . number_format((float) $overpayment, 2, '.', '');
+}
+
 function autorecharge_find_plan_candidates($minimumPrice, $customer, $exact, $maximumPrice = null)
 {
     $plans = [];
@@ -524,10 +535,14 @@ function autoRechargeUser(array $payment)
             throw new Exception($found['error']);
         }
 
-        $note = "Auto Payment\n" .
-            "Gateway: {$gateway}\n" .
-            "Sender: {$sender}\n" .
-            "TrxID: {$trxid}";
+        $note = autorecharge_payment_note(
+            $gateway,
+            $sender,
+            $trxid,
+            $amount,
+            $found['package_price'],
+            $found['overpayment']
+        );
 
         /* Do not let a bKash reference already claimed by the external JTEX
          * payment flow reach Package::rechargeUser(). */

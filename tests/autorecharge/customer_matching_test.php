@@ -186,6 +186,9 @@ ORM::$currentRecharges = [(object) ['customer_id' => 77, 'plan_id' => 10, 'statu
 $runningBasicPlan = new AutoRechargeTestCustomer(77, 'running', 'running.pppoe', '01712345678');
 $selected = autorecharge_find_plan(350, $runningBasicPlan);
 check($selected['plan']->id === 10 && $selected['overpayment'] === 50.0, 'current Tk 300 package must win through Tk 350 even when a Tk 350 package exists');
+$note = autorecharge_payment_note('bKash', '01712345678', 'TRX-50', 350, $selected['package_price'], $selected['overpayment']);
+check(strpos($note, 'Amount received: Tk 350.00') !== false, 'receipt note must retain the full amount received');
+check(strpos($note, 'Package price: Tk 300.00') !== false && strpos($note, 'Overpayment (receipt only): Tk 50.00') !== false, 'receipt note must show package amount and surplus without balance credit');
 ORM::$currentRecharges[] = (object) ['customer_id' => 77, 'plan_id' => 11, 'status' => 'on'];
 check(autorecharge_find_plan(320, $runningBasicPlan)['error'] !== null, 'multiple active PPPOE packages must require review');
 
@@ -197,4 +200,4 @@ ORM::$resellerPackages = [(object) ['reseller_id' => 9, 'plan_id' => 10, 'custom
 $selected = autorecharge_find_plan(320, $resellerCustomer);
 check($selected['plan']->id === 10 && $selected['package_price'] === 280.0, 'reseller customer price must be used for tolerance matching');
 
-echo "PASS: reference matching, retry boundaries, current-plan priority, exact and tolerant package selection, and reseller pricing\n";
+echo "PASS: reference matching, retry boundaries, current-plan priority, exact and tolerant package selection, reseller pricing, and receipt-only overpayment\n";
