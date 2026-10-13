@@ -89,6 +89,7 @@ switch ($do) {
             $d = ORM::for_table('tbl_customers')->create();
             $d->username = alphanumeric($username, "+_.@-");
             $d->password = $password;
+            $d->portal_password_hash = Password::customerHash($password);
             $d->fullname = $fullname;
             $d->address = $address;
             $d->email = $email;

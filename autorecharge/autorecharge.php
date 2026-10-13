@@ -9,11 +9,30 @@ if (!function_exists('autorecharge_log')) {
 
 function autorecharge_log($file, $message)
 {
-    @file_put_contents(
-        __DIR__ . '/' . $file,
-        date('Y-m-d H:i:s') . ' ' . $message . "\n",
-        FILE_APPEND | LOCK_EX
-    );
+    $path = __DIR__ . '/' . basename((string)$file);
+    $lockPath = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'autorecharge-' . hash('sha256', $path) . '.lock';
+    $lock = @fopen($lockPath, 'c');
+    if (!$lock || !@flock($lock, LOCK_EX)) {
+        if ($lock) @fclose($lock);
+        return;
+    }
+    @chmod($lockPath, 0600);
+    $line = preg_replace('/\b(Sender|Ref|reference)=([^|]*)/i', '$1=[redacted]', (string)$message);
+    $line = date('Y-m-d H:i:s') . ' ' . $line . "\n";
+    $maxBytes = 5 * 1024 * 1024;
+    if (is_file($path) && filesize($path) + strlen($line) > $maxBytes) {
+        @unlink($path . '.2');
+        if (is_file($path . '.1')) @rename($path . '.1', $path . '.2');
+        @rename($path, $path . '.1');
+    }
+    $handle = @fopen($path, 'ab');
+    if ($handle) {
+        @chmod($path, 0640);
+        @fwrite($handle, $line);
+        @fclose($handle);
+    }
+    @flock($lock, LOCK_UN);
+    @fclose($lock);
 }
 
 
@@ -40,7 +59,7 @@ function autorecharge_require_webhook_secret(array $data)
     $provided = trim((string) (
         $_SERVER['HTTP_X_WEBHOOK_SECRET']
         ?? $_SERVER['HTTP_X_API_KEY']
-        ?? ($data['secret'] ?? ($_GET['secret'] ?? ''))
+        ?? ''
     ));
 
     if ($expected !== '' && $provided !== '' && hash_equals($expected, $provided)) {
@@ -53,6 +72,21 @@ function autorecharge_require_webhook_secret(array $data)
         'message' => 'Webhook authentication failed',
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
+}
+
+function autorecharge_response_code(array $result): int
+{
+    if (($result['status'] ?? '') === 'success') return 200;
+    if (!empty($result['manual_review'])) return 202;
+    if (!empty($result['retryable'])) return 503;
+    return 422;
+}
+
+function autorecharge_exception_response_code(Throwable $error): int
+{
+    $message = strtolower($error->getMessage());
+    if (strpos($message, 'invalid sms payload') !== false || strpos($message, 'invalid ') === 0) return 400;
+    return 500;
 }
 
 
@@ -252,9 +286,7 @@ function autorecharge_find_plan_candidates($minimumPrice, $customer, $exact, $ma
                 'price' => (float) $plan->customer_price,
             ];
         }
-        if (count($plans) > 0) {
-            return $plans;
-        }
+        return $plans;
     }
 
     $query = ORM::for_table('tbl_plans')
@@ -481,6 +513,7 @@ function autoRechargeUser(array $payment)
             'gateway' => $gateway,
             'trxid' => $trxid,
             'message' => 'Invalid payment details',
+            'retryable' => false,
         ];
     }
 
@@ -511,6 +544,7 @@ function autoRechargeUser(array $payment)
                 'status' => $isSuccess ? 'success' : 'error',
                 'gateway' => $gateway,
                 'trxid' => $trxid,
+                'manual_review' => !$isSuccess,
                 'message' => $isSuccess
                     ? 'Already processed'
                     : 'A previous processing attempt requires administrator review',
@@ -631,6 +665,8 @@ function autoRechargeUser(array $payment)
             'gateway' => $gateway,
             'message' => $e->getMessage(),
             'trxid' => $trxid,
+            'retryable' => $retrySafe,
+            'manual_review' => !$retrySafe,
         ];
     } finally {
         autorecharge_unlock($lockKey);

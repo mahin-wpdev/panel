@@ -1,6 +1,7 @@
 config.php
 # Runtime payment/identity data must never be committed.
 autorecharge/*.log
+autorecharge/*.log.*
 autorecharge/**/*.log
 *.log
 *.log.*

@@ -11,7 +11,7 @@ class ResellerAccounting
             AND t.recharged_on>=? AND t.recharged_on<=?");
         $legacy->execute([$resellerId,$from,$through]);
         $events = $db->prepare("SELECT COALESCE(SUM(recharge_amount),0) FROM tbl_profit_events
-            WHERE owner_reseller_id=? AND reseller_income>0 AND status='earned'
+            WHERE owner_reseller_id=? AND status='earned'
             AND effective_on>=? AND effective_on<=?");
         $events->execute([$resellerId,$from,$through]);
         return round((float)$legacy->fetchColumn()+(float)$events->fetchColumn(),2);

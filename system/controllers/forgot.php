@@ -72,6 +72,7 @@ if ($step == 1) {
                 $pass = mt_rand(10000, 99999);
                 $user = ORM::for_table('tbl_customers')->where('username', $username)->find_one();
                 $user->password = $pass;
+                $user->portal_password_hash = Password::customerHash($pass);
                 $user->save();
                 $ui->assign('username', $username);
                 $ui->assign('passsword', $pass);

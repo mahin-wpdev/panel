@@ -11,7 +11,7 @@ This additive PHP API is intentionally isolated from legacy `system/api.php`, pa
 
 ## What it does *not* do yet
 
-No traffic/ONU dashboard, payments, support, or full administrator management. The existing customer's password is plaintext and existing staff password is SHA-1 in this codebase. This **legacy compatibility shim is not an authentication hardening or a production approval**. Do not deploy the API without a reviewed secure-credential migration plan, verified staff permission policy, session replay protection, staging regression tests and HTTPS configuration.
+No traffic/ONU dashboard, payments, support, or full administrator management. Portal authentication now uses per-customer bcrypt hashes and staff passwords use bcrypt; legacy customer portal logins and staff SHA-1 hashes upgrade on the next successful login. The separate customer `password` and `pppoe_password` fields remain recoverable network credentials for current RouterOS/RADIUS integrations. Production use still requires verified staff permissions, session replay protection, staging regression tests and HTTPS configuration.
 
 Customer, reseller and admin role distinctions are verified from both `tbl_users.user_type` and the **active** `tbl_resellers` association; unsupported staff accounts fail closed. A duplicate valid username across customer and staff is rejected.
 

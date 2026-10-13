@@ -10,15 +10,41 @@ class Password
 
     public static function _crypt($password)
     {
-        return sha1($password);
+        return password_hash((string)$password, PASSWORD_BCRYPT);
     }
 
     public static function _verify($user_input, $hashed_password)
     {
-        if (sha1($user_input) == $hashed_password) {
+        $stored = (string)$hashed_password;
+        if (password_verify((string)$user_input, $stored)) {
             return true;
         }
-        return false;
+        // Upgrade old SHA-1 credentials transparently at the next successful login.
+        return preg_match('/^[a-f0-9]{40}$/i', $stored) === 1
+            && hash_equals(strtolower($stored), sha1((string)$user_input));
+    }
+
+    public static function _needsRehash($hashed_password)
+    {
+        $stored = (string)$hashed_password;
+        if (preg_match('/^[a-f0-9]{40}$/i', $stored) === 1) {
+            return true;
+        }
+        return password_needs_rehash($stored, PASSWORD_BCRYPT);
+    }
+
+    public static function customerHash($password)
+    {
+        return password_hash((string)$password, PASSWORD_BCRYPT);
+    }
+
+    public static function customerVerify($password, $passwordHash, $legacyPassword = '')
+    {
+        $hash = (string)$passwordHash;
+        if ($hash !== '') {
+            return password_verify((string)$password, $hash);
+        }
+        return hash_equals((string)$legacyPassword, (string)$password);
     }
     public static function _uverify($user_input, $hashed_password)
     {

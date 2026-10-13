@@ -34,7 +34,7 @@ switch ($action) {
             $d_pass = $user['password'];
             $npass = _post('npass');
             $cnpass = _post('cnpass');
-            if ($password == $d_pass) {
+            if (Password::customerVerify($password, $user['portal_password_hash'] ?? '', $d_pass)) {
                 if (!Validator::Length($password, 36, 2)) {
                     r2(getUrl('accounts/change-password'), 'e', 'New Password must be 2 to 35 character');
                 }
@@ -42,6 +42,7 @@ switch ($action) {
                     r2(getUrl('accounts/change-password'), 'e', 'Both Password should be same');
                 }
                 $user->password = $npass;
+                $user->portal_password_hash = Password::customerHash($npass);
                 $turs = ORM::for_table('tbl_user_recharges')->where('customer_id', $user['id'])->find_many();
                 foreach ($turs as $tur) {
                     // if has active plan, change the password to devices

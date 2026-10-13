@@ -22,8 +22,16 @@ jobs:
           php -l system/autoload/ResellerBalanceHistory.php
           php -l system/controllers/reseller.php
           php -l system/mobile/panel-app.php
+          php -l system/autoload/Package.php
+          php -l system/autoload/Password.php
+          php -l autorecharge/autorecharge.php
+          php -l autorecharge/bkash.php
+          php -l autorecharge/bkash_merchant.php
+          php -l autorecharge/nogod.php
           php -l tests/profit/reseller_profit_config_test.php
           php -l tests/profit/reseller_balance_history_test.php
+          php -l tests/auth/password_hash_test.php
+          php -l tests/autorecharge/response_code_test.php
       - name: Reseller profit configuration
         run: php tests/profit/reseller_profit_config_test.php
       - name: Profit split for every recharge actor
@@ -32,3 +40,7 @@ jobs:
         run: php tests/profit/reseller_accounting_test.php
       - name: Admin profit history signs and deduplication
         run: php tests/profit/reseller_balance_history_test.php
+      - name: Password hash migration compatibility
+        run: php tests/auth/password_hash_test.php
+      - name: Auto-recharge response and retry semantics
+        run: php tests/autorecharge/response_code_test.php

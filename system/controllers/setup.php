@@ -88,7 +88,7 @@ if (($routes[1] ?? '') === 'save') {
         $newPassword = (string) _post('admin_password');
         if ($newPassword !== '') {
             if (strlen($newPassword) < 10) r2(getUrl('setup'), 'e', 'Admin password must be at least 10 characters');
-            $user->password = sha1($newPassword);
+            $user->password = Password::_crypt($newPassword);
         }
         $user->save();
     }

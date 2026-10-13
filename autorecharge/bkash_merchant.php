@@ -50,12 +50,12 @@ try {
         )
     );
 
-    http_response_code(200);
+    http_response_code(autorecharge_response_code($result));
     echo json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 } catch (Throwable $e) {
     autorecharge_log('bkash-merchant-webhook.log', 'REJECTED: ' . $e->getMessage());
 
-    http_response_code(200);
+    http_response_code(autorecharge_exception_response_code($e));
     echo json_encode([
         'status' => 'error',
         'gateway' => 'bKash Merchant',

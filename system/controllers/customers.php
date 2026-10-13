@@ -553,6 +553,7 @@ switch ($action) {
             $d = ORM::for_table('tbl_customers')->create();
             $d->username = $username;
             $d->password = $password;
+            $d->portal_password_hash = Password::customerHash($password);
             $d->pppoe_username = $pppoe_username;
             $d->pppoe_password = $pppoe_password;
             $d->pppoe_ip = $pppoe_ip;
@@ -770,6 +771,7 @@ switch ($action) {
             }
             if ($password != '') {
                 $c->password = $password;
+                $c->portal_password_hash = Password::customerHash($password);
             }
             $c->pppoe_username = $pppoe_username;
             $c->pppoe_password = $pppoe_password;

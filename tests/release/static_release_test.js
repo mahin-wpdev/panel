@@ -60,6 +60,8 @@ assert.match(read('database/migrations/manifest.txt'),
   /2026092702\|database\/migrations\/2026092702_customer_approval_status\.sql/);
 assert.match(read('database/migrations/manifest.txt'),
   /2026101301\|database\/migrations\/2026101301_profit_events\.sql/);
+assert.match(read('database/migrations/manifest.txt'),
+  /2026101401\|database\/migrations\/2026101401_password_hashes\.sql/);
 const approvalMigration = read('database/migrations/2026092702_customer_approval_status.sql');
 assert.match(approvalMigration, /LOWER\(TRIM\(approval_status\)\)/);
 assert.match(approvalMigration, /ENUM\('pending','approved','rejected'\)/);
@@ -95,6 +97,26 @@ assert.match(panelEntrypoint, /refusing to replace an existing key/);
 const autorecharge = read('autorecharge/autorecharge.php');
 assert.match(autorecharge, /auto_payment_sms_secret/);
 assert.match(autorecharge, /hash_equals\(/);
+assert.doesNotMatch(autorecharge, /\$_GET\s*\[\s*['"]secret['"]\s*\]|\$data\s*\[\s*['"]secret['"]\s*\]/,
+  'webhook secrets must not be accepted in URLs or request bodies');
+assert.match(autorecharge, /5\s*\*\s*1024\s*\*\s*1024/,
+  'auto-recharge logs must rotate at a bounded size');
+assert.match(autorecharge, /function autorecharge_response_code/);
+const planCandidateBlock = autorecharge.slice(
+  autorecharge.indexOf('function autorecharge_find_plan_candidates'),
+  autorecharge.indexOf('function autorecharge_router')
+);
+assert.match(planCandidateBlock, /if \(!empty\(\$customer->reseller_id\)\)[\s\S]*return \$plans;[\s\S]*\$query = ORM::for_table\('tbl_plans'\)/,
+  'reseller payments must never fall through to a mismatched global plan price');
+const packageSource = read('system/autoload/Package.php');
+assert.match(packageSource, /private static function provisionCustomer[\s\S]*throw new RuntimeException\('Package provisioning failed:/,
+  'a failed device provisioning operation must stop the recharge before recording it');
+assert.equal((packageSource.match(/self::provisionCustomer\(\$c, \$p, \$router_name, \$_app_stage\)/g) || []).length, 2,
+  'both new and renewal recharge paths must verify provisioning');
+const resellerController = read('system/controllers/reseller.php');
+assert.match(resellerController, /\$isNewProfile=!\$record/);
+assert.match(resellerController, /if\(\$isNewProfile\)\{[\s\S]*tbl_reseller_packages/,
+  'editing a reseller profile must preserve existing package-level pricing and profit rules');
 assert.match(autorecharge, /LOWER\(pppoe_username\)/,
   'auto-recharge references must match PPPoE usernames too');
 assert.match(autorecharge, /SAFE_RETRY:/,
