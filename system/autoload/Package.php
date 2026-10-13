@@ -329,9 +329,7 @@ class Package
             } else {
                 $t->admin_id = '0';
             }
-            $t->save();
-
-            ResellerProfit::record($c, $t, $p);
+            self::saveRechargeProfit($t, $c, $p);
 
             if ($p['validity_unit'] == 'Period') {
                 // insert price to fields for invoice next month
@@ -444,10 +442,8 @@ class Package
                 $t->admin_id = '0';
             }
             $t->type = $p['type'];
-            $t->save();
-            // Keep reseller profit separate from billing.  A unique ledger key
-            // prevents duplicate earnings if a gateway/webhook retries.
-            ResellerProfit::record($c, $t, $p);
+            // Keep the billing transaction and its profit snapshot atomic.
+            self::saveRechargeProfit($t, $c, $p);
 
             if ($p['validity_unit'] == 'Period' && $p['price'] != 0) {
                 // insert price to fields for invoice next month
@@ -493,6 +489,23 @@ class Package
             $trx->trx_invoice = $inv;
         }
         return $inv;
+    }
+
+    private static function saveRechargeProfit($transaction, $customer, $plan): void
+    {
+        $db = ORM::get_db();
+        if ($db->inTransaction()) {
+            throw new RuntimeException('Recharge save started inside another database transaction.');
+        }
+        $db->beginTransaction();
+        try {
+            $transaction->save();
+            ResellerProfit::record($customer, $transaction, $plan);
+            $db->commit();
+        } catch (Throwable $error) {
+            if ($db->inTransaction()) $db->rollBack();
+            throw $error;
+        }
     }
 
     public static function rechargeBalance($customer, $plan, $gateway, $channel, $note = '')

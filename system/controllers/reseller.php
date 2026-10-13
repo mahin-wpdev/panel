@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__.'/../autoload/ProfitSummary.php';
+require_once __DIR__.'/../autoload/ResellerAccounting.php';
 _admin();
 $isAdmin=in_array($admin['user_type'],['SuperAdmin','Admin'],true);
 $isReseller=$admin['user_type']==='Agent';
@@ -40,6 +42,31 @@ if($isReseller){
         if($filter!=='all')$query->where('status',$filter);
         $direction==='desc'?$query->order_by_desc($order):$query->order_by_asc($order);
         $customers=Paginator::findMany($query,['search'=>$search],30,'&filter='.urlencode($filter).'&order='.urlencode($order).'&orderby='.$direction);
+        // Load packages only for customers in this reseller's current page.
+        $customerPackages = [];
+        $customerExpiries = [];
+        $customerIds = [];
+        foreach ($customers as $customer) {
+            $customerIds[] = (int)$customer['id'];
+        }
+        if ($customerIds) {
+            $recharges = ORM::for_table('tbl_user_recharges')
+                ->where_in('customer_id', $customerIds)
+                ->order_by_desc('id')->find_array();
+            foreach ($recharges as $recharge) {
+                $customerId = (int)$recharge['customer_id'];
+                if (!array_key_exists($customerId, $customerExpiries)) {
+                    $expiration = (string)$recharge['expiration'];
+                    $customerExpiries[$customerId] = $expiration !== '' && $expiration !== '0000-00-00'
+                        ? Lang::dateAndTimeFormat($expiration, $recharge['time']) : '—';
+                }
+                if ($recharge['status'] === 'on') {
+                    $customerPackages[$customerId][] = $recharge;
+                }
+            }
+        }
+        $ui->assign('customer_packages', $customerPackages);
+        $ui->assign('customer_expiries', $customerExpiries);
         $ui->assign('is_reseller_view',true);$ui->assign('reseller_screen','customers');$ui->assign('profile',$profile);$ui->assign('d',$customers);$ui->assign('search',$search);$ui->assign('filter',$filter);$ui->assign('order',$order);$ui->assign('orderby',$direction);$ui->assign('statuses',ORM::for_table('tbl_customers')->getEnum('status'));$ui->assign('csrf_token',Csrf::generateAndStoreToken());$ui->display('admin/reseller/customers.tpl');return;
     }
     if($action==='customer-save'){
@@ -87,22 +114,23 @@ if($isReseller){
     }
     if($action==='report'){
         $from=preg_match('/^\d{4}-\d{2}-\d{2}$/',_req('from'))?_req('from'):date('Y-m-01');$to=preg_match('/^\d{4}-\d{2}-\d{2}$/',_req('to'))?_req('to'):date('Y-m-d');
-        $reportRows=ORM::for_table('tbl_reseller_earnings')->table_alias('e')->select_many('e.*','c.fullname','c.username','t.plan_name')->left_outer_join('tbl_customers',['e.customer_id','=','c.id'],'c')->left_outer_join('tbl_transactions',['e.recharge_id','=','t.id'],'t')->where('e.reseller_id',$profile['id'])->where_gte('e.created_at',$from.' 00:00:00')->where_lte('e.created_at',$to.' 23:59:59')->order_by_desc('e.id')->find_many();
+        $reportRows=ORM::for_table('tbl_reseller_earnings')->table_alias('e')->select_many('e.*','c.fullname','c.username','t.plan_name')->left_outer_join('tbl_customers',['e.customer_id','=','c.id'],'c')->left_outer_join('tbl_transactions',['e.recharge_id','=','t.id'],'t')->left_outer_join('tbl_users',['t.admin_id','=','au.id'],'au')->where('e.reseller_id',$profile['id'])->where('e.status','earned')->where_raw("(t.id IS NULL OR (t.method NOT LIKE 'Admin Manual - %' AND (au.id IS NULL OR au.user_type NOT IN ('Admin','SuperAdmin'))))")->where_gte('e.created_at',$from.' 00:00:00')->where_lte('e.created_at',$to.' 23:59:59')->order_by_desc('e.id')->find_many();
         $ui->assign('is_reseller_view',true);$ui->assign('reseller_screen','report');$ui->assign('profile',$profile);$ui->assign('report_rows',$reportRows);$ui->assign('report_from',$from);$ui->assign('report_to',$to);$ui->display('admin/reseller/dashboard.tpl');return;
     }
     if($_SERVER['REQUEST_METHOD']==='POST')r2(getUrl('reseller'),'e','Reseller accounts cannot change customer ownership.');
     $customers=ORM::for_table('tbl_customers')->where('reseller_id',$profile['id'])->order_by_desc('id')->find_many();
     $total=count($customers);$online=0;$expiring=0;$ownedIds=[];foreach($customers as $customer){$ownedIds[]=(int)$customer['id'];if($customer['status']==='Active')$online++;$active=ORM::for_table('tbl_user_recharges')->where('customer_id',$customer['id'])->where('status','on')->order_by_desc('id')->find_one();$customer->package_name=$active?$active['namebp']:'No active package';$customer->package_expiry=$active?$active['expiration'].' '.$active['time']:'—';if($active&&!empty($active['expiration'])){$expiry=strtotime((string)$active['expiration']);if($expiry!==false&&$expiry>=strtotime('today')&&$expiry<=strtotime('+7 days'))$expiring++;}}
     $onuTotal=0;$onuOnline=0;$ownedOnus=[];try{if($ownedIds){$onuTotal=ORM::for_table('tbl_onus')->where_in('customer_id',$ownedIds)->count();$onuOnline=ORM::for_table('tbl_onus')->where_in('customer_id',$ownedIds)->where('status','ONLINE')->count();$ownedOnus=ORM::for_table('tbl_onus')->table_alias('o')->select_many('o.*','c.fullname','c.username','olt.name')->left_outer_join('tbl_customers',['o.customer_id','=','c.id'],'c')->left_outer_join('tbl_olts',['o.olt_id','=','olt.id'],'olt')->where_in('o.customer_id',$ownedIds)->order_by_desc('o.updated_at')->find_many();}}catch(Throwable $e){$onuTotal=0;$onuOnline=0;$ownedOnus=[];}
-    $sales=(float)ORM::for_table('tbl_transactions')->table_alias('t')->join('tbl_customers',['t.user_id','=','c.id'],'c')->where('c.reseller_id',$profile['id'])->where_gte('t.recharged_on',date('Y-m-01'))->sum('t.price');
-    $earnings=ORM::for_table('tbl_reseller_earnings')->table_alias('e')->select_many('e.*','c.fullname','c.username','t.plan_name')->left_outer_join('tbl_customers',['e.customer_id','=','c.id'],'c')->left_outer_join('tbl_transactions',['e.recharge_id','=','t.id'],'t')->where('e.reseller_id',$profile['id'])->order_by_desc('e.id')->limit(20)->find_array();
-    $earned=(float)ORM::for_table('tbl_reseller_earnings')->where('reseller_id',$profile['id'])->where('status','earned')->sum('profit_amount');$settled=(float)ORM::for_table('tbl_reseller_settlements')->where('reseller_id',$profile['id'])->sum('amount');
-    $today=(float)ORM::for_table('tbl_reseller_earnings')->where('reseller_id',$profile['id'])->where_gte('created_at',date('Y-m-d').' 00:00:00')->sum('profit_amount');$month=(float)ORM::for_table('tbl_reseller_earnings')->where('reseller_id',$profile['id'])->where_gte('created_at',date('Y-m-01').' 00:00:00')->sum('profit_amount');
+    $resetDay=max(1,min(31,(int)($config['reset_day']??1)));$sales=ResellerAccounting::sales(ORM::get_db(),(int)$profile['id'],ProfitSummary::periodStart(date('Y-m-d'),$resetDay),date('Y-m-d'));
+    $earnings=ORM::for_table('tbl_reseller_earnings')->table_alias('e')->select_many('e.*','c.fullname','c.username','t.plan_name')->left_outer_join('tbl_customers',['e.customer_id','=','c.id'],'c')->left_outer_join('tbl_transactions',['e.recharge_id','=','t.id'],'t')->left_outer_join('tbl_users',['t.admin_id','=','au.id'],'au')->where('e.reseller_id',$profile['id'])->where('e.status','earned')->where_raw("(t.id IS NULL OR (t.method NOT LIKE 'Admin Manual - %' AND (au.id IS NULL OR au.user_type NOT IN ('Admin','SuperAdmin'))))")->order_by_desc('e.id')->limit(20)->find_array();
+    require_once 'system/autoload/ResellerAccounting.php';$earned=ResellerAccounting::earned(ORM::get_db(),(int)$profile['id']);$settled=ResellerAccounting::settled(ORM::get_db(),(int)$profile['id']);
+    $today=ResellerAccounting::earned(ORM::get_db(),(int)$profile['id'],date('Y-m-d'),date('Y-m-d'));$resetDay=max(1,min(31,(int)($config['reset_day']??1)));$month=ResellerAccounting::earned(ORM::get_db(),(int)$profile['id'],ProfitSummary::periodStart(date('Y-m-d'),$resetDay),date('Y-m-d'));
     $settlements=ORM::for_table('tbl_reseller_settlements')->where('reseller_id',$profile['id'])->order_by_desc('id')->limit(20)->find_array();
     $allowedPackages=ORM::for_table('tbl_reseller_packages')->table_alias('rp')->select_many('p.*')->join('tbl_plans',['rp.plan_id','=','p.id'],'p')->where('rp.reseller_id',$profile['id'])->where('p.enabled',1)->order_by_asc('p.name_plan')->find_many();
     $ui->assign('is_reseller_view',true);$ui->assign('reseller_screen','dashboard');$ui->assign('profile',$profile);$ui->assign('owned_customers',$customers);$ui->assign('allowed_packages',$allowedPackages);
     $ui->assign('owned_total',$total);$ui->assign('owned_online',$online);$ui->assign('owned_offline',$total-$online);$ui->assign('owned_expiring',$expiring);$ui->assign('owned_onu_total',$onuTotal);$ui->assign('owned_onu_online',$onuOnline);$ui->assign('owned_onus',$ownedOnus);
-    $ui->assign('month_sales',$sales);$ui->assign('profit_share',max(0,$earned-$settled));$ui->assign('today_profit',$today);$ui->assign('month_profit',$month);$ui->assign('lifetime_profit',$earned);$ui->assign('total_settled',$settled);$ui->assign('recent_earnings',$earnings);$ui->assign('settlements',$settlements);
+    require_once 'system/autoload/ResellerDebt.php';$ui->assign('debt_summary',ResellerDebt::summary(ORM::get_db(),(int)$profile['id']));$ui->assign('debt_history',ORM::for_table('tbl_reseller_debts')->where('reseller_id',$profile['id'])->order_by_desc('id')->limit(20)->find_array());
+    $ui->assign('month_sales',$sales);$ui->assign('profit_share',round($earned-$settled,2));$ui->assign('today_profit',$today);$ui->assign('month_profit',$month);$ui->assign('lifetime_profit',$earned);$ui->assign('total_settled',$settled);$ui->assign('recent_earnings',$earnings);$ui->assign('settlements',$settlements);
     $ui->display('admin/reseller/dashboard.tpl');return;
 }
 if(!$isAdmin)_alert('You do not have permission to access reseller management.','danger','dashboard');
@@ -196,7 +224,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         if($record->customer_prefix==='')r2(getUrl('reseller/resellers'),'e','Customer username suffix may contain only letters, numbers, underscore or hyphen.');
         $record->mobile=trim(_post('mobile'))?:$user['phone'];$record->email=trim(_post('email'))?:$user['email'];$record->profit_percentage=max(0,min(100,(float)_post('profit_percentage')));
         $record->status=in_array(_post('status'),['active','suspended','disabled'],true)?_post('status'):'active';$record->auto_approve_customers=isset($_POST['auto_approve_customers'])?1:0;$record->allow_sms=isset($_POST['allow_sms'])?1:0;$record->allow_whatsapp=isset($_POST['allow_whatsapp'])?1:0;$record->allow_email=isset($_POST['allow_email'])?1:0;$record->notes=trim(_post('notes'));$record->updated_at=date('Y-m-d H:i:s');$record->save();
-        if(isset($_POST['package_ids'])){ORM::for_table('tbl_reseller_packages')->where('reseller_id',$record['id'])->delete_many();foreach((array)($_POST['package_ids']??[]) as $packageId){$package=ORM::for_table('tbl_plans')->where('id',(int)$packageId)->where('enabled',1)->find_one();if($package){$allow=ORM::for_table('tbl_reseller_packages')->create();$allow->reseller_id=$record->id;$allow->plan_id=$package->id;$allow->customer_price=(float)$package['price'];$allow->created_at=date('Y-m-d H:i:s');$allow->updated_at=date('Y-m-d H:i:s');$allow->save();}}}
+        if(isset($_POST['package_ids'])){ORM::for_table('tbl_reseller_packages')->where('reseller_id',$record['id'])->delete_many();foreach((array)($_POST['package_ids']??[]) as $packageId){$package=ORM::for_table('tbl_plans')->where('id',(int)$packageId)->where('enabled',1)->find_one();if($package){$allow=ORM::for_table('tbl_reseller_packages')->create();$allow->reseller_id=$record->id;$allow->plan_id=$package->id;$allow->customer_price=(float)$package['price'];$allow->profit_type='percentage';$allow->profit_value=(float)$record['profit_percentage'];$allow->created_at=date('Y-m-d H:i:s');$allow->updated_at=date('Y-m-d H:i:s');$allow->save();}}}
         _log('Reseller saved #'.$record->id);r2(getUrl('reseller/resellers/').$user['id'],'s','Reseller profile saved.');
     }
     if($action==='assign'||$action==='unassign'){
@@ -225,20 +253,25 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $customer->approval_status='approved';$customer->save();_log('Admin approved reseller customer #'.$customer->id);
         r2(getUrl('reseller/ownership'),'s','Customer approved successfully.');
     }
-    if($action==='settle'){
-        $record=ORM::for_table('tbl_resellers')->find_one((int)_post('reseller_id'));$amount=round((float)_post('amount'),2);if(!$record||$amount<=0)r2(getUrl('reseller'),'e','Enter a valid reseller and settlement amount.');
-        $earned=(float)ORM::for_table('tbl_reseller_earnings')->where('reseller_id',$record['id'])->where('status','earned')->sum('profit_amount');$settled=(float)ORM::for_table('tbl_reseller_settlements')->where('reseller_id',$record['id'])->sum('amount');if($amount>$earned-$settled+0.0001)r2(getUrl('reseller'),'e','Settlement cannot exceed available profit.');
-        $settlement=ORM::for_table('tbl_reseller_settlements')->create();$settlement->reseller_id=$record['id'];$settlement->amount=$amount;$settlement->payment_method=trim(_post('payment_method'))?:'Cash';$settlement->reference=trim(_post('reference'));$settlement->note=trim(_post('note'));$settlement->processed_by=$admin['id'];$settlement->created_at=date('Y-m-d H:i:s');$settlement->save();_log('Reseller settlement #'.$settlement->id);r2(getUrl('reseller'),'s','Settlement recorded.');
+    if($action==='settle'||$action==='balance-change'){
+        require_once 'system/autoload/ResellerBalance.php';
+        try{
+            $operation=$action==='settle'?'payment':(string)_post('operation');
+            ResellerBalance::apply(ORM::get_db(),(int)_post('reseller_id'),(int)$admin['id'],$operation,trim((string)_post('amount')),trim(_post('payment_method')),trim(_post('reference')),trim(_post('note')),(int)_post('settlement_id'),(string)_post('operation_key'));
+            _log('Reseller balance '.$operation.' for reseller #'.(int)_post('reseller_id').' by admin #'.$admin['id']);
+        }catch(InvalidArgumentException $e){r2(getUrl('reseller/settlements'),'e',$e->getMessage());}
+        catch(Throwable $e){_log('Reseller balance update failed: '.$e->getMessage());r2(getUrl('reseller/settlements'),'e','Unable to save the change. Please retry.');}
+        r2(getUrl('reseller/settlements'),'s','Balance change recorded.');
     }
     if($action==='packages'){
         $record=ORM::for_table('tbl_resellers')->find_one((int)_post('reseller_id'));if(!$record)r2(getUrl('reseller'),'e','Reseller was not found.');
-        $customerPrice=max(0,(float)($_POST['customer_price']??0));$baseCost=max(0,(float)($_POST['base_cost']??0));$profitType=($_POST['profit_type']??'percentage')==='fixed'?'fixed':'percentage';$profitValue=max(0,(float)($_POST['profit_value']??0));if($customerPrice>0&&$baseCost>$customerPrice)r2(getUrl('reseller/packages'),'e','Base cost cannot exceed selling price.');
+        $customerPrice=max(0,(float)($_POST['customer_price']??0));$baseCost=max(0,(float)($_POST['base_cost']??0));$profitType=($_POST['profit_type']??'percentage')==='fixed'?'fixed':'percentage';$profitValue=max(0,(float)($_POST['profit_value']??$record['profit_percentage']));if($customerPrice>0&&$baseCost>$customerPrice)r2(getUrl('reseller/packages'),'e','Base cost cannot exceed selling price.');
         ORM::for_table('tbl_reseller_packages')->where('reseller_id',$record['id'])->delete_many();foreach((array)($_POST['package_ids']??[]) as $packageId){$package=ORM::for_table('tbl_plans')->where('id',(int)$packageId)->where('enabled',1)->find_one();if($package){$selling=$customerPrice>0?$customerPrice:(float)$package['price'];$allow=ORM::for_table('tbl_reseller_packages')->create();$allow->reseller_id=$record->id;$allow->plan_id=$package->id;$allow->customer_price=$selling;$allow->base_cost=$baseCost;$allow->profit_type=$profitType;$allow->profit_value=$profitValue;$allow->created_at=date('Y-m-d H:i:s');$allow->updated_at=date('Y-m-d H:i:s');$allow->save();}}
         _log('Reseller package permissions updated #'.$record->id);r2(getUrl('reseller'),'s','Allowed packages updated.');
     }
 }
 $sql="SELECT r.*,u.username,u.fullname,COUNT(c.id) customer_count,COALESCE(SUM(c.status='Active'),0) active_count,COALESCE(SUM(c.approval_status='pending'),0) pending_count,COALESCE((SELECT SUM(t.price) FROM tbl_transactions t JOIN tbl_customers tc ON tc.id=t.user_id WHERE tc.reseller_id=r.id AND t.recharged_on>=DATE_FORMAT(CURDATE(),'%Y-%m-01')),0) month_sales FROM tbl_resellers r LEFT JOIN tbl_users u ON u.id=r.user_id LEFT JOIN tbl_customers c ON c.reseller_id=r.id GROUP BY r.id ORDER BY r.name";
-$resellers=ORM::for_table('tbl_resellers')->raw_query($sql)->find_array();foreach($resellers as &$record){$earned=(float)ORM::for_table('tbl_reseller_earnings')->where('reseller_id',$record['id'])->where('status','earned')->sum('profit_amount');$settled=(float)ORM::for_table('tbl_reseller_settlements')->where('reseller_id',$record['id'])->sum('amount');$record['profit_share']=max(0,$earned-$settled);$record['lifetime_earnings']=$earned;$record['total_settled']=$settled;$record['offline_count']=$record['customer_count']-$record['active_count'];}unset($record);
+$resellers=ORM::for_table('tbl_resellers')->raw_query($sql)->find_array();foreach($resellers as &$record){$earned=ResellerAccounting::earned(ORM::get_db(),(int)$record['id']);$settled=ResellerAccounting::settled(ORM::get_db(),(int)$record['id']);$record['profit_share']=round($earned-$settled,2);$record['month_sales']=ResellerAccounting::sales(ORM::get_db(),(int)$record['id'],ProfitSummary::periodStart(date('Y-m-d'),max(1,min(31,(int)($config['reset_day']??1)))),date('Y-m-d'));require_once 'system/autoload/ResellerDebt.php';$record['isp_debt']=ResellerDebt::outstanding(ORM::get_db(),(int)$record['id']);$record['lifetime_earnings']=$earned;$record['total_settled']=$settled;$record['offline_count']=$record['customer_count']-$record['active_count'];}unset($record);
 $dashTotal=count($resellers);$dashActive=0;$dashCustomers=0;$dashActiveCustomers=0;$dashPending=0;$dashMonthSales=0;$dashProfitDue=0;foreach($resellers as $rr){if($rr['status']==='active')$dashActive++;$dashCustomers+=(int)$rr['customer_count'];$dashActiveCustomers+=(int)$rr['active_count'];$dashPending+=(int)$rr['pending_count'];$dashMonthSales+=(float)$rr['month_sales'];$dashProfitDue+=(float)$rr['profit_share'];}
 $ui->assign('dash_total_resellers',$dashTotal);$ui->assign('dash_active_resellers',$dashActive);$ui->assign('dash_total_customers',$dashCustomers);$ui->assign('dash_active_customers',$dashActiveCustomers);$ui->assign('dash_pending_customers',$dashPending);$ui->assign('dash_month_sales',$dashMonthSales);$ui->assign('dash_profit_due',$dashProfitDue);$ui->assign('dash_active_percent',$dashCustomers>0?round($dashActiveCustomers/$dashCustomers*100):0);
 if($action==='ownership'){
@@ -256,6 +289,11 @@ $adminSections=['dashboard','resellers','ownership','packages','earnings','settl
 $activity=[];try{$activity=ORM::for_table('tbl_reseller_activity_logs')->order_by_desc('id')->limit(100)->find_many();}catch(Throwable $e){}
 $selectedAgent=null;$selectedProfile=null;$resellerForm=false;
 if($action==='resellers'&&isset($routes[2])&&($routes[2]==='add'||ctype_digit((string)$routes[2]))){$resellerForm=true;if(ctype_digit((string)$routes[2])){$selectedAgent=ORM::for_table('tbl_users')->where('user_type','Agent')->find_one((int)$routes[2]);if($selectedAgent)$selectedProfile=ORM::for_table('tbl_resellers')->where('user_id',$selectedAgent['id'])->find_one();}}
+require_once 'system/autoload/ResellerDebt.php';$ui->assign('debt_summary',ResellerDebt::summary(ORM::get_db()));
+$ui->assign('debt_history',ORM::for_table('tbl_reseller_debts')->order_by_desc('id')->limit(100)->find_array());
+$ui->assign('balance_history',ORM::for_table('tbl_reseller_settlements')->order_by_desc('id')->limit(100)->find_array());
+$ui->assign('reversal_options',ORM::for_table('tbl_reseller_settlements')->where('entry_type','payment')->where_gt('amount',0)->where_raw('NOT EXISTS (SELECT 1 FROM tbl_reseller_settlements reversal WHERE reversal.reversal_of=tbl_reseller_settlements.id)')->order_by_desc('id')->find_array());
+$ui->assign('operation_key',bin2hex(random_bytes(16)));
 $ui->assign('reseller_form',$resellerForm);
 $ui->assign('is_reseller_view',false);$ui->assign('admin_section',$adminSection);$ui->assign('activity_logs',$activity);$ui->assign('resellers',$resellers);$ui->assign('agents',ORM::for_table('tbl_users')->where('user_type','Agent')->order_by_asc('fullname')->find_many());$ui->assign('plans',ORM::for_table('tbl_plans')->where('enabled',1)->order_by_asc('name_plan')->find_many());$ui->assign('customers',ORM::for_table('tbl_customers')->order_by_asc('fullname')->find_many());$ui->assign('selected_agent',$selectedAgent);$ui->assign('selected_profile',$selectedProfile);$ui->assign('csrf_token',Csrf::generateAndStoreToken());
 if($action==='resellers'){$ui->display('admin/reseller/users.tpl');return;}

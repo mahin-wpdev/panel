@@ -19,6 +19,13 @@
     <div class="col-lg-3 col-md-6"><div class="small-box bg-yellow"><div class="inner"><h3>{Lang::moneyFormat($reseller_month_profit)}</h3><p>Reseller Profit This Month</p></div><div class="icon"><i class="fa fa-bar-chart"></i></div><a href="{Text::url('reseller/earnings')}" class="small-box-footer">View earnings <i class="fa fa-arrow-circle-right"></i></a></div></div>
 </div>
 <div class="row">
+    <div class="col-md-12"><h4 class="page-header"><i class="fa fa-money"></i> Recorded Income <small>Current reset period</small></h4></div>
+    <div class="col-lg-3 col-md-6"><div class="small-box bg-aqua"><div class="inner"><h3>{Lang::moneyFormat($profit_direct_month)}</h3><p>Direct Customer Sales</p></div><div class="icon"><i class="fa fa-users"></i></div></div></div>
+    <div class="col-lg-3 col-md-6"><div class="small-box bg-purple"><div class="inner"><h3>{Lang::moneyFormat($profit_reseller_admin_month)}</h3><p>Admin Share of Reseller Sales</p></div><div class="icon"><i class="fa fa-share-alt"></i></div></div></div>
+    <div class="col-lg-3 col-md-6"><div class="small-box bg-green"><div class="inner"><h3>{Lang::moneyFormat($profit_own_month)}</h3><p>Own Recorded Income This Period</p></div><div class="icon"><i class="fa fa-line-chart"></i></div></div></div>
+    <div class="col-lg-3 col-md-6"><div class="small-box bg-yellow"><div class="inner"><h3>{Lang::moneyFormat($profit_own_lifetime)}</h3><p>Own Recorded Income Lifetime</p></div><div class="icon"><i class="fa fa-bar-chart"></i></div></div></div>
+</div>
+<div class="row">
     <div class="col-md-12"><h4 class="page-header"><i class="fa fa-sitemap"></i> Network &amp; Service Overview <small>ONU values are refreshed by OLT sync</small></h4></div>
     <div class="col-lg-3 col-md-6"><div class="small-box bg-light-blue"><div class="inner"><h3>{$service_active_total}/{$service_inactive_total}</h3><p>Service Active / Inactive</p></div><div class="icon"><i class="fa fa-user"></i></div><a href="{Text::url('customers/list')}" class="small-box-footer">View customers <i class="fa fa-arrow-circle-right"></i></a></div></div>
     <div class="col-lg-3 col-md-6"><div class="small-box bg-teal"><div class="inner"><h3>{$onu_online_total}/{$onu_offline_total}</h3><p>ONU Online / Offline</p></div><div class="icon"><i class="fa fa-wifi"></i></div><a href="{Text::url('onus')}" class="small-box-footer">View ONU status <i class="fa fa-arrow-circle-right"></i></a></div></div>

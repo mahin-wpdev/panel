@@ -71,20 +71,27 @@ if (in_array($tipeUser, ['SuperAdmin', 'Admin'])) {
         $ui->assign('onu_offline_total', 0); $ui->assign('onu_los_total', 0);
         $ui->assign('onu_unassigned_total', 0);
     }
+    require_once __DIR__.'/../autoload/ProfitSummary.php';
+    $profitSplit = ProfitSummary::dashboard(ORM::get_db(), (int)$reset_day);
+    $ui->assign('profit_split', $profitSplit);
+    $ui->assign('profit_direct_month', $profitSplit['month']['direct']);
+    $ui->assign('profit_reseller_admin_month', $profitSplit['month']['reseller_admin']);
+    $ui->assign('profit_own_month', $profitSplit['month']['total']);
+    $ui->assign('profit_own_lifetime', $profitSplit['lifetime']['total']);
     try {
         $resellerTotal = ORM::for_table('tbl_resellers')->count();
         $resellerActive = ORM::for_table('tbl_resellers')->where('status', 'active')->count();
         $resellerCustomers = ORM::for_table('tbl_customers')->where_not_null('reseller_id')->count();
         $serviceActive = ORM::for_table('tbl_customers')->where('status', 'Active')->count();
         $serviceInactive = ORM::for_table('tbl_customers')->where_not_equal('status', 'Active')->count();
-        $earned = (float) ORM::for_table('tbl_reseller_earnings')->where('status', 'earned')->sum('profit_amount');
-        $settled = (float) ORM::for_table('tbl_reseller_settlements')->sum('amount');
-        $monthProfit = (float) ORM::for_table('tbl_reseller_earnings')
-            ->where_gte('created_at', date('Y-m-01') . ' 00:00:00')->sum('profit_amount');
+        require_once __DIR__.'/../autoload/ResellerAccounting.php';$earned=ResellerAccounting::earned(ORM::get_db());
+        $settled = ResellerAccounting::settled(ORM::get_db());
+        $monthProfit = ResellerAccounting::earned(ORM::get_db(), null,
+            ProfitSummary::periodStart(date('Y-m-d'), (int)$reset_day), date('Y-m-d'));
         $ui->assign('reseller_total', $resellerTotal);
         $ui->assign('reseller_active_total', $resellerActive);
         $ui->assign('reseller_customer_total', $resellerCustomers);
-        $ui->assign('reseller_profit_due', max(0, $earned - $settled));
+        $ui->assign('reseller_profit_due', round($earned - $settled, 2));
         $ui->assign('reseller_month_profit', $monthProfit);
         $ui->assign('service_active_total', $serviceActive);
         $ui->assign('service_inactive_total', $serviceInactive);
