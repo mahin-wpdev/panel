@@ -299,6 +299,8 @@ class Package
             $t->invoice = $inv = "INV-" . Package::_raid();
             $t->username = $c['username'];
             $t->user_id = $id_customer;
+            $t->owner_reseller_id = (int)($c['reseller_id'] ?? 0);
+            $t->owner_snapshot_saved = 1;
             $t->plan_name = $p['name_plan'];
             if ($gateway == 'Voucher' && User::isUserVoucher($channel)) {
                 //its already paid
@@ -394,6 +396,8 @@ class Package
             $t->invoice = $inv = "INV-" . Package::_raid();
             $t->username = $c['username'];
             $t->user_id = $id_customer;
+            $t->owner_reseller_id = (int)($c['reseller_id'] ?? 0);
+            $t->owner_snapshot_saved = 1;
             $t->plan_name = $p['name_plan'];
             if ($gateway == 'Voucher' && User::isUserVoucher($channel)) {
                 $t->price = 0;
@@ -500,6 +504,8 @@ class Package
         $t->invoice = $inv = "INV-" . Package::_raid();
         $t->username = $customer['username'];
         $t->user_id = $customer['id'];
+        $t->owner_reseller_id = (int)($customer['reseller_id'] ?? 0);
+        $t->owner_snapshot_saved = 1;
         $t->plan_name = $plan['name_plan'];
         $t->price = $plan['price'];
         $t->recharged_on = date("Y-m-d");
@@ -566,6 +572,8 @@ class Package
         $t->invoice = $inv = "INV-" . Package::_raid();
         $t->username = $customer['username'];
         $t->user_id = $customer['id'];
+        $t->owner_reseller_id = (int)($customer['reseller_id'] ?? 0);
+        $t->owner_snapshot_saved = 1;
         $t->plan_name = 'Custom Balance';
         $t->price = $plan['price'];
         $t->recharged_on = date("Y-m-d");

@@ -213,12 +213,7 @@ function jm_app_home(PDO $db, array $identity): array {
                     "SELECT COUNT(*) FROM tbl_customers WHERE reseller_id IS NOT NULL AND approval_status='pending'")->fetchColumn();
             }
         }
-        $monthSalesExpr=jm_app_table($db,'tbl_transactions')
-            ? "COALESCE((SELECT SUM(t.price) FROM tbl_transactions t
-                JOIN tbl_customers tc ON tc.id=t.user_id
-                WHERE tc.reseller_id=r.id
-                  AND t.recharged_on>=DATE_FORMAT(CURDATE(),'%Y-%m-01')),0)"
-            : "0";
+        $monthSalesExpr="0";
         $profitDueExpr="0";
         $resellerOverview=jm_app_rows($db,
             "SELECT r.id,r.name,r.status,r.profit_percentage,u.username,
@@ -230,7 +225,9 @@ function jm_app_home(PDO $db, array $identity): array {
              LEFT JOIN tbl_users u ON u.id=r.user_id
              LEFT JOIN tbl_customers c ON c.reseller_id=r.id
              GROUP BY r.id ORDER BY r.name ASC LIMIT 20");
-        foreach($resellerOverview as &$row){$row['profit_due']=ResellerAccounting::available($db,(int)$row['id']);$row['debt_to_isp']=ResellerDebt::outstanding($db,(int)$row['id']);}
+        $salesResetDay=max(1,min(31,(int)($config['reset_day']??1)));
+        $salesFrom=ProfitSummary::periodStart(date('Y-m-d'),$salesResetDay);
+        foreach($resellerOverview as &$row){$row['profit_due']=ResellerAccounting::available($db,(int)$row['id']);$row['debt_to_isp']=ResellerDebt::outstanding($db,(int)$row['id']);$row['month_sales']=ResellerAccounting::sales($db,(int)$row['id'],$salesFrom,date('Y-m-d'));}
         unset($row);
     }
     if (jm_app_table($db,'tbl_reseller_earnings')) {
@@ -239,12 +236,10 @@ function jm_app_home(PDO $db, array $identity): array {
         $summary['reseller_profit_due_bdt']=jm_app_num(ResellerAccounting::earned($db)-ResellerAccounting::settled($db));
         $summary['reseller_month_profit_bdt']=jm_app_num($monthProfit);
     }
-    if (jm_app_table($db,'tbl_transactions') && jm_app_column($db,'tbl_customers','reseller_id')) {
-        $summary['reseller_month_sales_bdt']=jm_app_num(jm_mobile_query($db,
-            "SELECT COALESCE(SUM(CAST(t.price AS DECIMAL(15,2))),0)
-             FROM tbl_transactions t JOIN tbl_customers c ON c.id=t.user_id
-             WHERE c.reseller_id IS NOT NULL
-               AND t.recharged_on>=DATE_FORMAT(CURDATE(),'%Y-%m-01')")->fetchColumn());
+    if (jm_app_table($db,'tbl_transactions') && jm_app_column($db,'tbl_transactions','owner_reseller_id')) {
+        $salesResetDay=max(1,min(31,(int)($config['reset_day']??1)));
+        $summary['reseller_month_sales_bdt']=jm_app_num(ResellerAccounting::sales(
+            $db,null,ProfitSummary::periodStart(date('Y-m-d'),$salesResetDay),date('Y-m-d')));
     }
 
     $summary['onu_total']=0;$summary['onu_online_total']=0;$summary['onu_offline_total']=0;
@@ -295,9 +290,16 @@ function jm_app_customers(PDO $db, array $identity, string $query=''): array {
 }
 function jm_app_sales(PDO $db, array $identity): array {
     if (!jm_app_table($db,'tbl_transactions')) return jm_app_disabled('Transactions table is unavailable.');
-    $scope=jm_app_customer_scope($db,$identity);
-    if (!$scope) return jm_app_disabled('Reseller ownership mapping is unavailable.');
-    [$where,$params]=$scope;
+    if ($identity['role']==='reseller') {
+        if (!jm_app_column($db,'tbl_transactions','owner_reseller_id'))
+            return jm_app_disabled('Transaction ownership history is not installed on this Panel.');
+        $where="t.owner_snapshot_saved=1 AND t.owner_reseller_id=? AND t.type IN ('Hotspot','PPPOE')";
+        $params=[(int)$identity['reseller_id']];
+    } else {
+        $scope=jm_app_customer_scope($db,$identity);
+        if (!$scope) return jm_app_disabled('Reseller ownership mapping is unavailable.');
+        [$where,$params]=$scope;
+    }
     $sql="SELECT t.id,t.invoice,t.plan_name,t.price,t.recharged_on,t.expiration,t.method,".
         "c.username FROM tbl_transactions t JOIN tbl_customers c ON c.id=t.user_id " .
         "WHERE $where ORDER BY t.id DESC LIMIT 60";
