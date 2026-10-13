@@ -81,7 +81,9 @@ foreach ($d as $ds) {
                 }
             }
 
-            // Send notification and update user status
+            // Persist the expired state independently of optional notification delivery.
+            $u->status = 'off';
+            $u->save();
             try {
                 echo Message::sendPackageNotification(
                     $c,
@@ -90,8 +92,6 @@ foreach ($d as $ds) {
                     Message::getMessageType($p['type'], $textExpired),
                     $config['user_notification_expired']
                 ) . "\n";
-                $u->status = 'off';
-                $u->save();
             } catch (Throwable $e) {
                 _log($e->getMessage());
                 sendTelegram($e->getMessage());
@@ -105,9 +105,11 @@ foreach ($d as $ds) {
                     $p['price'] += $add_cost;
                 }
 
-                if ($p && $c['balance'] >= $p['price']) {
-                    if (Package::rechargeUser($ds['customer_id'], $ds['routers'], $p['id'], 'Customer', 'Balance')) {
-                        Balance::min($ds['customer_id'], $p['price']);
+                if ($p) {
+                    $renewed = Balance::purchase($ds['customer_id'], $p['price'], function () use ($ds, $p) {
+                        return Package::rechargeUser($ds['customer_id'], $ds['routers'], $p['id'], 'Customer', 'Balance');
+                    });
+                    if ($renewed) {
                         echo "plan enabled: " . (string) $p['enabled'] . " | User balance: " . (string) $c['balance'] . " | price " . (string) $p['price'] . "\n";
                         echo "auto renewal Success\n";
                     } else {

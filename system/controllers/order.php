@@ -242,10 +242,11 @@ switch ($action) {
         }
         // Tax calculation stop
         $total_cost = $plan['price'] + $add_cost + $tax;
-        if ($plan && $plan['enabled'] && $user['balance'] >= $total_cost) {
-            if (Package::rechargeUser($user['id'], $router_name, $plan['id'], 'Customer', 'Balance')) {
-                // if success, then get the balance
-                Balance::min($user['id'], $total_cost);
+        if ($plan && $plan['enabled']) {
+            $invoice = Balance::purchase($user['id'], $total_cost, function () use ($user, $router_name, $plan, $tax) {
+                return Package::rechargeUser($user['id'], $router_name, $plan['id'], 'Customer', 'Balance', '', $tax);
+            });
+            if ($invoice) {
                 App::setToken($_GET['stoken'], "success");
                 r2(getUrl('voucher/invoice/'), 's', Lang::T("Success to buy package"));
             } else {
@@ -304,6 +305,9 @@ switch ($action) {
 
         if (isset($_POST['send']) && $_POST['send'] == 'plan') {
             $target = ORM::for_table('tbl_customers')->where('username', _post('username'))->find_one();
+            if (!$target) {
+                r2(getUrl('home'), 'd', Lang::T('Username not found'));
+            }
             list($bills, $add_cost) = User::getBills($target['id']);
             if (!empty($add_cost)) {
                 $ui->assign('bills', $bills);
@@ -311,12 +315,6 @@ switch ($action) {
                 $plan['price'] += $add_cost;
             }
 
-            if (!$target) {
-                r2(getUrl('home'), 'd', Lang::T('Username not found'));
-            }
-            if ($user['balance'] < $plan['price']) {
-                r2(getUrl('home'), 'd', Lang::T('insufficient balance'));
-            }
             if ($user['username'] == $target['username']) {
                 r2(getUrl('order/pay/$routes[2]/$routes[3]'), 's', '^_^ v');
             }
@@ -328,10 +326,10 @@ switch ($action) {
             if ($active && $active['plan_id'] != $plan['id']) {
                 r2(getUrl('order/package'), 'e', Lang::T("Target has active plan, different with current plant.") . " [ <b>$active[namebp]</b> ]");
             }
-            $result = Package::rechargeUser($target['id'], $router_name, $plan['id'], $user['username'], 'Balance');
+            $result = Balance::purchase($user['id'], $plan['price'], function () use ($target, $router_name, $plan, $user, $tax) {
+                return Package::rechargeUser($target['id'], $router_name, $plan['id'], $user['username'], 'Balance', '', $tax);
+            });
             if (!empty($result)) {
-                // if success, then get the balance
-                Balance::min($user['id'], $plan['price']);
                 //sender
                 $d = ORM::for_table('tbl_payment_gateway')->create();
                 $d->username = $user['username'];

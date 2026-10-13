@@ -239,11 +239,15 @@ switch ($action) {
                 $zero = 1;
                 $gateway = 'Recharge Zero';
             }
-            if (Package::rechargeUser($id_customer, $server, $planId, $gateway, $channel)) {
-                if ($using == 'balance') {
-                    Balance::min($cust['id'], $total_cost);
-                }
-                $in = ORM::for_table('tbl_transactions')->where('username', $cust['username'])->order_by_desc('id')->find_one();
+            $recordedTax = $using === 'zero' ? 0 : $tax;
+            $performRecharge = function () use ($id_customer, $server, $planId, $gateway, $channel, $recordedTax) {
+                return Package::rechargeUser($id_customer, $server, $planId, $gateway, $channel, '', $recordedTax);
+            };
+            $rechargeResult = $using === 'balance'
+                ? Balance::purchase($cust['id'], $total_cost, $performRecharge)
+                : $performRecharge();
+            if ($rechargeResult) {
+                $in = ORM::for_table('tbl_transactions')->where('invoice', $rechargeResult)->find_one();
                 Package::createInvoice($in);
                 App::setVoucher($svoucher, $cust['username']);
                 $ui->display('admin/plan/invoice.tpl');
@@ -955,11 +959,12 @@ switch ($action) {
 
         run_hook('refill_customer'); #HOOK
         if ($v1) {
-            if (Package::rechargeUser($user['id'], $v1['routers'], $v1['id_plan'], "Voucher", $code)) {
+            $voucherInvoice = Package::rechargeUser($user['id'], $v1['routers'], $v1['id_plan'], "Voucher", $code);
+            if ($voucherInvoice) {
                 $v1->status = "1";
                 $v1->user = $user['username'];
                 $v1->save();
-                $in = ORM::for_table('tbl_transactions')->where('username', $user['username'])->order_by_desc('id')->find_one();
+                $in = ORM::for_table('tbl_transactions')->where('invoice', $voucherInvoice)->find_one();
                 Package::createInvoice($in);
                 $ui->display('admin/plan/invoice.tpl');
             } else {

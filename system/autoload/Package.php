@@ -18,7 +18,26 @@ class Package
      * @param array $pgids payment gateway ids
      * @return boolean
      */
-    public static function rechargeUser($id_customer, $router_name, $plan_id, $gateway, $channel, $note = '')
+    public static function rechargeUser($id_customer, $router_name, $plan_id, $gateway, $channel, $note = '', $taxAmount = 0)
+    {
+        // Every channel funnels through this lock, so web, mobile, cron and
+        // gateway callbacks cannot mutate one customer's entitlement together.
+        $id = (int)$id_customer;
+        $key = $id > 0 ? (string)$id : 'voucher-' . substr(hash('sha256', (string)$channel), 0, 32);
+        $lockName = 'jm_recharge_' . $key;
+        $db = ORM::get_db();
+        $lock = $db->prepare('SELECT GET_LOCK(?, 0)');
+        $lock->execute([$lockName]);
+        if ((int)$lock->fetchColumn() !== 1) return false;
+        try {
+            return self::rechargeUserLocked($id_customer, $router_name, $plan_id, $gateway, $channel, $note, $taxAmount);
+        } finally {
+            $release = $db->prepare('SELECT RELEASE_LOCK(?)');
+            $release->execute([$lockName]);
+        }
+    }
+
+    private static function rechargeUserLocked($id_customer, $router_name, $plan_id, $gateway, $channel, $note = '', $taxAmount = 0)
     {
         global $config, $admin, $c, $p, $b, $t, $d, $zero, $trx, $_app_stage, $isChangePlan;
         $date_only = date("Y-m-d");
@@ -210,7 +229,9 @@ class Package
         if ($b) {
             $lastExpired = Lang::dateAndTimeFormat($b['expiration'], $b['time']);
             $isChangePlan = false;
-            if ($b['namebp'] == $p['name_plan'] && $b['status'] == 'on' && $config['extend_expiry'] == 'yes') {
+            $existingExpiry = strtotime($b['expiration'] . ' ' . $b['time']);
+            if ($b['namebp'] == $p['name_plan'] && $b['status'] == 'on'
+                && $config['extend_expiry'] == 'yes' && $existingExpiry !== false && $existingExpiry > time()) {
                 // if it same internet plan, expired will extend
                 switch ($p['validity_unit']) {
                     case 'Months':
@@ -288,6 +309,7 @@ class Package
                     $t->price = $p['price'] + $add_cost;
                 }
             }
+            $t->tax_amount = round(max(0, (float)$taxAmount), 2);
             $t->recharged_on = $date_only;
             $t->recharged_time = $time_only;
             $t->expiration = $date_exp;
@@ -373,6 +395,7 @@ class Package
                     $t->price = $p['price'] + $add_cost;
                 }
             }
+            $t->tax_amount = round(max(0, (float)$taxAmount), 2);
             $t->recharged_on = $date_only;
             $t->recharged_time = $time_only;
             $t->expiration = $date_exp;
@@ -628,7 +651,12 @@ class Package
                 }
             }
         }
-        $invoice .= Lang::pads(Lang::T('Total'), Lang::moneyFormat($in['price']), ' ') . "\n";
+        $taxAmount = round((float)($in['tax_amount'] ?? 0), 2);
+        if ($taxAmount > 0) {
+            $invoice .= Lang::pads(Lang::T('Subtotal'), Lang::moneyFormat($in['price']), ' ') . "\n";
+            $invoice .= Lang::pads(Lang::T('Tax'), Lang::moneyFormat($taxAmount), ' ') . "\n";
+        }
+        $invoice .= Lang::pads(Lang::T('Total'), Lang::moneyFormat((float)$in['price'] + $taxAmount), ' ') . "\n";
         $method = explode("-", $in['method']);
         $invoice .= Lang::pads($method[0], $method[1], ' ') . "\n";
         if (!empty($note)) {
@@ -673,7 +701,11 @@ class Package
                 }
             }
         }
-        $invoice .= Lang::pads(Lang::T('Total'), Lang::moneyFormat($in['price']), ' ') . "\n";
+        if ($taxAmount > 0) {
+            $invoice .= Lang::pads(Lang::T('Subtotal'), Lang::moneyFormat($in['price']), ' ') . "\n";
+            $invoice .= Lang::pads(Lang::T('Tax'), Lang::moneyFormat($taxAmount), ' ') . "\n";
+        }
+        $invoice .= Lang::pads(Lang::T('Total'), Lang::moneyFormat((float)$in['price'] + $taxAmount), ' ') . "\n";
         $invoice .= Lang::pads($method[0], $method[1], ' ') . "\n";
         if (!empty($note)) {
             $invoice .= Lang::pad("", '=') . "\n";

@@ -10,3 +10,4 @@
 2026092702|database/migrations/2026092702_customer_approval_status.sql
 2026101301|database/migrations/2026101301_profit_events.sql
 2026101401|database/migrations/2026101401_password_hashes.sql
+2026101402|database/migrations/2026101402_transaction_tax.sql

@@ -35,13 +35,17 @@
                     <td class="small mb15 text-bold">
                         {Lang::moneyFormat($_user['balance'])}
                         {if $_user['auto_renewal'] == 1}
-                            <a class="label label-success pull-right" href="{Text::url('home&renewal=0')}"
-                                onclick="return ask(this, '{Lang::T('Disable auto renewal?')}')">{Lang::T('Auto Renewal
-                                On')}</a>
+                            <form method="post" action="{Text::url('home')}" class="pull-right" style="display:inline">
+                                <input type="hidden" name="renewal" value="0">
+                                <input type="hidden" name="csrf_token" value="{$csrf_token|escape}">
+                                <button class="label label-success" type="submit" onclick="return confirm('{Lang::T('Disable auto renewal?')}')">{Lang::T('Auto Renewal On')}</button>
+                            </form>
                         {else}
-                            <a class="label label-danger pull-right" href="{Text::url('home&renewal=1')}"
-                                onclick="return ask(this, '{Lang::T('Enable auto renewal?')}')">{Lang::T('Auto Renewal
-                                Off')}</a>
+                            <form method="post" action="{Text::url('home')}" class="pull-right" style="display:inline">
+                                <input type="hidden" name="renewal" value="1">
+                                <input type="hidden" name="csrf_token" value="{$csrf_token|escape}">
+                                <button class="label label-danger" type="submit" onclick="return confirm('{Lang::T('Enable auto renewal?')}')">{Lang::T('Auto Renewal Off')}</button>
+                            </form>
                         {/if}
                     </td>
                 </tr>

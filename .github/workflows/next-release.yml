@@ -24,9 +24,10 @@ jobs:
           set -euo pipefail
           for file in install/*.php system/mobile/*.php \
             index.php update.php mobile-app-version.php mobile-app-download.php whatsapp-gateway.php \
-            system/controllers/{accounts,admin,customers,forgot,login,olts,onus,register,reseller,setup,whatsapp,mikrotik-onboarding,message}.php \
-            system/autoload/{OltManager,OltOnuRemoval,Message,MikrotikProvisioner,Package,ProfitSummary,ResellerProfit,ResellerDebt,ResellerBalance,ResellerAccounting}.php \
+            system/controllers/{accounts,admin,customers,forgot,home,login,olts,onus,order,plan,register,reseller,setup,whatsapp,mikrotik-onboarding,message}.php \
+            system/autoload/{OltManager,OltOnuRemoval,Message,MikrotikProvisioner,Package,Balance,ProfitSummary,ResellerProfit,ResellerDebt,ResellerBalance,ResellerAccounting}.php \
             tests/profit/*.php \
+            tests/wallet/*.php \
             tests/auth/*.php \
             tests/autorecharge/*.php \
             autorecharge/{autorecharge,bkash,bkash_merchant,nogod}.php; do
@@ -37,6 +38,8 @@ jobs:
         run: php tests/profit/profit_summary_test.php
       - name: Reseller earnings and sales regression
         run: php tests/profit/reseller_accounting_test.php
+      - name: Wallet amount validation regression
+        run: php tests/wallet/wallet_amount_test.php
       - name: Auto-recharge matching and retry regression
         run: php tests/autorecharge/customer_matching_test.php
       - name: Password hash migration compatibility

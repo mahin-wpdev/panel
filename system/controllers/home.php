@@ -10,13 +10,21 @@ $ui->assign('_title', Lang::T('Dashboard'));
 
 $user = User::_info();
 $ui->assign('_user', $user);
+$ui->assign('csrf_token', Csrf::generateAndStoreToken());
 
-if (isset($_GET['renewal'])) {
-    $user->auto_renewal = $_GET['renewal'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['renewal'])) {
+    if (!Csrf::check(_post('csrf_token')) || !in_array((string)_post('renewal'), ['0', '1'], true)) {
+        r2(getUrl('home'), 'e', Lang::T('Invalid or expired request token'));
+    }
+    $user->auto_renewal = (int)_post('renewal');
     $user->save();
+    r2(getUrl('home'), 's', Lang::T('Auto renewal updated'));
 }
 
 if (_post('send') == 'balance') {
+    if (!Csrf::check(_post('csrf_token'))) {
+        r2(getUrl('home'), 'd', Lang::T('Invalid or expired request token'));
+    }
     if ($config['enable_balance'] == 'yes' && $config['allow_balance_transfer'] == 'yes') {
         if ($user['status'] != 'Active') {
             _alert(Lang::T('This account status') . ' : ' . Lang::T($user['status']), 'danger', "");
@@ -27,6 +35,9 @@ if (_post('send') == 'balance') {
         }
         $username = _post('username');
         $balance = _post('balance');
+        if (!Balance::isValidAmount($balance)) {
+            r2(getUrl('home'), 'd', Lang::T('Enter a valid positive transfer amount'));
+        }
         if ($user['balance'] < $balance) {
             r2(getUrl('home'), 'd', Lang::T('insufficient balance'));
         }
@@ -37,45 +48,13 @@ if (_post('send') == 'balance') {
             r2(getUrl('home'), 'd', Lang::T('Cannot send to yourself'));
         }
         if (Balance::transfer($user['id'], $username, $balance)) {
-            //sender
-            $d = ORM::for_table('tbl_payment_gateway')->create();
-            $d->username = $user['username'];
-            $d->gateway = $target['username'];
-            $d->plan_id = 0;
-            $d->plan_name = 'Send Balance';
-            $d->routers_id = 0;
-            $d->routers = 'balance';
-            $d->price = $balance;
-            $d->payment_method = "Customer";
-            $d->payment_channel = "Balance";
-            $d->created_date = date('Y-m-d H:i:s');
-            $d->paid_date = date('Y-m-d H:i:s');
-            $d->expired_date = date('Y-m-d H:i:s');
-            $d->pg_url_payment = 'balance';
-            $d->status = 2;
-            $d->save();
-            //receiver
-            $d = ORM::for_table('tbl_payment_gateway')->create();
-            $d->username = $target['username'];
-            $d->gateway = $user['username'];
-            $d->plan_id = 0;
-            $d->plan_name = 'Receive Balance';
-            $d->routers_id = 0;
-            $d->routers = 'balance';
-            $d->payment_method = "Customer";
-            $d->payment_channel = "Balance";
-            $d->price = $balance;
-            $d->created_date = date('Y-m-d H:i:s');
-            $d->paid_date = date('Y-m-d H:i:s');
-            $d->expired_date = date('Y-m-d H:i:s');
-            $d->pg_url_payment = 'balance';
-            $d->status = 2;
-            $d->save();
             //
             Message::sendBalanceNotification($user, $target, $balance, ($user['balance'] - $balance), Lang::getNotifText('balance_send'), $config['user_notification_payment']);
             Message::sendBalanceNotification($target, $user, $balance, ($target['balance'] + $balance), Lang::getNotifText('balance_received'), $config['user_notification_payment']);
             Message::sendTelegram("#u$user[username] send balance to #u$target[username] \n" . Lang::moneyFormat($balance));
             r2(getUrl('home'), 's', Lang::T('Sending balance success'));
+        } else {
+            r2(getUrl('home'), 'd', Lang::T('Failed, balance is not available'));
         }
     } else {
         r2(getUrl('home'), 'd', Lang::T('Failed, balance is not available'));
