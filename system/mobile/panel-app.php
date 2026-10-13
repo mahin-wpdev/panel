@@ -71,6 +71,9 @@ function jm_app_customer_scope(PDO $db, array $identity): ?array {
     return null;
 }
 function jm_app_home(PDO $db, array $identity): array {
+    global $config;
+    require_once __DIR__.'/../autoload/ResellerAccounting.php';
+    require_once __DIR__.'/../autoload/ProfitSummary.php';
     if ($identity['role']==='customer') {
         require_once __DIR__.'/customer-dashboard.php';
         $data=jm_mobile_customer_dashboard($db,$identity['id']);
@@ -95,11 +98,13 @@ function jm_app_home(PDO $db, array $identity): array {
     ];
 
     if (jm_app_table($db,'tbl_transactions')) {
-        $s=jm_mobile_query($db,
-            "SELECT COALESCE(SUM(CAST(t.price AS DECIMAL(15,2))),0) gross FROM tbl_transactions t " .
-            "JOIN tbl_customers c ON c.id=t.user_id WHERE $where AND t.recharged_on >= DATE_FORMAT(CURDATE(),'%Y-%m-01')",
-            $params)->fetch(PDO::FETCH_ASSOC);
-        $summary['monthly_recorded_sales_bdt']=jm_app_num($s['gross']??0);
+        $resetDay=max(1,min(31,(int)($config['reset_day']??1)));
+        if($identity['role']==='reseller'){
+            $summary['monthly_recorded_sales_bdt']=ResellerAccounting::sales($db,(int)$identity['reseller_id'],ProfitSummary::periodStart(date('Y-m-d'),$resetDay),date('Y-m-d'));
+        }else{
+            $s=jm_mobile_query($db,"SELECT COALESCE(SUM(CAST(t.price AS DECIMAL(15,2))),0) gross FROM tbl_transactions t JOIN tbl_customers c ON c.id=t.user_id WHERE $where AND t.recharged_on>=?",array_merge($params,[ProfitSummary::periodStart(date('Y-m-d'),$resetDay)]))->fetch(PDO::FETCH_ASSOC);
+            $summary['monthly_recorded_sales_bdt']=jm_app_num($s['gross']??0);
+        }
     } else {
         $summary['monthly_recorded_sales_bdt']=null;
     }
@@ -131,29 +136,27 @@ function jm_app_home(PDO $db, array $identity): array {
         $earned=0.0;$settled=0.0;$today=0.0;$month=0.0;
         $recentEarnings=[];$settlements=[];$allowedPackages=[];
         if (jm_app_table($db,'tbl_reseller_earnings')) {
-            $earned=(float)jm_mobile_query($db,
-                "SELECT COALESCE(SUM(profit_amount),0) FROM tbl_reseller_earnings
-                 WHERE reseller_id=? AND status='earned'",[$resellerId])->fetchColumn();
-            $today=(float)jm_mobile_query($db,
-                "SELECT COALESCE(SUM(profit_amount),0) FROM tbl_reseller_earnings
-                 WHERE reseller_id=? AND created_at>=CONCAT(CURDATE(),' 00:00:00')",[$resellerId])->fetchColumn();
-            $month=(float)jm_mobile_query($db,
-                "SELECT COALESCE(SUM(profit_amount),0) FROM tbl_reseller_earnings
-                 WHERE reseller_id=? AND created_at>=DATE_FORMAT(CURDATE(),'%Y-%m-01 00:00:00')",[$resellerId])->fetchColumn();
+            $earned=ResellerAccounting::earned($db,$resellerId);
+            $today=ResellerAccounting::earned($db,$resellerId,date('Y-m-d'),date('Y-m-d'));
+            $resetDay=max(1,min(31,(int)($config['reset_day']??1)));
+            $month=ResellerAccounting::earned($db,$resellerId,ProfitSummary::periodStart(date('Y-m-d'),$resetDay),date('Y-m-d'));
             $recentEarnings=jm_app_rows($db,
                 "SELECT e.created_at,e.recharge_amount,e.profit_percentage,e.profit_amount,
+                        e.profit_type,e.profit_value,
                         c.username,c.fullname,t.plan_name
                  FROM tbl_reseller_earnings e
                  LEFT JOIN tbl_customers c ON c.id=e.customer_id
                  LEFT JOIN tbl_transactions t ON t.id=e.recharge_id
-                 WHERE e.reseller_id=? ORDER BY e.id DESC LIMIT 8",[$resellerId]);
+                 LEFT JOIN tbl_users au ON au.id=t.admin_id
+                 WHERE e.reseller_id=? AND e.status='earned'
+                   AND (t.id IS NULL OR (t.method NOT LIKE 'Admin Manual - %'
+                     AND (au.id IS NULL OR au.user_type NOT IN ('Admin','SuperAdmin'))))
+                 ORDER BY e.id DESC LIMIT 8",[$resellerId]);
         }
         if (jm_app_table($db,'tbl_reseller_settlements')) {
-            $settled=(float)jm_mobile_query($db,
-                'SELECT COALESCE(SUM(amount),0) FROM tbl_reseller_settlements WHERE reseller_id=?',
-                [$resellerId])->fetchColumn();
+            $settled=ResellerAccounting::settled($db,$resellerId);
             $settlements=jm_app_rows($db,
-                'SELECT created_at,amount,payment_method,reference,note FROM tbl_reseller_settlements WHERE reseller_id=? ORDER BY id DESC LIMIT 8',
+                'SELECT created_at,amount,payment_method,reference,note,entry_type,reversal_of FROM tbl_reseller_settlements WHERE reseller_id=? ORDER BY id DESC LIMIT 8',
                 [$resellerId]);
         }
         if (jm_app_table($db,'tbl_reseller_packages') && jm_app_table($db,'tbl_plans')) {
@@ -162,17 +165,39 @@ function jm_app_home(PDO $db, array $identity): array {
                  FROM tbl_reseller_packages rp JOIN tbl_plans p ON p.id=rp.plan_id
                  WHERE rp.reseller_id=? AND p.enabled=1 ORDER BY p.name_plan ASC LIMIT 20",[$resellerId]);
         }
-        $summary['profit_payable_bdt']=jm_app_num(max(0,$earned-$settled));
+        $summary['profit_payable_bdt']=jm_app_num($earned-$settled);
         $summary['profit_today_bdt']=jm_app_num($today);
         $summary['profit_month_bdt']=jm_app_num($month);
         $summary['profit_lifetime_bdt']=jm_app_num($earned);
-        $summary['total_settled_bdt']=jm_app_num($settled);
+        $summary['net_balance_deductions_bdt']=jm_app_num($settled);
+        $summary['total_settled_bdt']=jm_app_num((float)jm_mobile_query($db,"SELECT COALESCE(SUM(amount),0) FROM tbl_reseller_settlements WHERE reseller_id=? AND entry_type IN ('payment','reverse')",[$resellerId])->fetchColumn());
+        require_once __DIR__.'/../autoload/ResellerDebt.php';$debt=ResellerDebt::summary($db,(int)$resellerId);
+        $summary['debt_to_isp_bdt']=$debt['outstanding'];$summary['debt_recovered_bdt']=$debt['recovered'];$summary['debt_added_bdt']=$debt['added'];
+        $debtHistory=jm_app_rows($db,'SELECT created_at,amount,entry_type,recharge_id,note FROM tbl_reseller_debts WHERE reseller_id=? ORDER BY id DESC LIMIT 20',[$resellerId]);
         $summary['allowed_packages'] = count($allowedPackages);
         return ['available'=>true,'role'=>'reseller','summary'=>$summary,
-            'recent_earnings'=>$recentEarnings,'settlements'=>$settlements,
+            'debt_history'=>$debtHistory,'recent_earnings'=>$recentEarnings,'settlements'=>$settlements,
             'allowed_packages'=>$allowedPackages,
             'note'=>'Sales and profit figures are recorded Panel accounting values; they do not verify cash, bKash or Nagad settlement.'];
     }
+
+    require_once __DIR__.'/../autoload/ProfitSummary.php';
+    require_once __DIR__.'/../autoload/ResellerDebt.php';$debt=ResellerDebt::summary($db);
+    $summary['reseller_receivable_bdt']=$debt['outstanding'];$summary['reseller_debt_recovered_bdt']=$debt['recovered'];$summary['reseller_debt_added_bdt']=$debt['added'];
+    global $config;
+    $profitResetDay = max(1, min(31, (int)($config['reset_day'] ?? 1)));
+    $profitSplit = ProfitSummary::dashboard($db, $profitResetDay);
+    foreach ($profitSplit as $period => $values) {
+        $summary['direct_sales_'.$period.'_bdt'] = $values['direct'];
+        $summary['admin_reseller_share_'.$period.'_bdt'] = $values['reseller_admin'];
+        $summary['own_income_'.$period.'_bdt'] = $values['total'];
+        $summary['admin_profit_'.$period.'_bdt'] = $values['admin'];
+        $summary['reseller_profit_'.$period.'_bdt'] = $values['reseller'];
+        $summary['total_profit_'.$period.'_bdt'] = $values['total'];
+    }
+    $summary['profit_period_start'] = ProfitSummary::periodStart(date('Y-m-d'), $profitResetDay);
+    $summary['profit_period_end'] = date('Y-m-d');
+    $summary['profit_scope'] = 'Own income: direct customer sales plus admin share of reseller recharges';
 
     $summary['service_active_total']=$summary['active_customers'];
     $summary['service_inactive_total']=$summary['inactive_customers'];
@@ -194,43 +219,40 @@ function jm_app_home(PDO $db, array $identity): array {
         $monthSalesExpr=jm_app_table($db,'tbl_transactions')
             ? "COALESCE((SELECT SUM(t.price) FROM tbl_transactions t
                 JOIN tbl_customers tc ON tc.id=t.user_id
+                LEFT JOIN tbl_users au ON au.id=t.admin_id
                 WHERE tc.reseller_id=r.id
+                  AND t.method NOT LIKE 'Admin Manual - %'
+                  AND (au.id IS NULL OR au.user_type NOT IN ('Admin','SuperAdmin'))
                   AND t.recharged_on>=DATE_FORMAT(CURDATE(),'%Y-%m-01')),0)"
             : "0";
-        $profitDueExpr=(jm_app_table($db,'tbl_reseller_earnings') && jm_app_table($db,'tbl_reseller_settlements'))
-            ? "GREATEST(0,
-                COALESCE((SELECT SUM(e.profit_amount) FROM tbl_reseller_earnings e
-                    WHERE e.reseller_id=r.id AND e.status='earned'),0)
-                - COALESCE((SELECT SUM(s.amount) FROM tbl_reseller_settlements s
-                    WHERE s.reseller_id=r.id),0))"
-            : "0";
+        $profitDueExpr="0";
         $resellerOverview=jm_app_rows($db,
             "SELECT r.id,r.name,r.status,r.profit_percentage,u.username,
                     COUNT(c.id) customer_count,
                     COALESCE(SUM(c.status='Active'),0) active_count,
                     $monthSalesExpr month_sales,
-                    $profitDueExpr profit_due
+                    $profitDueExpr profit_due, GREATEST(0,COALESCE((SELECT SUM(d.amount) FROM tbl_reseller_debts d WHERE d.reseller_id=r.id),0)) debt_to_isp
              FROM tbl_resellers r
              LEFT JOIN tbl_users u ON u.id=r.user_id
              LEFT JOIN tbl_customers c ON c.reseller_id=r.id
              GROUP BY r.id ORDER BY r.name ASC LIMIT 20");
+        foreach($resellerOverview as &$row){$row['profit_due']=ResellerAccounting::available($db,(int)$row['id']);$row['debt_to_isp']=ResellerDebt::outstanding($db,(int)$row['id']);}
+        unset($row);
     }
     if (jm_app_table($db,'tbl_reseller_earnings')) {
-        $earned=(float)jm_mobile_query($db,
-            "SELECT COALESCE(SUM(profit_amount),0) FROM tbl_reseller_earnings WHERE status='earned'")->fetchColumn();
-        $monthProfit=(float)jm_mobile_query($db,
-            "SELECT COALESCE(SUM(profit_amount),0) FROM tbl_reseller_earnings
-             WHERE created_at>=DATE_FORMAT(CURDATE(),'%Y-%m-01 00:00:00')")->fetchColumn();
-        $settled=jm_app_table($db,'tbl_reseller_settlements') ? (float)jm_mobile_query($db,
-            'SELECT COALESCE(SUM(amount),0) FROM tbl_reseller_settlements')->fetchColumn() : 0.0;
-        $summary['reseller_profit_due_bdt']=jm_app_num(max(0,$earned-$settled));
+        $profitResetDay=max(1,min(31,(int)($config['reset_day']??1)));
+        $monthProfit=ResellerAccounting::earned($db,null,ProfitSummary::periodStart(date('Y-m-d'),$profitResetDay),date('Y-m-d'));
+        $summary['reseller_profit_due_bdt']=jm_app_num(ResellerAccounting::earned($db)-ResellerAccounting::settled($db));
         $summary['reseller_month_profit_bdt']=jm_app_num($monthProfit);
     }
     if (jm_app_table($db,'tbl_transactions') && jm_app_column($db,'tbl_customers','reseller_id')) {
         $summary['reseller_month_sales_bdt']=jm_app_num(jm_mobile_query($db,
             "SELECT COALESCE(SUM(CAST(t.price AS DECIMAL(15,2))),0)
              FROM tbl_transactions t JOIN tbl_customers c ON c.id=t.user_id
-             WHERE c.reseller_id IS NOT NULL AND t.recharged_on>=DATE_FORMAT(CURDATE(),'%Y-%m-01')")->fetchColumn());
+             LEFT JOIN tbl_users au ON au.id=t.admin_id
+             WHERE c.reseller_id IS NOT NULL AND t.method NOT LIKE 'Admin Manual - %'
+               AND (au.id IS NULL OR au.user_type NOT IN ('Admin','SuperAdmin'))
+               AND t.recharged_on>=DATE_FORMAT(CURDATE(),'%Y-%m-01')")->fetchColumn());
     }
 
     $summary['onu_total']=0;$summary['onu_online_total']=0;$summary['onu_offline_total']=0;

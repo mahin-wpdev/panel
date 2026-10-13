@@ -8,3 +8,4 @@
 2026092608|system/mobile/session-revocation.sql
 2026092701|database/migrations/2026092701_olt_onu.sql
 2026092702|database/migrations/2026092702_customer_approval_status.sql
+2026101301|database/migrations/2026101301_profit_events.sql

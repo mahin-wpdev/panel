@@ -165,6 +165,11 @@ try {
         require_once __DIR__.'/system/mobile/admin-operations.php';
         respond(200,['success'=>true,'data'=>jm_mobile_admin_profile($db,$session,(int)($_GET['customer_id']??0))]);
     }
+    if ($action==='staff-customer-traffic' && $method==='GET') {
+        require_once __DIR__.'/system/mobile/panel-app.php';
+        require_once __DIR__.'/system/mobile/admin-operations.php';
+        respond(200,['success'=>true,'data'=>jm_mobile_staff_customer_traffic($db,$session,(int)($_GET['customer_id']??0))]);
+    }
     if ($action==='admin-expiry' && $method==='GET') {
         require_once __DIR__.'/system/mobile/panel-app.php';
         require_once __DIR__.'/system/mobile/admin-recharge.php';

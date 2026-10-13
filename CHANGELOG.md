@@ -2,6 +2,16 @@
 
 # CHANGELOG
 
+## 2026.10.13 — Auto-recharge matching and recovery
+
+- Renew the customer's active PPPoE package when the received amount is at or up to Tk 50 above its configured price, even if another package matches the full amount; record the full payment, package price and surplus in the receipt note without crediting customer balance.
+- When the customer has no active-package match, prefer an exact eligible package price, then the closest lower eligible price within Tk 50; ambiguous matches fail closed for review.
+- Auto-recharge now resolves a payment reference against both account and PPPoE usernames, then uses the sender phone only when it maps uniquely to one customer.
+- Ambiguous username or phone matches fail safely instead of selecting an arbitrary customer.
+- Known preflight failures can be retried with the same payment TrxID after correcting customer or plan configuration; attempts that reached the actual recharge call remain protected from duplicate charging.
+- Preserve the production bKash shared-payment claim so the same payment cannot be consumed by the separate JTEX payment flow.
+- Require a transaction ID from PHPNuxBill before reporting a recharge as completed, with a regression test for matching and retry boundaries.
+
 ## 2026.09.28 — Cache integration removal
 
 - Removed the deprecated live-only `JM Cache Status` panel integration from the supported Arivo release surface.

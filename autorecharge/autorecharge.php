@@ -73,65 +73,206 @@ function autorecharge_find_customer($username, $sender)
     $username = autorecharge_username($username);
 
     if ($username !== '' && !in_array(strtoupper($username), ['N/A', 'NA'], true)) {
-        return ORM::for_table('tbl_customers')
+        $customers = ORM::for_table('tbl_customers')
             ->where_raw(
                 '(LOWER(username) = ? OR LOWER(pppoe_username) = ?)',
                 [$username, $username]
             )
-            ->find_one();
+            ->find_many();
+
+        if (count($customers) === 1) {
+            return $customers[0];
+        }
+
+        /* A matching reference is authoritative; never guess between users. */
+        if (count($customers) > 1) {
+            return null;
+        }
     }
 
-    /* Phone fallback only works when the SMS contains a usable phone number. */
+    /*
+     * Some payment references contain a display name or a typo instead of
+     * the account username. Use the payer phone only when it identifies one
+     * customer, and refuse ambiguous matches rather than charging at random.
+     */
     $last10 = autorecharge_phone($sender);
     if (strlen($last10) < 10) {
         return null;
     }
 
-    return ORM::for_table('tbl_customers')
+    $customers = ORM::for_table('tbl_customers')
         ->where_raw(
-            "RIGHT(REPLACE(REPLACE(REPLACE(phonenumber,'+',''),' ',''),'-',''),10)=?",
+            "RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phonenumber,'+',''),' ',''),'-',''),'(',''),')',''),'.',''),10)=?",
             [$last10]
         )
-        ->find_one();
+        ->find_many();
+
+    return count($customers) === 1 ? $customers[0] : null;
 }
 
 function autorecharge_find_plan($amount, $customer)
 {
     $amount = round((float) $amount, 2);
+    $minimumPrice = max(0, $amount - 50);
+
+    /* If the payer already has an active PPPOE plan, a small overpayment is
+     * treated as renewal of that same plan, even when another plan happens
+     * to have the exact received amount as its price. */
+    $current = autorecharge_find_current_plan_candidate($amount, $customer);
+    if (!empty($current['error'])) {
+        return ['plan' => null, 'error' => $current['error']];
+    }
+    if (!empty($current['candidate'])) {
+        return autorecharge_select_plan_candidate([$current['candidate']], $amount);
+    }
+
+    /* With no current-plan match, exact price wins before general tolerance. */
+    $exact = autorecharge_find_plan_candidates($amount, $customer, true);
+    if (count($exact) > 0) {
+        return autorecharge_select_plan_candidate($exact, $amount);
+    }
+
+    /* For a small overpayment, choose the closest eligible package below it. */
+    $tolerant = autorecharge_find_plan_candidates($minimumPrice, $customer, false, $amount);
+    if (count($tolerant) === 0) {
+        return [
+            'plan' => null,
+            'error' => 'No eligible PPPOE package matches this amount or the Tk 50 overpayment range',
+        ];
+    }
+
+    $highestPrice = max(array_column($tolerant, 'price'));
+    $nearest = array_values(array_filter($tolerant, function ($candidate) use ($highestPrice) {
+        return (float) $candidate['price'] === (float) $highestPrice;
+    }));
+
+    return autorecharge_select_plan_candidate($nearest, $amount);
+}
+
+function autorecharge_find_current_plan_candidate($amount, $customer)
+{
+    $activePlans = ORM::for_table('tbl_user_recharges')
+        ->table_alias('r')
+        ->select('p.*')
+        ->join('tbl_plans', ['p.id', '=', 'r.plan_id'], 'p')
+        ->where('r.customer_id', $customer->id())
+        ->where('r.status', 'on')
+        ->where('p.type', 'PPPOE')
+        ->where('p.enabled', 1)
+        ->find_many();
+
+    if (count($activePlans) > 1) {
+        return ['candidate' => null, 'error' => 'Multiple active PPPOE packages found for this customer'];
+    }
+    if (count($activePlans) === 0) {
+        return ['candidate' => null, 'error' => null];
+    }
+
+    $plan = $activePlans[0];
+    $price = (float) $plan->price;
+    if (!empty($customer->reseller_id)) {
+        $resellerPrices = ORM::for_table('tbl_reseller_packages')
+            ->where('reseller_id', $customer->reseller_id)
+            ->where('plan_id', $plan->id)
+            ->where('status', 1)
+            ->find_many();
+        if (count($resellerPrices) > 1) {
+            return ['candidate' => null, 'error' => 'Multiple reseller prices found for this customer package'];
+        }
+        if (count($resellerPrices) === 1) {
+            $price = (float) $resellerPrices[0]->customer_price;
+        }
+    }
+
+    if ($price > 0 && $amount >= $price && $amount <= $price + 50) {
+        return [
+            'candidate' => ['plan' => $plan, 'price' => $price],
+            'error' => null,
+        ];
+    }
+
+    return ['candidate' => null, 'error' => null];
+}
+
+function autorecharge_select_plan_candidate($candidates, $amount)
+{
+    if (count($candidates) !== 1) {
+        return [
+            'plan' => null,
+            'error' => 'Multiple eligible PPPOE packages match this amount',
+        ];
+    }
+
+    return [
+        'plan' => $candidates[0]['plan'],
+        'package_price' => (float) $candidates[0]['price'],
+        'amount_received' => round((float) $amount, 2),
+        'overpayment' => round((float) $amount - (float) $candidates[0]['price'], 2),
+        'error' => null,
+    ];
+}
+
+function autorecharge_payment_note($gateway, $sender, $trxid, $amount, $packagePrice, $overpayment)
+{
+    return "Auto Payment\n" .
+        "Gateway: {$gateway}\n" .
+        "Sender: {$sender}\n" .
+        "TrxID: {$trxid}\n" .
+        "Amount received: Tk " . number_format((float) $amount, 2, '.', '') . "\n" .
+        "Package price: Tk " . number_format((float) $packagePrice, 2, '.', '') . "\n" .
+        "Overpayment (receipt only): Tk " . number_format((float) $overpayment, 2, '.', '');
+}
+
+function autorecharge_find_plan_candidates($minimumPrice, $customer, $exact, $maximumPrice = null)
+{
     $plans = [];
 
-    /* A reseller-specific price is valid only for this customer's reseller. */
+    /* Reseller customer pricing takes precedence over global package pricing. */
     if (!empty($customer->reseller_id)) {
-        $plans = ORM::for_table('tbl_reseller_packages')
+        $query = ORM::for_table('tbl_reseller_packages')
             ->table_alias('rp')
             ->select('p.*')
+            ->select('rp.customer_price', 'customer_price')
             ->join('tbl_plans', ['p.id', '=', 'rp.plan_id'], 'p')
             ->where('rp.reseller_id', $customer->reseller_id)
             ->where('rp.status', 1)
             ->where('p.type', 'PPPOE')
-            ->where('p.enabled', 1)
-            ->where('rp.customer_price', $amount)
-            ->find_many();
+            ->where('p.enabled', 1);
+
+        if ($exact) {
+            $query->where('rp.customer_price', $minimumPrice);
+        } else {
+            $query->where_gte('rp.customer_price', $minimumPrice)
+                ->where_lte('rp.customer_price', $maximumPrice);
+        }
+
+        foreach ($query->find_many() as $plan) {
+            $plans[] = [
+                'plan' => $plan,
+                'price' => (float) $plan->customer_price,
+            ];
+        }
+        if (count($plans) > 0) {
+            return $plans;
+        }
     }
 
-    if (count($plans) === 0) {
-        $plans = ORM::for_table('tbl_plans')
-            ->where('price', $amount)
-            ->where('type', 'PPPOE')
-            ->where('enabled', 1)
-            ->find_many();
+    $query = ORM::for_table('tbl_plans')
+        ->where('type', 'PPPOE')
+        ->where('enabled', 1);
+
+    if ($exact) {
+        $query->where('price', $minimumPrice);
+    } else {
+        $query->where_gte('price', $minimumPrice)
+            ->where_lte('price', $maximumPrice);
     }
 
-    if (count($plans) !== 1) {
-        return [
-            'plan' => null,
-            'error' => count($plans)
-                ? 'Multiple eligible PPPOE packages match this amount'
-                : 'No eligible PPPOE package matches this amount',
-        ];
+    foreach ($query->find_many() as $plan) {
+        $plans[] = ['plan' => $plan, 'price' => (float) $plan->price];
     }
 
-    return ['plan' => $plans[0], 'error' => null];
+    return $plans;
 }
 
 function autorecharge_router()
@@ -202,14 +343,11 @@ function autorecharge_receipt($gateway, $trxid, $amount)
             throw $insertError;
         }
 
-        /* Customer-not-found is safe to retry because recharge never started. */
-        if (
-            $row->status === 'error' &&
-            empty($row->customer_id) &&
-            empty($row->transaction_id) &&
-            $row->error_message === 'Customer not found'
-        ) {
+        /* Explicitly marked preflight errors are safe to retry: Package was
+         * never called, so no recharge transaction could have been created. */
+        if (autorecharge_receipt_can_retry($row)) {
             $row->amount = $amount;
+            $row->customer_id = null;
             $row->status = 'processing';
             $row->error_message = null;
             $row->received_at = date('Y-m-d H:i:s');
@@ -221,6 +359,42 @@ function autorecharge_receipt($gateway, $trxid, $amount)
 
         return ['new' => false, 'row' => $row];
     }
+}
+
+function autorecharge_receipt_can_retry($row)
+{
+    if (!$row || $row->status !== 'error' || !empty($row->transaction_id)) {
+        return false;
+    }
+
+    if (strpos((string) $row->error_message, 'SAFE_RETRY:') === 0) {
+        return true;
+    }
+
+    /* Legacy customer-not-found receipts predate SAFE_RETRY markers. */
+    return empty($row->customer_id) && $row->error_message === 'Customer not found';
+}
+
+/* Preserve the production bKash claim shared with the separate JTEX payment
+ * service. This file is installed only on the production host; local/staging
+ * environments without that integration continue to use the Panel ledger. */
+function autorecharge_reserve_external_payment($gateway, $trxid)
+{
+    if ($gateway !== 'bKash') {
+        return true;
+    }
+
+    $claimsFile = '/www/server/jtex-payments/shared-claims.php';
+    if (!is_file($claimsFile)) {
+        return true;
+    }
+
+    require_once $claimsFile;
+    if (!function_exists('jtex_payment_reserve')) {
+        throw new Exception('Shared payment claim service is unavailable');
+    }
+
+    return jtex_payment_reserve($trxid, 'panel');
 }
 
 /*
@@ -323,6 +497,7 @@ function autoRechargeUser(array $payment)
 
     $receipt = null;
     $rechargeCompleted = false;
+    $retrySafe = true;
     $transactionId = null;
 
     try {
@@ -360,11 +535,25 @@ function autoRechargeUser(array $payment)
             throw new Exception($found['error']);
         }
 
-        $note = "Auto Payment\n" .
-            "Gateway: {$gateway}\n" .
-            "Sender: {$sender}\n" .
-            "TrxID: {$trxid}";
+        $note = autorecharge_payment_note(
+            $gateway,
+            $sender,
+            $trxid,
+            $amount,
+            $found['package_price'],
+            $found['overpayment']
+        );
 
+        /* Do not let a bKash reference already claimed by the external JTEX
+         * payment flow reach Package::rechargeUser(). */
+        if ($gateway === 'bKash') {
+            $retrySafe = false;
+            if (!autorecharge_reserve_external_payment($gateway, $trxid)) {
+                throw new Exception('Transaction reserved for another payment system');
+            }
+        }
+
+        $retrySafe = false;
         $transactionId = Package::rechargeUser(
             $customer->id(),
             $router['name'],
@@ -427,7 +616,8 @@ function autoRechargeUser(array $payment)
         }
 
         if (is_array($receipt) && isset($receipt['row'])) {
-            autorecharge_mark_error($receipt['row'], $e->getMessage());
+            $message = $retrySafe ? 'SAFE_RETRY: ' . $e->getMessage() : $e->getMessage();
+            autorecharge_mark_error($receipt['row'], $message);
         }
 
         autorecharge_log(
