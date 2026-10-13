@@ -14,10 +14,17 @@ jobs:
           php-version: '8.3'
           coverage: none
       - name: PHP syntax
-        run: php -l system/autoload/ResellerProfit.php && php -l tests/profit/reseller_profit_config_test.php
+        run: |
+          php -l system/autoload/ResellerProfit.php
+          php -l system/autoload/ResellerAccounting.php
+          php -l system/autoload/ProfitSummary.php
+          php -l system/autoload/ResellerDebt.php
+          php -l system/controllers/reseller.php
+          php -l system/mobile/panel-app.php
+          php -l tests/profit/reseller_profit_config_test.php
       - name: Reseller profit configuration
         run: php tests/profit/reseller_profit_config_test.php
-      - name: Admin attribution and profit summary
+      - name: Profit split for every recharge actor
         run: php tests/profit/profit_summary_test.php
       - name: Reseller earnings and sales
         run: php tests/profit/reseller_accounting_test.php

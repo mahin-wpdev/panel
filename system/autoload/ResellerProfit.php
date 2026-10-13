@@ -19,7 +19,7 @@ class ResellerProfit
             global $admin;
             $adminActor = self::isAdminActor($method, $admin['user_type'] ?? '');
             $actorType = $adminActor ? 'admin' : ($resellerId > 0 ? 'reseller' : 'customer');
-            if ($resellerId === 0 || $adminActor) {
+            if ($resellerId === 0) {
                 if (!in_array($method, ['Customer - Balance', 'Recharge Balance - Administrator'], true)) {
                     $amount = round((float)$transaction['price'], 2);
                     $event = $db->prepare("INSERT INTO tbl_profit_events

@@ -32,13 +32,14 @@ if ($own['admin'] !== 700.0 || $own['reseller'] !== 300.0) {
     throw new RuntimeException('Expected direct 500 + reseller admin share 200 = admin income 700.');
 }
 
-// Any Admin/SuperAdmin recharge of a reseller-owned customer belongs wholly to
-// the ISP. Legacy commission rows are ignored even when their method is generic.
+// Admin-originated recharges of reseller-owned customers share profit under
+// the same package/profile rules as reseller-originated recharges.
 $db->exec("INSERT INTO tbl_transactions VALUES (3,2,500,'Recharge - Cash','2026-10-13',1);
-INSERT INTO tbl_reseller_earnings VALUES (3,'earned',200,300);");
+INSERT INTO tbl_transactions VALUES (4,2,500,'Admin Manual - admin','2026-10-13',1);
+INSERT INTO tbl_reseller_earnings VALUES (3,'earned',200,300),(4,'earned',200,300);");
 $own = ProfitSummary::period($db, '2026-10-01', '2026-10-31');
-if ($own['admin'] !== 1200.0 || $own['reseller'] !== 300.0) {
-    throw new RuntimeException('Admin recharge should add 500 to ISP income and exclude its legacy reseller split.');
+if ($own['admin'] !== 1100.0 || $own['reseller'] !== 900.0) {
+    throw new RuntimeException('Admin and Admin Manual recharges should each use the reseller profit split.');
 }
 if (ProfitSummary::periodStart('2026-10-13',10)!=='2026-10-10' ||
     ProfitSummary::periodStart('2026-03-05',31)!=='2026-02-28') {
