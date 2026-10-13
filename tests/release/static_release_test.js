@@ -58,6 +58,8 @@ assert.match(read('database/migrations/manifest.txt'),
   /2026092701\|database\/migrations\/2026092701_olt_onu\.sql/);
 assert.match(read('database/migrations/manifest.txt'),
   /2026092702\|database\/migrations\/2026092702_customer_approval_status\.sql/);
+assert.match(read('database/migrations/manifest.txt'),
+  /2026101301\|database\/migrations\/2026101301_profit_events\.sql/);
 const approvalMigration = read('database/migrations/2026092702_customer_approval_status.sql');
 assert.match(approvalMigration, /LOWER\(TRIM\(approval_status\)\)/);
 assert.match(approvalMigration, /ENUM\('pending','approved','rejected'\)/);
