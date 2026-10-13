@@ -18,7 +18,7 @@ class Package
      * @param array $pgids payment gateway ids
      * @return boolean
      */
-    public static function rechargeUser($id_customer, $router_name, $plan_id, $gateway, $channel, $note = '', $taxAmount = 0)
+    public static function rechargeUser($id_customer, $router_name, $plan_id, $gateway, $channel, $note = '', $taxAmount = 0, $priceOverride = null)
     {
         // Every channel funnels through this lock, so web, mobile, cron and
         // gateway callbacks cannot mutate one customer's entitlement together.
@@ -30,14 +30,14 @@ class Package
         $lock->execute([$lockName]);
         if ((int)$lock->fetchColumn() !== 1) return false;
         try {
-            return self::rechargeUserLocked($id_customer, $router_name, $plan_id, $gateway, $channel, $note, $taxAmount);
+            return self::rechargeUserLocked($id_customer, $router_name, $plan_id, $gateway, $channel, $note, $taxAmount, $priceOverride);
         } finally {
             $release = $db->prepare('SELECT RELEASE_LOCK(?)');
             $release->execute([$lockName]);
         }
     }
 
-    private static function rechargeUserLocked($id_customer, $router_name, $plan_id, $gateway, $channel, $note = '', $taxAmount = 0)
+    private static function rechargeUserLocked($id_customer, $router_name, $plan_id, $gateway, $channel, $note = '', $taxAmount = 0, $priceOverride = null)
     {
         global $config, $admin, $c, $p, $b, $t, $d, $zero, $trx, $_app_stage, $isChangePlan;
         $date_only = date("Y-m-d");
@@ -59,6 +59,13 @@ class Package
         }
 
         $p = ORM::for_table('tbl_plans')->where('id', $plan_id)->find_one();
+        if ($p && $priceOverride !== null) {
+            $priceOverride = round((float)$priceOverride, 2);
+            if (!is_finite($priceOverride) || $priceOverride < 0) {
+                throw new InvalidArgumentException('Recharge price override must be a finite non-negative amount.');
+            }
+            $p['price'] = $priceOverride;
+        }
 
         // RADIUS plans are independent of the incoming MikroTik/router label.
         // Normalize all recharge paths (SMS, gateway, admin and app).
@@ -300,7 +307,9 @@ class Package
                 if ($p['validity_unit'] == 'Period') {
                     // Postpaid price from field
                     $add_inv = User::getAttribute("Invoice", $id_customer);
-                    if (empty($add_inv) or $add_inv == 0) {
+                    if ($priceOverride !== null) {
+                        $t->price = $priceOverride + $add_cost;
+                    } elseif (empty($add_inv) or $add_inv == 0) {
                         $t->price = $p['price'] + $add_cost;
                     } else {
                         $t->price = $add_inv + $add_cost;
@@ -323,8 +332,9 @@ class Package
             } else {
                 $t->admin_id = '0';
             }
-            self::saveRechargeProfit($t, $c, $p);
+            self::saveRechargeProfit($t, $c, $p, $bills, (int)$id_customer);
 
+            try {
             if ($p['validity_unit'] == 'Period') {
                 // insert price to fields for invoice next month
                 $fl = ORM::for_table('tbl_customers_fields')->where('field_name', 'Invoice')->where('customer_id', $c['id'])->find_one();
@@ -349,6 +359,9 @@ class Package
                 "\nNew Expired: " . Lang::dateAndTimeFormat($date_exp, $time) .
                 "\nPrice: " . Lang::moneyFormat($p['price'] + $add_cost) .
                 "\nNote:\n" . $note);
+            } catch (Throwable $error) {
+                _log('Recharge follow-up warning for invoice '.$inv.': '.$error->getMessage());
+            }
         } else {
             // active plan not exists
             self::provisionCustomer($c, $p, $router_name, $_app_stage);
@@ -410,8 +423,9 @@ class Package
             }
             $t->type = $p['type'];
             // Keep the billing transaction and its profit snapshot atomic.
-            self::saveRechargeProfit($t, $c, $p);
+            self::saveRechargeProfit($t, $c, $p, $bills, (int)$id_customer);
 
+            try {
             if ($p['validity_unit'] == 'Period' && $p['price'] != 0) {
                 // insert price to fields for invoice next month
                 $fl = ORM::for_table('tbl_customers_fields')->where('field_name', 'Invoice')->where('customer_id', $c['id'])->find_one();
@@ -445,20 +459,22 @@ class Package
                 "\nExpired: " . Lang::dateAndTimeFormat($date_exp, $time) .
                 "\nPrice: " . Lang::moneyFormat($p['price'] + $add_cost) .
                 "\nNote:\n" . $note);
+            } catch (Throwable $error) {
+                _log('Recharge follow-up warning for invoice '.$inv.': '.$error->getMessage());
+            }
         }
 
-        if (is_array($bills) && count($bills) > 0) {
-            User::billsPaid($bills, $id_customer);
-        }
-        run_hook("recharge_user_finish");
-        Message::sendInvoice($c, $t);
+        try { run_hook("recharge_user_finish"); }
+        catch (Throwable $error) { _log('Recharge hook warning for invoice '.$inv.': '.$error->getMessage()); }
+        try { Message::sendInvoice($c, $t); }
+        catch (Throwable $error) { _log('Recharge invoice-notification warning for invoice '.$inv.': '.$error->getMessage()); }
         if ($trx) {
             $trx->trx_invoice = $inv;
         }
         return $inv;
     }
 
-    private static function saveRechargeProfit($transaction, $customer, $plan): void
+    private static function saveRechargeProfit($transaction, $customer, $plan, array $bills = [], int $customerId = 0): void
     {
         $db = ORM::get_db();
         if ($db->inTransaction()) {
@@ -468,6 +484,7 @@ class Package
         try {
             $transaction->save();
             ResellerProfit::record($customer, $transaction, $plan);
+            if ($bills && $customerId > 0) User::billsPaid($bills, $customerId);
             $db->commit();
         } catch (Throwable $error) {
             if ($db->inTransaction()) $db->rollBack();

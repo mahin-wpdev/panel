@@ -93,13 +93,18 @@ class User
             // if has : then its an installment
             $v = User::getAttribute($k, $id);
             if (strpos($v, ":") === false) {
-                // Not installment, no need decrement
+                // One-off bills must be removed after payment or they are
+                // charged again on every later recharge.
+                ORM::for_table('tbl_customers_fields')->where('field_name', $k)->where('customer_id', $id)->delete_many();
             } else {
                 // installment
-                list($cost, $rem) = explode(":", $v);
-                // :0 installment is done
-                if ($rem != 0) {
+                list($cost, $rem) = array_pad(explode(":", $v, 2), 2, 0);
+                if ((int)$rem > 1) {
                     User::setAttribute($k, "$cost:" . ($rem - 1), $id);
+                } else {
+                    // Remove completed installments instead of leaving stale
+                    // zero-payment bill rows in customer attributes.
+                    ORM::for_table('tbl_customers_fields')->where('field_name', $k)->where('customer_id', $id)->delete_many();
                 }
             }
         }

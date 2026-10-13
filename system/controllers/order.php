@@ -223,6 +223,8 @@ switch ($action) {
         }
 
         list($bills, $add_cost) = User::getBills($id_customer);
+        $invoiceOverride = User::getAttribute("Invoice", $id_customer);
+        if (!empty($invoiceOverride)) $plan['price'] = (float)$invoiceOverride;
 
         // Tax calculation start
         $tax_enable = isset($config['enable_tax']) ? $config['enable_tax'] : 'no';
@@ -307,6 +309,12 @@ switch ($action) {
             $target = ORM::for_table('tbl_customers')->where('username', _post('username'))->find_one();
             if (!$target) {
                 r2(getUrl('home'), 'd', Lang::T('Username not found'));
+            }
+            $targetInvoice = User::getAttribute("Invoice", $target['id']);
+            if (!empty($targetInvoice)) {
+                $targetBasePrice = (float)$targetInvoice;
+                $tax = $tax_enable === 'yes' ? Package::tax($targetBasePrice, $tax_rate) : 0;
+                $plan['price'] = $targetBasePrice + $tax;
             }
             list($bills, $add_cost) = User::getBills($target['id']);
             if (!empty($add_cost)) {
