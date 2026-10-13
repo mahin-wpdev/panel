@@ -49,19 +49,21 @@ class ResellerProfit
                 return true;
             }
             $rp = ORM::for_table('tbl_reseller_packages')->where('reseller_id', $resellerId)
-                ->where('plan_id', $plan['id'])->where('status', 1)->find_one();
-            if (!$rp) {
+                ->where('plan_id', $plan['id'])->find_one();
+            if ($rp && empty($rp['status'])) {
                 self::recordDirect($db,$customer,$transaction,$actorType,$method,$ownsTransaction);
                 return true;
             }
+            $rp = self::resolvePackageConfig($rp, $reseller);
 
             $selling = round((float)$transaction['price'], 2);
-            $base = round(max(0, (float)$rp['base_cost']), 2);
-            $gross = round(max(0, $selling - $base), 2);
-            $type = $rp['profit_type'] === 'fixed' ? 'fixed' : 'percentage';
-            $value = max(0, min($type === 'percentage' ? 100 : $gross, (float)$rp['profit_value']));
-            $resellerProfit = round($type === 'fixed' ? min($gross, $value) : $gross * $value / 100, 2);
-            $adminProfit = round($gross - $resellerProfit, 2);
+            $split = self::calculateSplit($selling, $rp);
+            $base = $split['base_cost'];
+            $gross = $split['gross_profit'];
+            $type = $split['profit_type'];
+            $value = $split['profit_value'];
+            $resellerProfit = $split['reseller_profit'];
+            $adminProfit = $split['admin_profit'];
 
             $e = ORM::for_table('tbl_reseller_earnings')->create();
             $e->reseller_id = $resellerId; $e->customer_id = $customer['id'];
@@ -100,6 +102,35 @@ class ResellerProfit
     {
         return strncmp($method, 'Admin Manual - ', 15) === 0
             || in_array($userType, ['Admin', 'SuperAdmin'], true);
+    }
+
+    /** Use the reseller profile rate when a plan has no explicit package rule. */
+    public static function resolvePackageConfig($packageRule, $reseller)
+    {
+        if ($packageRule) return $packageRule;
+        return [
+            'id' => null,
+            'base_cost' => 0,
+            'profit_type' => 'percentage',
+            'profit_value' => max(0, min(100, (float)($reseller['profit_percentage'] ?? 0))),
+        ];
+    }
+
+    public static function calculateSplit(float $selling, $packageRule): array
+    {
+        $base = round(max(0, (float)$packageRule['base_cost']), 2);
+        $gross = round(max(0, $selling - $base), 2);
+        $type = ($packageRule['profit_type'] ?? '') === 'fixed' ? 'fixed' : 'percentage';
+        $value = max(0, min($type === 'percentage' ? 100 : $gross, (float)$packageRule['profit_value']));
+        $resellerProfit = round($type === 'fixed' ? min($gross, $value) : $gross * $value / 100, 2);
+        return [
+            'base_cost' => $base,
+            'gross_profit' => $gross,
+            'profit_type' => $type,
+            'profit_value' => $value,
+            'reseller_profit' => $resellerProfit,
+            'admin_profit' => round($gross - $resellerProfit, 2),
+        ];
     }
 
     private static function recordDirect(PDO $db,$customer,$transaction,$actorType,$method,$ownsTransaction):void
