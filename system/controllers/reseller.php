@@ -247,6 +247,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $customerIds=array_unique(array_filter(array_map('intval',(array)($_POST['customer_ids']??[]))));
         $operation=_post('operation');$targetId=(int)_post('reseller_id');
         if(!$customerIds)r2(getUrl('reseller/ownership'),'e','Select at least one customer.');
+        if(!in_array($operation,['assign','unassign'],true))r2(getUrl('reseller/ownership'),'e','Invalid ownership operation.');
         $target=null;if($operation==='assign'){$target=ORM::for_table('tbl_resellers')->where('id',$targetId)->where('status','active')->find_one();if(!$target)r2(getUrl('reseller/ownership'),'e','Choose an active reseller.');}
         $updated=0;foreach($customerIds as $customerId){$customer=ORM::for_table('tbl_customers')->find_one($customerId);if(!$customer)continue;$customer->reseller_id=$operation==='unassign'?null:$targetId;$customer->save();$updated++;}
         _log('Ownership bulk '.$operation.' updated '.$updated.' customer(s)');r2(getUrl('reseller/ownership'),'s',$updated.' customer(s) updated successfully.');

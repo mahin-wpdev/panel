@@ -594,7 +594,9 @@ function autoRechargeUser(array $payment)
             $found['plan']->id(),
             $gateway . ' SMS',
             'SmsForwarder',
-            $note
+            $note,
+            0,
+            (float)$found['package_price']
         );
 
         if (!$transactionId) {

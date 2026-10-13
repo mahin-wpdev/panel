@@ -376,35 +376,14 @@ class Message
         $inv_url = "?_route=voucher/invoice/$trx[id]/" . md5($trx['id'] . $db_pass);
         $textInvoice = str_replace('[[invoice_link]]', $inv_url, $textInvoice);
 
-        // Calculate bills and additional costs
-        list($bills, $add_cost) = User::getBills($cust['id']);
-
-        // Initialize note and total variables
+        // Reuse the amounts captured on this transaction. Re-reading pending
+        // bills or today's tax configuration would make an old invoice drift.
         $note = "";
-        $total = $trx['price'];
-
-        // Add bills to the note if there are any additional costs
-        if ($add_cost != 0) {
-            foreach ($bills as $k => $v) {
-                $note .= $k . " : " . Lang::moneyFormat($v) . "\n";
-            }
-            $total += $add_cost;
-        }
-
-        // Calculate tax
-        $tax = 0;
-        $tax_enable = isset($config['enable_tax']) ? $config['enable_tax'] : 'no';
-        if ($tax_enable === 'yes') {
-            $tax_rate_setting = isset($config['tax_rate']) ? $config['tax_rate'] : null;
-            $custom_tax_rate = isset($config['custom_tax_rate']) ? (float) $config['custom_tax_rate'] : null;
-
-            $tax_rate = ($tax_rate_setting === 'custom') ? $custom_tax_rate : $tax_rate_setting;
-            $tax = Package::tax($trx['price'], $tax_rate);
-
-            if ($tax != 0) {
-                $note .= "Tax : " . Lang::moneyFormat($tax) . "\n";
-                $total += $tax;
-            }
+        $total = (float)$trx['price'];
+        $tax = round((float)($trx['tax_amount'] ?? 0), 2);
+        if ($tax > 0) {
+            $note .= "Tax : " . Lang::moneyFormat($tax) . "\n";
+            $total += $tax;
         }
 
         // Add total to the note

@@ -136,11 +136,13 @@ function jm_mobile_recharge_recover(PDO $db, array $request): ?string {
         WHERE t.user_id=? AND t.admin_id=?
           AND t.plan_name=p.name_plan
           AND t.method=CONCAT('Admin Manual - ',u.username)
+          AND t.note LIKE CONCAT('%JM_APP_REQUEST_KEY=',?,'%')
           AND TIMESTAMP(t.recharged_on,t.recharged_time)>=
               DATE_SUB(?,INTERVAL 2 MINUTE)
         ORDER BY t.id DESC LIMIT 1",
         [(int)$request['plan_id'],(int)$request['actor_id'],
          (int)$request['customer_id'],(int)$request['actor_id'],
+         (string)$request['request_key'],
          (string)$request['created_at']])->fetchColumn();
     if (!$invoice) return null;
     jm_mobile_query($db,"UPDATE tbl_mobile_admin_recharge_requests

@@ -179,4 +179,19 @@ assert.match(setup, /JSON_THROW_ON_ERROR/);
 assert.match(setup, /\.tmp\.['"]?\s*\.\s*bin2hex\(random_bytes\(4\)\)/);
 const whatsappController = read('system/controllers/whatsapp.php');
 assert.match(whatsappController, /\(\(\$result\['json'\]\['success'\] \?\? false\) === true\)/);
-console.log('PASS: installer, webhook auth, receipt idempotency, logs, Nginx, ONU, setup, WhatsApp, session cookies, and server-owned peak invariants');
+assert.match(packageSource, /\$priceOverride = null\)/);
+assert.ok(packageSource.includes("$p['price'] = $priceOverride"));
+assert.ok(packageSource.includes("$t->price = $priceOverride + $add_cost"));
+assert.match(autorecharge, /'SmsForwarder',[\s\S]*\(float\)\$found\['package_price'\]/,
+  'auto-recharge must store and account using the matched reseller selling price');
+assert.ok(read('system/mobile/admin-recharge.php').includes("t.note LIKE CONCAT('%JM_APP_REQUEST_KEY=',?,'%')"),
+  'mobile retry recovery must find only its own recharge request marker');
+assert.match(read('system/autoload/Message.php'), /\$trx\['tax_amount'\]/,
+  'invoice notifications must use the transaction tax snapshot');
+assert.match(read('system/controllers/plan.php'), /getAttribute\("Invoice", \$id_customer\)/,
+  'admin balance recharge must charge the same postpaid invoice amount that Package records');
+assert.match(read('system/controllers/order.php'), /getAttribute\("Invoice", \$id_customer\)/,
+  'customer wallet recharge must charge the same postpaid invoice amount that Package records');
+assert.match(resellerController, /in_array\(\$operation,\['assign','unassign'\],true\)/,
+  'bulk ownership must reject unknown operations instead of assigning arbitrary reseller IDs');
+console.log('PASS: installer, webhook auth, receipts, billing snapshots, reseller pricing, mobile recovery, ownership validation, security, ONU, setup, WhatsApp, sessions, and traffic invariants');

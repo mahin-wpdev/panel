@@ -201,6 +201,8 @@ switch ($action) {
             $channel = $admin['fullname'];
             $cust = User::_info($id_customer);
             list($bills, $add_cost) = User::getBills($id_customer);
+            $add_inv = User::getAttribute("Invoice", $id_customer);
+            if (!empty($add_inv)) $plan['price'] = (float)$add_inv;
 
             // Tax calculation start
             $tax_enable = isset($config['enable_tax']) ? $config['enable_tax'] : 'no';
