@@ -1,15 +1,16 @@
 <?php
 class ResellerDebt {
  public static function outstanding(PDO $db,int $id):float {
-  $q=$db->prepare("SELECT COALESCE(SUM(d.amount),0) FROM tbl_reseller_debts d WHERE d.reseller_id=?
-   AND (d.entry_type<>'recovery' OR NOT EXISTS(SELECT 1 FROM tbl_transactions t LEFT JOIN tbl_users au ON au.id=t.admin_id
-    WHERE t.id=d.recharge_id AND (t.method LIKE 'Admin Manual - %' OR au.user_type IN ('Admin','SuperAdmin'))))");
+  $q=$db->prepare('SELECT COALESCE(SUM(amount),0) FROM tbl_reseller_debts WHERE reseller_id=?');
   $q->execute([$id]);return max(0,round((float)$q->fetchColumn(),2));
  }
  public static function summary(PDO $db,?int $id=null):array {
   $where=' WHERE 1=1';$args=[];if($id!==null){$where.=' AND reseller_id=?';$args[]=$id;}
-  $q=$db->prepare("SELECT COALESCE(SUM(CASE WHEN entry_type='debt' THEN amount ELSE 0 END),0) added,COALESCE(SUM(CASE WHEN entry_type='recovery' AND NOT EXISTS(SELECT 1 FROM tbl_transactions t LEFT JOIN tbl_users au ON au.id=t.admin_id WHERE t.id=tbl_reseller_debts.recharge_id AND (t.method LIKE 'Admin Manual - %' OR au.user_type IN ('Admin','SuperAdmin'))) THEN -amount ELSE 0 END),0) recovered FROM tbl_reseller_debts".$where);$q->execute($args);$row=$q->fetch(PDO::FETCH_ASSOC);
-  $q=$db->prepare("SELECT COALESCE(SUM(outstanding),0) FROM (SELECT GREATEST(0,SUM(d.amount)) outstanding FROM tbl_reseller_debts d".$where." AND (d.entry_type<>'recovery' OR NOT EXISTS(SELECT 1 FROM tbl_transactions t LEFT JOIN tbl_users au ON au.id=t.admin_id WHERE t.id=d.recharge_id AND (t.method LIKE 'Admin Manual - %' OR au.user_type IN ('Admin','SuperAdmin')))) GROUP BY d.reseller_id) debt");
+  $q=$db->prepare("SELECT COALESCE(SUM(CASE WHEN entry_type='debt' THEN amount ELSE 0 END),0) added,
+   COALESCE(SUM(CASE WHEN entry_type='recovery' THEN -amount ELSE 0 END),0) recovered
+   FROM tbl_reseller_debts".$where);$q->execute($args);$row=$q->fetch(PDO::FETCH_ASSOC);
+  $q=$db->prepare("SELECT COALESCE(SUM(outstanding),0) FROM
+   (SELECT CASE WHEN SUM(d.amount)>0 THEN SUM(d.amount) ELSE 0 END outstanding FROM tbl_reseller_debts d".$where.' GROUP BY d.reseller_id) debt');
   $q->execute($args);
   return ['added'=>round((float)$row['added'],2),'recovered'=>round((float)$row['recovered'],2),'outstanding'=>round((float)$q->fetchColumn(),2)];
  }

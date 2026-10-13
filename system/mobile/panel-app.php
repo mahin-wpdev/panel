@@ -147,10 +147,7 @@ function jm_app_home(PDO $db, array $identity): array {
                  FROM tbl_reseller_earnings e
                  LEFT JOIN tbl_customers c ON c.id=e.customer_id
                  LEFT JOIN tbl_transactions t ON t.id=e.recharge_id
-                 LEFT JOIN tbl_users au ON au.id=t.admin_id
                  WHERE e.reseller_id=? AND e.status='earned'
-                   AND (t.id IS NULL OR (t.method NOT LIKE 'Admin Manual - %'
-                     AND (au.id IS NULL OR au.user_type NOT IN ('Admin','SuperAdmin'))))
                  ORDER BY e.id DESC LIMIT 8",[$resellerId]);
         }
         if (jm_app_table($db,'tbl_reseller_settlements')) {
@@ -219,10 +216,7 @@ function jm_app_home(PDO $db, array $identity): array {
         $monthSalesExpr=jm_app_table($db,'tbl_transactions')
             ? "COALESCE((SELECT SUM(t.price) FROM tbl_transactions t
                 JOIN tbl_customers tc ON tc.id=t.user_id
-                LEFT JOIN tbl_users au ON au.id=t.admin_id
                 WHERE tc.reseller_id=r.id
-                  AND t.method NOT LIKE 'Admin Manual - %'
-                  AND (au.id IS NULL OR au.user_type NOT IN ('Admin','SuperAdmin'))
                   AND t.recharged_on>=DATE_FORMAT(CURDATE(),'%Y-%m-01')),0)"
             : "0";
         $profitDueExpr="0";
@@ -249,9 +243,7 @@ function jm_app_home(PDO $db, array $identity): array {
         $summary['reseller_month_sales_bdt']=jm_app_num(jm_mobile_query($db,
             "SELECT COALESCE(SUM(CAST(t.price AS DECIMAL(15,2))),0)
              FROM tbl_transactions t JOIN tbl_customers c ON c.id=t.user_id
-             LEFT JOIN tbl_users au ON au.id=t.admin_id
-             WHERE c.reseller_id IS NOT NULL AND t.method NOT LIKE 'Admin Manual - %'
-               AND (au.id IS NULL OR au.user_type NOT IN ('Admin','SuperAdmin'))
+             WHERE c.reseller_id IS NOT NULL
                AND t.recharged_on>=DATE_FORMAT(CURDATE(),'%Y-%m-01')")->fetchColumn());
     }
 

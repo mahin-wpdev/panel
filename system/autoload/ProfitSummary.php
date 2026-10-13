@@ -1,11 +1,10 @@
 <?php
-/** Panel-owned income: direct sales + Admin Manual sales + admin share of reseller sales. */
+/** Panel-owned income: direct sales + ISP share of reseller-customer sales. */
 class ProfitSummary
 {
     public static function period(PDO $db, ?string $from = null, ?string $through = null): array
     {
-        $adminShareWhere = "e.status = 'earned' AND t.method NOT LIKE 'Admin Manual - %'
-            AND (au.id IS NULL OR au.user_type NOT IN ('Admin','SuperAdmin'))
+        $adminShareWhere = "e.status = 'earned'
             AND NOT EXISTS (SELECT 1 FROM tbl_profit_events pe WHERE pe.recharge_id=e.recharge_id)";
         $legacyParams = [];
         if ($from !== null) { $adminShareWhere .= ' AND t.recharged_on >= ?'; $legacyParams[] = $from; }
@@ -31,9 +30,7 @@ class ProfitSummary
         // any event already captured by the immutable future ledger.
         $legacyDirectWhere = "t.method NOT IN ('Customer - Balance','Recharge Balance - Administrator')
             AND NOT EXISTS (SELECT 1 FROM tbl_profit_events pe WHERE pe.recharge_id=t.id)
-            AND NOT EXISTS (SELECT 1 FROM tbl_reseller_earnings re WHERE re.recharge_id=t.id
-                AND t.method NOT LIKE 'Admin Manual - %'
-                AND (au.id IS NULL OR au.user_type NOT IN ('Admin','SuperAdmin')))";
+            AND NOT EXISTS (SELECT 1 FROM tbl_reseller_earnings re WHERE re.recharge_id=t.id)";
         $directParams = [];
         if ($from !== null) { $legacyDirectWhere .= ' AND t.recharged_on >= ?'; $directParams[] = $from; }
         if ($through !== null) { $legacyDirectWhere .= ' AND t.recharged_on <= ?'; $directParams[] = $through; }

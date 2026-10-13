@@ -5,9 +5,8 @@ class ResellerAccounting
     public static function sales(PDO $db, int $resellerId, string $from, string $through): float
     {
         $legacy = $db->prepare("SELECT COALESCE(SUM(t.price),0) FROM tbl_transactions t
-            JOIN tbl_customers c ON c.id=t.user_id LEFT JOIN tbl_users au ON au.id=t.admin_id
-            WHERE c.reseller_id=? AND t.method NOT LIKE 'Admin Manual - %'
-            AND (au.id IS NULL OR au.user_type NOT IN ('Admin','SuperAdmin'))
+            JOIN tbl_customers c ON c.id=t.user_id
+            WHERE c.reseller_id=?
             AND NOT EXISTS(SELECT 1 FROM tbl_profit_events pe WHERE pe.recharge_id=t.id)
             AND t.recharged_on>=? AND t.recharged_on<=?");
         $legacy->execute([$resellerId,$from,$through]);
@@ -27,10 +26,8 @@ class ResellerAccounting
         if ($from !== null) { $where .= ' AND e.created_at>=?'; $params[] = $from.' 00:00:00'; }
         if ($through !== null) { $where .= ' AND e.created_at<=?'; $params[] = $through.' 23:59:59'; }
         $legacy = $db->prepare("SELECT COALESCE(SUM(e.profit_amount),0)
-            FROM tbl_reseller_earnings e LEFT JOIN tbl_transactions t ON t.id=e.recharge_id
-            LEFT JOIN tbl_users au ON au.id=t.admin_id
-            WHERE $where AND (t.id IS NULL OR (t.method NOT LIKE 'Admin Manual - %'
-                AND (au.id IS NULL OR au.user_type NOT IN ('Admin','SuperAdmin'))))");
+            FROM tbl_reseller_earnings e
+            WHERE $where");
         $legacy->execute($params);
 
         $eventWhere = "status='earned' AND reseller_income<>0";
@@ -45,10 +42,7 @@ class ResellerAccounting
 
     public static function settled(PDO $db, ?int $resellerId = null): float
     {
-        $where = "NOT (s.entry_type='debt_repayment' AND EXISTS
-            (SELECT 1 FROM tbl_transactions t LEFT JOIN tbl_users au ON au.id=t.admin_id
-             WHERE s.reference=CONCAT('Recharge #',t.id)
-               AND (t.method LIKE 'Admin Manual - %' OR au.user_type IN ('Admin','SuperAdmin'))))";
+        $where = '1=1';
         $params = [];
         if ($resellerId !== null) { $where .= ' AND s.reseller_id=?'; $params[] = $resellerId; }
         $q = $db->prepare("SELECT COALESCE(SUM(s.amount),0) FROM tbl_reseller_settlements s WHERE $where");
