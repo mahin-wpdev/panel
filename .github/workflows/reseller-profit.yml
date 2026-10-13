@@ -19,12 +19,16 @@ jobs:
           php -l system/autoload/ResellerAccounting.php
           php -l system/autoload/ProfitSummary.php
           php -l system/autoload/ResellerDebt.php
+          php -l system/autoload/ResellerBalanceHistory.php
           php -l system/controllers/reseller.php
           php -l system/mobile/panel-app.php
           php -l tests/profit/reseller_profit_config_test.php
+          php -l tests/profit/reseller_balance_history_test.php
       - name: Reseller profit configuration
         run: php tests/profit/reseller_profit_config_test.php
       - name: Profit split for every recharge actor
         run: php tests/profit/profit_summary_test.php
       - name: Reseller earnings and sales
         run: php tests/profit/reseller_accounting_test.php
+      - name: Admin profit history signs and deduplication
+        run: php tests/profit/reseller_balance_history_test.php

@@ -291,7 +291,8 @@ $selectedAgent=null;$selectedProfile=null;$resellerForm=false;
 if($action==='resellers'&&isset($routes[2])&&($routes[2]==='add'||ctype_digit((string)$routes[2]))){$resellerForm=true;if(ctype_digit((string)$routes[2])){$selectedAgent=ORM::for_table('tbl_users')->where('user_type','Agent')->find_one((int)$routes[2]);if($selectedAgent)$selectedProfile=ORM::for_table('tbl_resellers')->where('user_id',$selectedAgent['id'])->find_one();}}
 require_once 'system/autoload/ResellerDebt.php';$ui->assign('debt_summary',ResellerDebt::summary(ORM::get_db()));
 $ui->assign('debt_history',ORM::for_table('tbl_reseller_debts')->order_by_desc('id')->limit(100)->find_array());
-$ui->assign('balance_history',ORM::for_table('tbl_reseller_settlements')->order_by_desc('id')->limit(100)->find_array());
+require_once 'system/autoload/ResellerBalanceHistory.php';
+$ui->assign('balance_history',ResellerBalanceHistory::recent(ORM::get_db()));
 $ui->assign('reversal_options',ORM::for_table('tbl_reseller_settlements')->where('entry_type','payment')->where_gt('amount',0)->where_raw('NOT EXISTS (SELECT 1 FROM tbl_reseller_settlements reversal WHERE reversal.reversal_of=tbl_reseller_settlements.id)')->order_by_desc('id')->find_array());
 $ui->assign('operation_key',bin2hex(random_bytes(16)));
 $ui->assign('reseller_form',$resellerForm);

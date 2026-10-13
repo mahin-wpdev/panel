@@ -2,6 +2,12 @@
 
 # CHANGELOG
 
+## 2026.10.13 — Reseller profit balance history
+
+- Include automatic and legacy reseller recharge earnings in the admin profit history, with positive wallet changes and duplicate protection for event-mirrored earnings.
+- Show system-originated entries clearly and keep recharge references separate from the reason text.
+- Add a regression test for history signs, ordering, legacy earnings and event deduplication.
+
 ## 2026.10.13 — Auto-recharge matching and recovery
 
 - Renew the customer's active PPPoE package when the received amount is at or up to Tk 50 above its configured price, even if another package matches the full amount; record the full payment, package price and surplus in the receipt note without crediting customer balance.
