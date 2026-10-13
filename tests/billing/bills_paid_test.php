@@ -5,6 +5,8 @@ final class BillField implements ArrayAccess
 {
     private array $row;
     public function __construct(array $row = []) { $this->row = $row; }
+    public function __get(string $name): mixed { return $this->row[$name] ?? null; }
+    public function __set(string $name, mixed $value): void { $this->row[$name] = $value; }
     public function offsetExists(mixed $offset): bool { return isset($this->row[$offset]); }
     public function offsetGet(mixed $offset): mixed { return $this->row[$offset] ?? null; }
     public function offsetSet(mixed $offset, mixed $value): void { $this->row[$offset] = $value; }
