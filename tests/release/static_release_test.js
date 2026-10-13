@@ -85,6 +85,8 @@ assert.match(read('system/autoload/ProfitSummary.php'), /t\.owner_reseller_id=0/
   'legacy direct profit must use the transaction-time owner snapshot');
 assert.match(read('system/mobile/panel-app.php'), /t\.owner_reseller_id=\?/,
   'mobile reseller sales must retain transaction-time customer ownership');
+assert.match(read('system/controllers/reseller.php'), /where\('owner_reseller_id',\$profile\['id'\]\)->order_by_desc\('id'\)->limit\(20\)/,
+  'reseller customer history must not expose transactions owned by another reseller');
 assert.match(read('system/autoload/Balance.php'), /SELECT GET_LOCK\(\?, 0\)/,
   'wallet debits must serialize per customer');
 assert.match(read('system/autoload/Balance.php'), /balance>=\?/,

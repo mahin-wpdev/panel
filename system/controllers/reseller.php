@@ -103,7 +103,7 @@ if($isReseller){
         $customerId=(int)($routes[2]??_post('customer_id'));$selected=ORM::for_table('tbl_customers')->where('id',$customerId)->where('reseller_id',$profile['id'])->find_one();
         if(!$selected)r2(getUrl('reseller'),'e','Customer was not found or is not assigned to your reseller.');
         $active=ORM::for_table('tbl_user_recharges')->where('customer_id',$selected->id)->where('status','on')->order_by_desc('id')->find_one();
-        $onu=ORM::for_table('tbl_onus')->table_alias('o')->select_many('o.*','olt.name')->left_outer_join('tbl_olts',['o.olt_id','=','olt.id'],'olt')->where('o.customer_id',$selected->id)->find_one();$transactions=ORM::for_table('tbl_transactions')->where('user_id',$selected->id)->order_by_desc('id')->limit(20)->find_many();
+        $onu=ORM::for_table('tbl_onus')->table_alias('o')->select_many('o.*','olt.name')->left_outer_join('tbl_olts',['o.olt_id','=','olt.id'],'olt')->where('o.customer_id',$selected->id)->find_one();$transactions=ORM::for_table('tbl_transactions')->where('user_id',$selected->id)->where('owner_reseller_id',$profile['id'])->order_by_desc('id')->limit(20)->find_many();
         $ui->assign('is_reseller_view',true);$ui->assign('reseller_screen','customer-view');$ui->assign('profile',$profile);$ui->assign('selected_customer',$selected);$ui->assign('customer_package',$active);$ui->assign('customer_onu',$onu);$ui->assign('customer_transactions',$transactions);$ui->assign('csrf_token',Csrf::generateAndStoreToken());$ui->display('admin/reseller/dashboard.tpl');return;
     }
     if($action==='invoice'){
