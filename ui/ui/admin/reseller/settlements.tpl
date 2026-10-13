@@ -1,3 +1,4 @@
+{include file="sections/header.tpl"}
 <style>{literal}
 .settlements-ui{max-width:1400px;margin:0 auto;color:#334155}
 .settlement-intro{display:flex;align-items:center;justify-content:space-between;gap:20px;margin:8px 0 24px}
@@ -57,3 +58,4 @@ if(original.selectedIndex>0&&original.options[original.selectedIndex].disabled)o
 document.getElementById('settlement-form').addEventListener('submit',function(event){if(op.value!=='reverse'){amount.value=normalizeAmount(amount.value);if(!/^\d{1,8}(\.\d{1,2})?$/.test(amount.value)||Number(amount.value)<=0){event.preventDefault();amount.setCustomValidity('Enter a positive amount, e.g. 300 or 300.50');amount.reportValidity();return;}}});
 }());{/literal}</script>
 <div class="settlements-ui"><div class="box settlement-history"><div class="box-header"><h3 class="box-title">My Receivable History</h3></div><div class="box-body table-responsive"><table class="table"><thead><tr><th>Date</th><th>Reseller</th><th>Action</th><th>Amount</th><th>Recharge / Reason</th></tr></thead><tbody>{foreach $debt_history as $d}<tr><td>{$d['created_at']|escape}</td><td>{foreach $resellers as $r}{if $r['id']==$d['reseller_id']}{$r['name']|escape}{/if}{/foreach}</td><td>{if $d['entry_type']=='debt'}Receivable added{else}Recovered from profit{/if}</td><td>{Lang::moneyFormat($d['amount'])}</td><td>{if $d['recharge_id']}Recharge #{$d['recharge_id']} — {/if}{$d['note']|escape}</td></tr>{foreachelse}<tr><td colspan="5">No receivable recorded yet.</td></tr>{/foreach}</tbody></table></div></div></div>
+{include file="sections/footer.tpl"}
