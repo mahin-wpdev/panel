@@ -152,8 +152,8 @@ assert.match(planCandidateBlock, /if \(!empty\(\$customer->reseller_id\)\)[\s\S]
 const packageSource = read('system/autoload/Package.php');
 assert.match(packageSource, /private static function provisionCustomer[\s\S]*throw new RuntimeException\('Package provisioning failed:/,
   'a failed device provisioning operation must stop the recharge before recording it');
-assert.equal((packageSource.match(/self::provisionCustomer\(\$c, \$p, \$router_name, \$_app_stage\)/g) || []).length, 2,
-  'both new and renewal recharge paths must verify provisioning');
+assert.equal((packageSource.match(/self::provisionCustomer\(\$c, \$p, \$router_name, \$_app_stage, \$date_exp \. ' ' \. \$time\)/g) || []).length, 2,
+  'both new and renewal recharge paths must provision with the calculated expiry');
 const resellerController = read('system/controllers/reseller.php');
 assert.match(resellerController, /\$isNewProfile=!\$record/);
 assert.match(resellerController, /if\(\$isNewProfile\)\{[\s\S]*tbl_reseller_packages/,
