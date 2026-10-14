@@ -66,6 +66,8 @@ assert.match(read('database/migrations/manifest.txt'),
   /2026101402\|database\/migrations\/2026101402_transaction_tax\.sql/);
 assert.match(read('database/migrations/manifest.txt'),
   /2026101403\|database\/migrations\/2026101403_transaction_reseller_owner\.sql/);
+assert.match(read('database/migrations/manifest.txt'),
+  /2026101404\|database\/migrations\/2026101404_recharge_provisioning_outbox\.sql/);
 assert.match(read('database/migrations/2026101403_transaction_reseller_owner.sql'), /owner_snapshot_saved=1/,
   'legacy ownership migration must be repeat-safe, including customers with no reseller snapshot');
 const installSql = read('install/phpnuxbill.sql');
@@ -75,6 +77,10 @@ assert.match(transactionSchema, /`owner_reseller_id` int unsigned NOT NULL DEFAU
   'fresh installs must include the transaction-time reseller owner');
 assert.match(transactionSchema, /`owner_snapshot_saved` tinyint\(1\) NOT NULL DEFAULT '0'/,
   'fresh installs must include the ownership snapshot marker');
+assert.match(transactionSchema, /`recharge_operation_key` char\(32\)/,
+  'fresh installs must preserve recharge outbox idempotency keys');
+assert.match(installSql, /CREATE TABLE `tbl_recharge_provisioning_outbox`/,
+  'fresh installs must include the durable recharge provisioning outbox');
 assert.doesNotMatch(gatewaySchema, /owner_reseller_id|owner_snapshot_saved/,
   'transaction ownership fields must not be added to payment-gateway rows');
 assert.match(read('system/autoload/ResellerAccounting.php'), /owner_reseller_id/,
@@ -202,7 +208,7 @@ assert.match(setup, /JSON_THROW_ON_ERROR/);
 assert.match(setup, /\.tmp\.['"]?\s*\.\s*bin2hex\(random_bytes\(4\)\)/);
 const whatsappController = read('system/controllers/whatsapp.php');
 assert.match(whatsappController, /\(\(\$result\['json'\]\['success'\] \?\? false\) === true\)/);
-assert.match(packageSource, /\$priceOverride = null\)/);
+assert.match(packageSource, /\$priceOverride = null, \?string \$operationKey = null/);
 assert.ok(packageSource.includes("$p['price'] = $priceOverride"));
 assert.ok(packageSource.includes("$t->price = $priceOverride + $add_cost"));
 assert.match(autorecharge, /'SmsForwarder',[\s\S]*\(float\)\$found\['package_price'\]/,

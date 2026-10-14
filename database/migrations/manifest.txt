@@ -12,3 +12,4 @@
 2026101401|database/migrations/2026101401_password_hashes.sql
 2026101402|database/migrations/2026101402_transaction_tax.sql
 2026101403|database/migrations/2026101403_transaction_reseller_owner.sql
+2026101404|database/migrations/2026101404_recharge_provisioning_outbox.sql

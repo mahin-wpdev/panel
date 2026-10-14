@@ -18,7 +18,7 @@ class Package
      * @param array $pgids payment gateway ids
      * @return boolean
      */
-    public static function rechargeUser($id_customer, $router_name, $plan_id, $gateway, $channel, $note = '', $taxAmount = 0, $priceOverride = null)
+    public static function rechargeUser($id_customer, $router_name, $plan_id, $gateway, $channel, $note = '', $taxAmount = 0, $priceOverride = null, ?string $operationKey = null, bool $skipProvisioning = false, ?string $invoiceOverride = null)
     {
         // Every channel funnels through this lock, so web, mobile, cron and
         // gateway callbacks cannot mutate one customer's entitlement together.
@@ -26,25 +26,33 @@ class Package
         $key = $id > 0 ? (string)$id : 'voucher-' . substr(hash('sha256', (string)$channel), 0, 32);
         $lockName = 'jm_recharge_' . $key;
         $db = ORM::get_db();
+        $operationKey = $operationKey ?: bin2hex(random_bytes(16));
         $lock = $db->prepare('SELECT GET_LOCK(?, 0)');
         $lock->execute([$lockName]);
         if ((int)$lock->fetchColumn() !== 1) return false;
         try {
-            return self::rechargeUserLocked($id_customer, $router_name, $plan_id, $gateway, $channel, $note, $taxAmount, $priceOverride);
+            if ($id > 0 && !$skipProvisioning && class_exists('RechargeOutbox')) {
+                RechargeOutbox::processProvisioned(10, $id);
+                if (RechargeOutbox::hasOutstandingCustomer($db, $id)) {
+                    throw new RuntimeException('A previous recharge for this customer needs reconciliation before another recharge can run.');
+                }
+            }
+            return self::rechargeUserLocked($id_customer, $router_name, $plan_id, $gateway, $channel, $note, $taxAmount, $priceOverride, $operationKey, $skipProvisioning, $invoiceOverride);
         } finally {
             $release = $db->prepare('SELECT RELEASE_LOCK(?)');
             $release->execute([$lockName]);
         }
     }
 
-    private static function rechargeUserLocked($id_customer, $router_name, $plan_id, $gateway, $channel, $note = '', $taxAmount = 0, $priceOverride = null)
+    private static function rechargeUserLocked($id_customer, $router_name, $plan_id, $gateway, $channel, $note = '', $taxAmount = 0, $priceOverride = null, ?string $operationKey = null, bool $skipProvisioning = false, ?string $invoiceOverride = null)
     {
         global $config, $admin, $c, $p, $b, $t, $d, $zero, $trx, $_app_stage, $isChangePlan;
         $date_only = date("Y-m-d");
         $time_only = date("H:i:s");
         $time = date("H:i:s");
-        $inv = "";
+        $inv = $invoiceOverride ?: "INV-" . Package::_raid();
         $isVoucher = false;
+        $d = null;
         $c = [];
         if ($trx && $trx['status'] == 2) {
             // if its already paid, return it
@@ -269,7 +277,14 @@ class Package
             }
 
             //if ($b['status'] == 'on') {
-            self::provisionCustomer($c, $p, $router_name, $_app_stage, $date_exp . ' ' . $time);
+            self::prepareRechargeProvisioning($id_customer, $p, $router_name, $gateway, $channel, $note, $taxAmount, $priceOverride, $operationKey, $inv, $skipProvisioning);
+            try {
+                if (!$skipProvisioning) self::provisionCustomer($c, $p, $router_name, $_app_stage, $date_exp . ' ' . $time);
+                self::finishRechargeProvisioning($operationKey, $skipProvisioning);
+            } catch (Throwable $error) {
+                if (!$skipProvisioning) RechargeOutbox::manualReview(ORM::get_db(), $operationKey, $error);
+                throw $error;
+            }
             //}
 
             // if contains 'mikrotik', 'hotspot', 'pppoe', 'radius' then recharge it
@@ -291,12 +306,12 @@ class Package
                 } else {
                     $b->admin_id = '0';
                 }
-                $b->save();
             }
 
             // insert table transactions
             $t = ORM::for_table('tbl_transactions')->create();
-            $t->invoice = $inv = "INV-" . Package::_raid();
+            $t->invoice = $inv;
+            $t->recharge_operation_key = $operationKey;
             $t->username = $c['username'];
             $t->user_id = $id_customer;
             $t->owner_reseller_id = (int)($c['reseller_id'] ?? 0);
@@ -334,7 +349,7 @@ class Package
             } else {
                 $t->admin_id = '0';
             }
-            self::saveRechargeProfit($t, $c, $p, $bills, (int)$id_customer);
+            self::saveRechargeProfit($t, $c, $p, $bills, (int)$id_customer, $b, $operationKey);
 
             try {
             if ($p['validity_unit'] == 'Period') {
@@ -366,7 +381,14 @@ class Package
             }
         } else {
             // active plan not exists
-            self::provisionCustomer($c, $p, $router_name, $_app_stage, $date_exp . ' ' . $time);
+            self::prepareRechargeProvisioning($id_customer, $p, $router_name, $gateway, $channel, $note, $taxAmount, $priceOverride, $operationKey, $inv, $skipProvisioning);
+            try {
+                if (!$skipProvisioning) self::provisionCustomer($c, $p, $router_name, $_app_stage, $date_exp . ' ' . $time);
+                self::finishRechargeProvisioning($operationKey, $skipProvisioning);
+            } catch (Throwable $error) {
+                if (!$skipProvisioning) RechargeOutbox::manualReview(ORM::get_db(), $operationKey, $error);
+                throw $error;
+            }
 
             // if contains 'mikrotik', 'hotspot', 'pppoe', 'radius' then recharge it
             if (Validator::containsKeyword($p['device'])) {
@@ -388,12 +410,12 @@ class Package
                 } else {
                     $d->admin_id = '0';
                 }
-                $d->save();
             }
 
             // insert table transactions
             $t = ORM::for_table('tbl_transactions')->create();
-            $t->invoice = $inv = "INV-" . Package::_raid();
+            $t->invoice = $inv;
+            $t->recharge_operation_key = $operationKey;
             $t->username = $c['username'];
             $t->user_id = $id_customer;
             $t->owner_reseller_id = (int)($c['reseller_id'] ?? 0);
@@ -427,7 +449,7 @@ class Package
             }
             $t->type = $p['type'];
             // Keep the billing transaction and its profit snapshot atomic.
-            self::saveRechargeProfit($t, $c, $p, $bills, (int)$id_customer);
+            self::saveRechargeProfit($t, $c, $p, $bills, (int)$id_customer, $d, $operationKey);
 
             try {
             if ($p['validity_unit'] == 'Period' && $p['price'] != 0) {
@@ -478,7 +500,54 @@ class Package
         return $inv;
     }
 
-    private static function saveRechargeProfit($transaction, $customer, $plan, array $bills = [], int $customerId = 0): void
+    private static function prepareRechargeProvisioning(int $customerId, $plan, string $router, string $gateway, string $channel, string $note, $taxAmount, $priceOverride, ?string $operationKey, string $invoice, bool $skipProvisioning): void
+    {
+        if (!$operationKey || $customerId <= 0 || !class_exists('RechargeOutbox')) return;
+        $db = ORM::get_db();
+        if ($skipProvisioning) {
+            $entry = RechargeOutbox::find($db, $operationKey);
+            if (!$entry || $entry['status'] !== 'provisioned') {
+                throw new RuntimeException('Recharge cannot be replayed because network provisioning is not confirmed.');
+            }
+            return;
+        }
+        global $admin;
+        RechargeOutbox::begin($db, [
+            'operation_key' => $operationKey,
+            'customer_id' => $customerId,
+            'plan_id' => (int)$plan['id'],
+            'router' => $router,
+            'gateway' => $gateway,
+            'channel' => $channel,
+            'note' => $note,
+            'tax_amount' => $taxAmount,
+            'price_override' => $priceOverride,
+            'invoice' => $invoice,
+            'admin_id' => (int)($admin['id'] ?? 0),
+        ]);
+    }
+
+    private static function finishRechargeProvisioning(?string $operationKey, bool $skipProvisioning): void
+    {
+        if ($operationKey && !$skipProvisioning && class_exists('RechargeOutbox')) {
+            RechargeOutbox::markProvisioned(ORM::get_db(), $operationKey);
+        }
+    }
+
+    /** Replay the accounting half for a router operation already confirmed as provisioned. */
+    public static function replayProvisionedOperation(array $entry): string
+    {
+        $invoice = self::rechargeUser(
+            (int)$entry['customer_id'], (string)$entry['router'], (int)$entry['plan_id'],
+            (string)$entry['gateway'], (string)$entry['channel'], (string)$entry['note'],
+            (float)$entry['tax_amount'], $entry['price_override'] === null ? null : (float)$entry['price_override'],
+            (string)$entry['operation_key'], true, (string)$entry['invoice']
+        );
+        if (!is_string($invoice) || $invoice === '') throw new RuntimeException('Recharge ledger replay failed.');
+        return $invoice;
+    }
+
+    private static function saveRechargeProfit($transaction, $customer, $plan, array $bills = [], int $customerId = 0, $rechargeRow = null, ?string $operationKey = null): int
     {
         $db = ORM::get_db();
         if ($db->inTransaction()) {
@@ -486,10 +555,16 @@ class Package
         }
         $db->beginTransaction();
         try {
+            if ($rechargeRow) $rechargeRow->save();
             $transaction->save();
             ResellerProfit::record($customer, $transaction, $plan);
             if ($bills && $customerId > 0) User::billsPaid($bills, $customerId);
+            if ($operationKey && class_exists('RechargeOutbox')) {
+                RechargeOutbox::complete($db, $operationKey, (int)$transaction->id(), (string)$transaction->invoice);
+            }
+            $id = (int)$transaction->id();
             $db->commit();
+            return $id;
         } catch (Throwable $error) {
             if ($db->inTransaction()) $db->rollBack();
             throw $error;

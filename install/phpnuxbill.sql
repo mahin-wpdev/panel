@@ -154,6 +154,7 @@ CREATE TABLE `tbl_transactions` (
   `user_id` int(11) NOT NULL DEFAULT 0,
   `owner_reseller_id` int unsigned NOT NULL DEFAULT '0',
   `owner_snapshot_saved` tinyint(1) NOT NULL DEFAULT '0',
+  `recharge_operation_key` char(32) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
   `plan_name` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `price` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `recharged_on` date NOT NULL,
@@ -165,6 +166,32 @@ CREATE TABLE `tbl_transactions` (
   `type` enum('Hotspot','PPPOE','Balance') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `note` varchar(256) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT 'for note',
   `admin_id` int NOT NULL DEFAULT '1'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+DROP TABLE IF EXISTS `tbl_recharge_provisioning_outbox`;
+CREATE TABLE `tbl_recharge_provisioning_outbox` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `operation_key` char(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `customer_id` int unsigned NOT NULL,
+  `plan_id` int unsigned NOT NULL,
+  `router` varchar(64) NOT NULL,
+  `gateway` varchar(128) NOT NULL,
+  `channel` varchar(128) NOT NULL,
+  `note` text NOT NULL,
+  `tax_amount` decimal(15,2) NOT NULL DEFAULT '0.00',
+  `price_override` decimal(15,2) DEFAULT NULL,
+  `invoice` varchar(25) NOT NULL,
+  `admin_id` int unsigned NOT NULL DEFAULT '0',
+  `transaction_id` int unsigned DEFAULT NULL,
+  `status` enum('provisioning','provisioned','completed','manual_review') NOT NULL DEFAULT 'provisioning',
+  `attempts` int unsigned NOT NULL DEFAULT '1',
+  `last_error` varchar(1000) NOT NULL DEFAULT '',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_recharge_outbox_operation` (`operation_key`),
+  KEY `idx_recharge_outbox_status_updated` (`status`,`updated_at`),
+  KEY `idx_recharge_outbox_customer_status` (`customer_id`,`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 DROP TABLE IF EXISTS `tbl_users`;
