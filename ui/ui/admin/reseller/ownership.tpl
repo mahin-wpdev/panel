@@ -12,5 +12,25 @@
 <form method="post" action="{Text::url('reseller/ownership-bulk')}" id="ownershipBulk"><input type="hidden" name="csrf_token" value="{$csrf_token}"><div class="row" style="margin-bottom:12px"><div class="col-md-3"><select class="form-control" name="operation" id="ownershipOperation"><option value="assign">Assign / Transfer selected</option><option value="unassign">Return selected to Main ISP</option></select></div><div class="col-md-4"><select class="form-control select2" name="reseller_id" id="ownershipReseller"><option value="">Choose target reseller</option>{foreach $resellers as $r}{if $r['status']=='active'}<option value="{$r['id']}">{$r['name']|escape}</option>{/if}{/foreach}</select></div><div class="col-md-3"><button class="btn btn-info" onclick="return confirm('Apply ownership change to selected customers?')"><i class="fa fa-exchange"></i> Apply to Selected</button></div></div>
 <div class="table-responsive"><table class="table table-bordered table-striped table-hover"><thead><tr><th><input type="checkbox" id="ownershipSelectAll"></th><th>Customer</th><th>Contact</th><th>Current Owner</th><th>Package / Expiry</th><th>Balance</th><th>Status</th><th>Approval</th><th>Manage</th></tr></thead><tbody>{foreach $ownership_rows as $c}<tr><td><input type="checkbox" name="customer_ids[]" value="{$c['id']}"></td><td><b>{$c['fullname']|escape}</b><br><small>{$c['username']|escape}{if $c['pppoe_username']} / {$c['pppoe_username']|escape}{/if}</small></td><td>{$c['phonenumber']|escape}<br><small>{$c['email']|escape}</small></td><td>{if $c['reseller_id']}<span class="label label-primary">{$c['reseller_name']|escape}</span>{else}<span class="label label-default">Main ISP</span>{/if}</td><td>{$c['active_package']|escape}{if $c['package_expiry']}<br><small>{$c['package_expiry']|escape}</small>{/if}</td><td>{Lang::moneyFormat($c['balance'])}</td><td><span class="label {if $c['status']=='Active'}label-success{else}label-default{/if}">{$c['status']|escape}</span></td><td>{if $c['reseller_id']}{if $c['approval_status']=='pending'}<span class="label label-warning">Pending</span>{else}<span class="label label-success">Approved</span>{/if}{else}-{/if}</td><td class="ownership-actions"><a class="btn btn-success btn-xs" href="{Text::url('customers/view/')}{$c['id']}">View</a><a class="btn btn-info btn-xs" href="{Text::url('customers/edit/')}{$c['id']}&token={$csrf_token}">Edit</a><a class="btn btn-primary btn-xs" href="{Text::url('plan/recharge/')}{$c['id']}&token={$csrf_token}">Recharge</a>{if $c['reseller_id'] && $c['approval_status']=='pending'}<button type="submit" class="btn btn-warning btn-xs" formaction="{Text::url('reseller/ownership-approve')}" name="customer_id" value="{$c['id']}">Approve</button>{/if}</td></tr>{foreachelse}<tr><td colspan="9" class="text-center text-muted">No customers match the selected filters.</td></tr>{/foreach}</tbody></table></div></form>
 </div></div>
-{literal}<script>$('#ownershipSelectAll').on('change',function(){$('#ownershipBulk input[name="customer_ids[]"]').prop('checked',this.checked);});$('#ownershipOperation').on('change',function(){$('#ownershipReseller').prop('disabled',this.value==='unassign');}).trigger('change');</script>{/literal}
+{literal}<script>
+document.addEventListener('DOMContentLoaded',function(){
+    var selectAll=document.getElementById('ownershipSelectAll');
+    var bulkForm=document.getElementById('ownershipBulk');
+    var operation=document.getElementById('ownershipOperation');
+    var reseller=document.getElementById('ownershipReseller');
+
+    if(selectAll&&bulkForm){
+        selectAll.addEventListener('change',function(){
+            bulkForm.querySelectorAll('input[name="customer_ids[]"]').forEach(function(customer){
+                customer.checked=selectAll.checked;
+            });
+        });
+    }
+    if(operation&&reseller){
+        var updateResellerAvailability=function(){reseller.disabled=operation.value==='unassign';};
+        operation.addEventListener('change',updateResellerAvailability);
+        updateResellerAvailability();
+    }
+});
+</script>{/literal}
 {include file="sections/footer.tpl"}
