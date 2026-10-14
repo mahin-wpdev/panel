@@ -26,8 +26,12 @@ class Radius
         ];
     }
 
-    function add_customer($customer, $plan)
+    function add_customer($customer, $plan, $expiresAt = '')
     {
+        if ($expiresAt !== '') {
+            $this->customerAddPlan($customer, $plan, $expiresAt);
+            return;
+        }
         $p = ORM::for_table('tbl_plans')
             ->where('id', $plan['id'])
             ->findOne();

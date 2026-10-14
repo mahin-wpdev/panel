@@ -23,9 +23,11 @@ jobs:
           php -l system/controllers/reseller.php
           php -l system/mobile/panel-app.php
           php -l system/autoload/Package.php
+          php -l system/devices/Radius.php
           php -l system/autoload/Password.php
           php -l system/autoload/User.php
           php -l tests/billing/bills_paid_test.php
+          php -l tests/billing/radius_expiry_provisioning_test.php
           php -l autorecharge/autorecharge.php
           php -l autorecharge/bkash.php
           php -l autorecharge/bkash_merchant.php
@@ -48,3 +50,5 @@ jobs:
         run: php tests/autorecharge/response_code_test.php
       - name: One-off and installment bill settlement
         run: php tests/billing/bills_paid_test.php
+      - name: RADIUS renewal expiry matches panel entitlement
+        run: php tests/billing/radius_expiry_provisioning_test.php

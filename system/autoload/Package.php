@@ -269,7 +269,7 @@ class Package
             }
 
             //if ($b['status'] == 'on') {
-            self::provisionCustomer($c, $p, $router_name, $_app_stage);
+            self::provisionCustomer($c, $p, $router_name, $_app_stage, $date_exp . ' ' . $time);
             //}
 
             // if contains 'mikrotik', 'hotspot', 'pppoe', 'radius' then recharge it
@@ -366,7 +366,7 @@ class Package
             }
         } else {
             // active plan not exists
-            self::provisionCustomer($c, $p, $router_name, $_app_stage);
+            self::provisionCustomer($c, $p, $router_name, $_app_stage, $date_exp . ' ' . $time);
 
             // if contains 'mikrotik', 'hotspot', 'pppoe', 'radius' then recharge it
             if (Validator::containsKeyword($p['device'])) {
@@ -759,7 +759,7 @@ class Package
         return $tax;
     }
 
-    private static function provisionCustomer($customer, $plan, string $routerName, $stage): void
+    private static function provisionCustomer($customer, $plan, string $routerName, $stage, string $expiresAt): void
     {
         if (strtolower((string)$stage) === 'demo') return;
         $deviceFile = self::getDevice($plan);
@@ -772,7 +772,15 @@ class Package
             if (!class_exists($deviceClass)) {
                 throw new RuntimeException('Configured device driver is unavailable.');
             }
-            (new $deviceClass())->add_customer($customer, $plan);
+            $device = new $deviceClass();
+            if (strcasecmp($deviceClass, 'Radius') === 0) {
+                // The RADIUS expiry must match the entitlement we are about
+                // to persist. Recomputing from today can shorten an existing
+                // subscription when extend_expiry is enabled.
+                $device->add_customer($customer, $plan, $expiresAt);
+            } else {
+                $device->add_customer($customer, $plan);
+            }
         } catch (Throwable $error) {
             try {
                 Message::sendTelegram(
