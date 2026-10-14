@@ -37,6 +37,13 @@ while ($row = $statement->fetch(PDO::FETCH_ASSOC)) {
 
 $_c = $config;
 
+try {
+    $recovered = RechargeOutbox::processProvisioned(10);
+    if ($recovered > 0) echo "Recovered $recovered provisioned recharge ledger entry(ies)\n";
+} catch (Throwable $error) {
+    _log('Recharge outbox worker warning: ' . $error->getMessage());
+}
+
 
 $textExpired = Lang::getNotifText('expired');
 
