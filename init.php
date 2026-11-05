@@ -61,14 +61,8 @@ $PAYMENTGATEWAY_PATH = $root_path . File::pathFixer('system/paymentgateway');
 $UI_PATH = 'ui';
 
 if (!file_exists($UPLOAD_PATH . File::pathFixer('/notifications.default.json'))) {
-    $message = $UPLOAD_PATH . File::pathFixer("/notifications.default.json file not found");
-    if (PHP_SAPI === 'cli') {
-        fwrite(STDERR, $message . PHP_EOL);
-    } else {
-        http_response_code(500);
-        echo $message;
-    }
-    exit(1);
+    echo $UPLOAD_PATH . File::pathFixer("/notifications.default.json file not found");
+    die();
 }
 
 require_once $root_path . 'config.php';

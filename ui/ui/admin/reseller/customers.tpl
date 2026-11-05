@@ -102,7 +102,7 @@
                                 <th>PPPOE</th>
                                 <th>{Lang::T('Status')}</th>
                                 <th>Approval</th>
-                                <th>{Lang::T('Created On')}</th>
+                                <th>Expires On</th>
                                 <th>{Lang::T('Manage')}</th>
                             </tr>
                         </thead>
@@ -135,8 +135,14 @@
                                             class="glyphicon glyphicon-map-marker"></i></a>
                                     {/if}
                                 </td>
-                                <td align="center" api-get-text="{Text::url('autoload/plan_is_active/')}{$ds['id']}">
-                                    <span class="label label-default">&bull;</span>
+                                <td align="center">
+                                    {if !empty($customer_packages[$ds['id']])}
+                                        {foreach $customer_packages[$ds['id']] as $package}
+                                            <span class="label label-primary" title="Expires {$package['expiration']|escape:'html'} {$package['time']|escape:'html'}">{$package['namebp']|escape:'html'}</span><br>
+                                        {/foreach}
+                                    {else}
+                                        <span class="text-muted">No active package</span>
+                                    {/if}
                                 </td>
                                 <td>{$ds['service_type']}</td>
                                 <td>
@@ -146,7 +152,7 @@
                                 </td>
                                 <td>{Lang::T($ds['status'])}</td>
                                 <td>{if $ds['approval_status']=='pending'}<span class="label label-warning">Waiting for admin</span>{else}<span class="label label-success">Approved</span>{/if}</td>
-                                <td>{Lang::dateTimeFormat($ds['created_at'])}</td>
+                                <td>{if !empty($customer_expiries[$ds['id']])}{$customer_expiries[$ds['id']]|escape:'html'}{else}—{/if}</td>
                                 <td align="center">
                                     <a href="{Text::url('reseller/customer-view/')}{$ds['id']}" id="{$ds['id']}"
                                         style="margin: 0px; color:black"

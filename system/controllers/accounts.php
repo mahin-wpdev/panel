@@ -34,7 +34,7 @@ switch ($action) {
             $d_pass = $user['password'];
             $npass = _post('npass');
             $cnpass = _post('cnpass');
-            if (Password::customerVerify($password, $user['portal_password_hash'] ?? '', $d_pass)) {
+            if ($password == $d_pass) {
                 if (!Validator::Length($password, 36, 2)) {
                     r2(getUrl('accounts/change-password'), 'e', 'New Password must be 2 to 35 character');
                 }
@@ -42,7 +42,6 @@ switch ($action) {
                     r2(getUrl('accounts/change-password'), 'e', 'Both Password should be same');
                 }
                 $user->password = $npass;
-                $user->portal_password_hash = Password::customerHash($npass);
                 $turs = ORM::for_table('tbl_user_recharges')->where('customer_id', $user['id'])->find_many();
                 foreach ($turs as $tur) {
                     // if has active plan, change the password to devices
@@ -77,9 +76,6 @@ switch ($action) {
         $csrf_token = Csrf::generateAndStoreToken();
         $ui->assign('csrf_token', $csrf_token);
         $ui->assign('customFields', User::getFormCustomField($ui, false, $user['id']));
-        require_once __DIR__ . '/../mobile/monthly-usage.php';
-        $arivoPppoe = (string)($user['pppoe_username'] ?: $user['username']);
-        $ui->assign('arivoUsage', jm_mobile_monthly_view(ORM::get_db(), $arivoPppoe));
         $ui->display('customer/profile.tpl');
         break;
     case 'edit-profile-post':

@@ -37,10 +37,7 @@ switch ($do) {
                 if ($d['status'] == 'Banned') {
                     _alert(Lang::T('This account status') . ' : ' . Lang::T($d['status']), 'danger', "");
                 }
-                if (Password::customerVerify($password, $d['portal_password_hash'] ?? '', $d_pass)) {
-                    if (empty($d['portal_password_hash'])) {
-                        $d->portal_password_hash = Password::customerHash($password);
-                    }
+                if (Password::_uverify($password, $d_pass) == true) {
                     $_SESSION['uid'] = $d['id'];
                     $token = User::setCookie($d['id']);
                     $d->last_login = date('Y-m-d H:i:s');
@@ -186,7 +183,6 @@ switch ($do) {
                     $d = ORM::for_table('tbl_customers')->create();
                     $d->username = alphanumeric($username, "+_.@-");
                     $d->password = $voucher;
-                    $d->portal_password_hash = Password::customerHash($voucher);
                     $d->fullname = '';
                     $d->address = '';
                     $d->email = '';
@@ -203,10 +199,8 @@ switch ($do) {
                 }
                 if ($v1['status'] == 0) {
                     $oldPass = $user['password'];
-                    $oldPortalPasswordHash = (string)($user['portal_password_hash'] ?? '');
                     // change customer password to voucher code
                     $user->password = $voucher;
-                    $user->portal_password_hash = Password::customerHash($voucher);
                     $user->save();
                     // voucher activation
                     if (Package::rechargeUser($user['id'], $v1['routers'], $v1['id_plan'], "Voucher", $voucher)) {
@@ -255,7 +249,6 @@ switch ($do) {
                     } else {
                         // if failed to recharge, restore old password
                         $user->password = $oldPass;
-                        $user->portal_password_hash = $oldPortalPasswordHash !== '' ? $oldPortalPasswordHash : Password::customerHash($oldPass);
                         $user->save();
                         r2(getUrl('login'), 'e', Lang::T("Failed to activate voucher"));
                     }

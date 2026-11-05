@@ -8,7 +8,6 @@ header('Content-Type: application/json');
 
 try {
     $data = json_decode(file_get_contents('php://input'), true);
-    autorecharge_require_webhook_secret(is_array($data) ? $data : []);
     $msg = trim((string) ($data['msg'] ?? ''));
 
     if (!$data || $msg === '') {
@@ -50,12 +49,12 @@ try {
         )
     );
 
-    http_response_code(autorecharge_response_code($result));
+    http_response_code(200);
     echo json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 } catch (Throwable $e) {
     autorecharge_log('bkash-merchant-webhook.log', 'REJECTED: ' . $e->getMessage());
 
-    http_response_code(autorecharge_exception_response_code($e));
+    http_response_code(200);
     echo json_encode([
         'status' => 'error',
         'gateway' => 'bKash Merchant',

@@ -10,9 +10,16 @@ $ui->assign('_title', 'App Push Notifications');
 $ui->assign('_system_menu', 'message');
 $ui->assign('_admin', $admin);
 
-require_once $root_path . 'system/mobile/auth-core.php';
-require_once $root_path . 'system/mobile/panel-app.php';
-require_once $root_path . 'system/mobile/push.php';
+$mobileRoot = $root_path . 'system/mobile/';
+if (!is_file($mobileRoot . 'auth-core.php')) {
+    $mobileRoot = $root_path . 'panel/system/mobile/';
+}
+if (!is_file($mobileRoot . 'auth-core.php')) {
+    throw new RuntimeException('Mobile push backend is unavailable.');
+}
+require_once $mobileRoot . 'auth-core.php';
+require_once $mobileRoot . 'panel-app.php';
+require_once $mobileRoot . 'push.php';
 
 $db = ORM::get_db();
 $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);

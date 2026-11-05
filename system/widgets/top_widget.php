@@ -7,26 +7,10 @@ class top_widget
     {
         global $ui, $current_date, $start_date;
 
-        $iday = ORM::for_table('tbl_transactions')
-            ->where('recharged_on', $current_date)
-            ->where_not_equal('method', 'Customer - Balance')
-            ->where_not_equal('method', 'Recharge Balance - Administrator')
-            ->sum('price');
-
-        if ($iday == '') {
-            $iday = '0.00';
-        }
-        $ui->assign('iday', $iday);
-
-        $imonth = ORM::for_table('tbl_transactions')
-            ->where_not_equal('method', 'Customer - Balance')
-            ->where_not_equal('method', 'Recharge Balance - Administrator')
-            ->where_gte('recharged_on', $start_date)
-            ->where_lte('recharged_on', $current_date)->sum('price');
-        if ($imonth == '') {
-            $imonth = '0.00';
-        }
-        $ui->assign('imonth', $imonth);
+        require_once __DIR__.'/../autoload/ProfitSummary.php';
+        $db = ORM::get_db();
+        $ui->assign('iday', ProfitSummary::period($db, $current_date, $current_date)['total']);
+        $ui->assign('imonth', ProfitSummary::period($db, $start_date, $current_date)['total']);
 
         $u_act = ORM::for_table('tbl_user_recharges')->where('status', 'on')->count();
         if (empty($u_act)) {
